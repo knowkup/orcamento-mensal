@@ -21,6 +21,8 @@ Data inicial: 2026-05-24
 - Objetivo: controle mensal de orcamento pessoal.
 - Foco: clareza, uso recorrente e mobile.
 - Interface simples, direta e humana.
+- A planilha atual e a referencia principal de produto; ela e pratica e entrega as visoes que o usuario quer.
+- Nao substituir por um dashboard generico. Antes de desenvolver, entender e preservar a logica real da planilha.
 
 ## Decisoes tomadas
 
@@ -60,6 +62,21 @@ Data inicial: 2026-05-24
 - `Ant.FGTS`: antecipacoes de FGTS, contratos, valores recebidos/pagos, parcelas futuras e saldo bloqueado/liberado.
 - Totais em `Ant.FGTS`: bloco 1 recebido R$ 5.740,98, pago R$ 3.601,89, economia/ajuste R$ 304,97; bloco 2 recebido R$ 15.046,51, valor a pagar R$ 32.175,39; saldo R$ 58.647,21, bloqueado R$ 46.495,03, liberado R$ 12.152,18.
 - Riscos mapeados: formulas com faixas fixas, valores digitados direto em formulas, erro `#DIV/0!`, logica espalhada entre abas e validacoes de lista limitadas.
+
+## Modelo real da planilha
+
+- A aba principal `Dívida Cronologia` e a visao central do produto: ela mostra o futuro financeiro, com detalhamento suficiente para entender quando melhora, quando sobra, quando falta e como eventos futuros reorganizam os meses.
+- A aba principal deve continuar sendo a tela mais importante do sistema, nao um dashboard resumido.
+- `Parcelas` controla compras parceladas em cartao de credito. Cada cadastro precisa ter origem/cartao, valor, prazo/parcelas e andamento.
+- Parcelas cadastradas em `Parcelas` alimentam automaticamente a aba principal dentro da origem/cartao correspondente. Exemplo: uma compra Nubank entra nos meses futuros somando no bloco/linha do Nubank.
+- `Custo Fixo` serve para cadastrar custos fixos, principalmente custos fixos dos cartoes/origens. Custos fixos PIX nao necessariamente alimentam a aba principal.
+- Na aba principal, cada origem/cartao pode reunir parcelas vindas da aba `Parcelas`, custos fixos vindos da aba `Custo Fixo` e compras gerais planejadas digitadas diretamente na projecao do mes.
+- Compras gerais planejadas na aba principal sao usadas para simular gastos do mes e verificar se sera possivel fechar o mes.
+- `Jeep Compass` e um modulo proprio do financiamento do carro. Pagamentos feitos nessa aba precisam atualizar a aba principal/projecao.
+- `Ant.FGTS` e um modulo proprio para antecipacoes de FGTS, contratos/emprestimos, valores pagos, valores futuros e objetivo de quitacao.
+- O ato de pagar hoje equivale a remover/baixar a ocorrencia daquele valor da projecao futura, como o usuario faz hoje deletando o valor no Excel. No sistema, isso precisa ser simples e por ocorrencia especifica, nao por item geralzao.
+- O usuario nao quer um cadastro generico de "custos fixos" ou um total mensal agregado que esconda a origem dos valores.
+- A tela de itens criada no MVP atual esta desalinhada com a planilha e nao deve guiar a proxima modelagem.
 
 ## Mudancas feitas
 
@@ -286,3 +303,36 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Seguir mantendo commits pequenos, Git limpo e estrutura organizada.
+
+## Atualizacao - 2026-05-24 12:12:00
+
+### Decisoes tomadas
+
+- Usuario rejeitou o MVP atual por estar generico e pior que a planilha.
+- Nao corrigir superficialmente o app atual; voltar a entender a planilha como fonte de verdade.
+- A proxima modelagem deve partir da logica real das abas e das relacoes entre elas.
+
+### Mudancas feitas
+
+- Registrado o modelo real da planilha no contexto.
+- Marcado que a tela `Itens` e o cadastro generico do MVP atual estao desalinhados com o uso real.
+
+### Backups criados
+
+- Nenhum backup criado; apenas documentacao de entendimento de produto.
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `Get-Content -Raw CONTEXTO.md`
+
+### Pendencias
+
+- Revisar a planilha de novo antes de qualquer nova implementacao.
+- Mapear a aba principal `Dívida Cronologia` como produto/tela central.
+- Redesenhar o modelo de dados com origens/cartoes, parcelas, custos fixos por origem, compras planejadas, financiamento Jeep e antecipacoes FGTS.
+- Nao desenvolver nova versao ate o entendimento da planilha estar claro.
+
+### Proximos passos
+
+- Fazer uma etapa de leitura/modelagem da planilha antes de alterar codigo.
