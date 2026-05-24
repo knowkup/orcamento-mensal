@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Orçamento Mensal</title>
     <meta name="description" content="Controle mensal financeiro com projeção detalhada, parcelas, custos fixos, carro e FGTS.">
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="apple-touch-icon" href="assets/icon.svg">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -100,7 +102,7 @@
               </div>
               <button class="ghost-button" type="button" id="addPlanButton">
                 <i data-lucide="plus"></i>
-                <span>Compra planejada</span>
+                <span>Lançamento planejado</span>
               </button>
             </div>
             <div class="top-scroll" id="projectionTopScroll"><div></div></div>
@@ -124,42 +126,19 @@
         </section>
 
         <section class="view" id="parcelasView" data-title="Parcelas">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Cartão / origem</p>
-                  <h2>Nova parcela</h2>
-                </div>
-              </div>
-              <form class="stack-form" id="installmentForm">
-                <label>Item<input name="item" required placeholder="Ex.: Amazon"></label>
-                <label>Credor<select name="creditorId" data-creditor-select></select></label>
-                <div class="form-row">
-                  <label>Valor da parcela<input name="amount" type="number" step="0.01" min="0" required></label>
-                  <label>Total parcelas<input name="total" type="number" step="1" min="1" required></label>
-                </div>
-                <div class="form-row">
-                  <label>Pagas<input name="paid" type="number" step="1" min="0" value="0"></label>
-                  <label>Data compra<input name="date" type="date"></label>
-                </div>
-                <button class="primary-button full" type="submit">
-                  <i data-lucide="plus"></i>
-                  <span>Cadastrar parcela</span>
-                </button>
-              </form>
-            </section>
-
+          <div class="content-grid single">
             <section class="panel wide">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Controle geral</p>
-                  <h2>Parcelas por cartão</h2>
+                  <p class="eyebrow">Contas parceladas</p>
+                  <h2>Parcelas por credor</h2>
                 </div>
+                <button class="primary-button" type="button" id="newInstallmentButton">
+                  <i data-lucide="plus"></i>
+                  <span>Nova conta</span>
+                </button>
               </div>
-              <div class="table-wrap">
-                <table class="data-table" id="installmentsTable"></table>
-              </div>
+              <div class="debt-list" id="installmentsTable"></div>
             </section>
           </div>
         </section>
@@ -176,6 +155,7 @@
               <form class="stack-form" id="fixedCostForm">
                 <label>Custo<input name="name" required placeholder="Ex.: Netflix"></label>
                 <label>Credor<select name="creditorId" data-creditor-select></select></label>
+                <label>Dono<select name="owner" data-owner-select></select></label>
                 <div class="form-row">
                   <label>Grupo<input name="group" placeholder="Ex.: Streaming"></label>
                   <label>Vencimento<input name="dueDay" type="number" min="1" max="31" required></label>
@@ -245,9 +225,7 @@
                   <h2>Gestão do financiamento</h2>
                 </div>
               </div>
-              <div class="table-wrap">
-                <table class="data-table" id="carTable"></table>
-              </div>
+              <div class="debt-list" id="carTable"></div>
             </section>
           </div>
         </section>
@@ -298,24 +276,71 @@
         </section>
 
         <section class="view" id="ajustesView" data-title="Ajustes">
-          <section class="panel">
-            <div class="panel-heading">
-              <div>
-                <p class="eyebrow">Credores</p>
-                <h2>Cadastro base</h2>
+          <div class="content-grid">
+            <section class="panel wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Credores</p>
+                  <h2>Cadastro base</h2>
+                </div>
+                <button class="primary-button" type="button" id="newCreditorButton">
+                  <i data-lucide="plus"></i>
+                  <span>Novo credor</span>
+                </button>
               </div>
-              <button class="primary-button" type="button" id="newCreditorButton">
-                <i data-lucide="plus"></i>
-                <span>Novo credor</span>
-              </button>
-            </div>
-            <div class="table-wrap">
-              <table class="data-table clean-table" id="creditorList"></table>
-            </div>
-          </section>
+              <div class="table-wrap">
+                <table class="data-table clean-table" id="creditorList"></table>
+              </div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Planejamento</p>
+                  <h2>Saldos e limites</h2>
+                </div>
+              </div>
+              <form class="stack-form" id="settingsForm">
+                <label>Saldo em Conta<input name="accountBalance" type="number" step="0.01"></label>
+                <label>Limite Kah<input name="kahLimit" type="number" step="0.01"></label>
+                <button class="primary-button full" type="submit">
+                  <i data-lucide="save"></i>
+                  <span>Salvar ajustes</span>
+                </button>
+              </form>
+            </section>
+          </div>
         </section>
       </main>
     </div>
+
+    <dialog class="dialog" id="installmentDialog">
+      <form class="stack-form" id="installmentForm" method="dialog">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Conta parcelada</p>
+            <h2>Nova conta</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeInstallmentButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Conta<input name="item" required placeholder="Ex.: Amazon"></label>
+        <label>Credor<select name="creditorId" data-creditor-select></select></label>
+        <label>Dono<select name="owner" data-owner-select></select></label>
+        <div class="form-row">
+          <label>Valor da parcela<input name="amount" type="number" step="0.01" min="0" required></label>
+          <label>Total parcelas<input name="total" type="number" step="1" min="1" required></label>
+        </div>
+        <div class="form-row">
+          <label>Pagas<input name="paid" type="number" step="1" min="0" value="0"></label>
+          <label>Data compra<input name="date" type="date"></label>
+        </div>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="plus"></i>
+          <span>Cadastrar conta</span>
+        </button>
+      </form>
+    </dialog>
 
     <dialog class="dialog" id="creditorDialog">
       <form class="stack-form" id="creditorForm" method="dialog">
@@ -336,13 +361,15 @@
             <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
           </div>
         </div>
-        <label>Tipo<select name="type">
-          <option value="Cartão de crédito">Cartão de crédito</option>
-          <option value="Empréstimo">Empréstimo</option>
-          <option value="Débito em conta">Débito em conta</option>
-          <option value="Financiamento">Financiamento</option>
-          <option value="Outro">Outro</option>
-        </select></label>
+        <fieldset class="check-group">
+          <legend>Formas de pagamento</legend>
+          <label><input type="checkbox" name="paymentForms" value="Cartão de crédito"> Cartão de crédito</label>
+          <label><input type="checkbox" name="paymentForms" value="Empréstimo"> Empréstimo</label>
+          <label><input type="checkbox" name="paymentForms" value="Débito em conta"> Débito em conta</label>
+          <label><input type="checkbox" name="paymentForms" value="Financiamento"> Financiamento</label>
+          <label><input type="checkbox" name="paymentForms" value="PIX"> PIX</label>
+          <label><input type="checkbox" name="paymentForms" value="Boleto"> Boleto</label>
+        </fieldset>
         <button class="primary-button full" type="submit">
           <i data-lucide="save"></i>
           <span>Salvar credor</span>
@@ -355,19 +382,24 @@
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Simulação</p>
-            <h2>Compra planejada</h2>
+            <h2>Lançamento planejado</h2>
           </div>
           <button class="icon-button" type="button" id="closePlanButton" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
-        <label>Descrição<input name="description" required placeholder="Ex.: compras gerais"></label>
+        <label>Descrição<input name="description" required placeholder="Ex.: 13º, compras gerais"></label>
+        <label>Tipo<select name="kind">
+          <option value="expense">Saída</option>
+          <option value="income">Entrada</option>
+        </select></label>
         <div class="form-row">
           <label>Credor<select name="creditorId" data-creditor-select></select></label>
           <label>Mês<input name="month" type="month" required></label>
         </div>
+        <label>Dono<select name="owner" data-owner-select></select></label>
         <label>Valor<input name="amount" type="number" step="0.01" min="0" required></label>
-        <button class="primary-button full" type="submit">Adicionar ao mês</button>
+        <button class="primary-button full" type="submit">Adicionar ao planejamento</button>
       </form>
     </dialog>
 

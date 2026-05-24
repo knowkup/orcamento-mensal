@@ -551,3 +551,59 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Fazer commit e push desta rodada.
+
+## Atualizacao - 2026-05-24 19:14:49
+
+### Decisoes tomadas
+
+- Sistema deve iniciar zerado, sem dados herdados da planilha/mock.
+- Dados antigos de schema anterior (`schemaVersion` menor que 3) devem ser substituidos por estado vazio para permitir cadastro real.
+- Grafico de `Planejamento` deve mostrar entradas e saidas como barras e saldo como linha conectada.
+- Grafico precisa exibir valores, senao perde utilidade.
+- Credor pode ter varias formas de pagamento, nao apenas um tipo.
+- `Parcelas` representa contas parceladas; cadastro deve ser modal.
+- `Custos Fixos` representa contas recorrentes todo mes ate alteracao.
+- Itens podem pertencer a `Felipe` ou `Kah`.
+- Itens da Kah devem aparecer primeiro e com fundo diferenciado no Planejamento.
+- `Limite Kah` e `Saldo em Conta` devem ser ajustes manuais do Planejamento.
+- O saldo de um mes deve carregar a sobra/deficit do mes anterior pelo saldo acumulado.
+
+### Mudancas feitas
+
+- Criado schema 3 com estado inicial zerado: sem credores, entradas, parcelas, custos fixos, compras planejadas, carro ou FGTS.
+- Ao carregar dados antigos de schema menor que 3 no Firebase/local, o app grava estado vazio.
+- Adicionado `Saldo em Conta` e `Limite Kah` em Ajustes.
+- `Saldo em Conta` entra como saldo inicial do primeiro mes planejado.
+- `Diferença Kah` passa a ser calculada por `Limite Kah` menos os itens marcados como Kah.
+- Adicionado dono (`Felipe`/`Kah`) em lançamentos planejados, custos fixos e contas parceladas.
+- Planejamento agora gera linhas automaticamente a partir de contas parceladas, custos fixos e lançamentos planejados.
+- Removidas legendas pequenas das linhas do Planejamento.
+- Grafico de visao futura agora usa barras para entradas/saidas, linha conectada para saldo e valores compactos.
+- Credores agora usam `Formas de pagamento` com checkboxes de multipla selecao.
+- Cadastro de conta parcelada virou modal `Nova conta`.
+- `Parcelas` agora usa cards expansíveis com abas pendentes/pagas dentro de cada conta.
+- `Carro` agora usa card expansível com abas pendentes/pagas dentro do financiamento.
+- Criados `assets/favicon.svg` e `assets/icon.svg` e instalados no HTML.
+- Ajustado visual geral para reduzir peso de negritos e deixar a interface mais limpa.
+
+### Backups criados
+
+- `backups/20260524-191449`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `node --check app.js` usando runtime empacotado do Codex.
+- `git diff --check`
+- Validacao estatica de seletores `id` usados pelo JavaScript.
+- `Invoke-WebRequest http://127.0.0.1:4897/index.html`
+
+### Pendencias
+
+- Validar em producao se o reset do Firebase/schema 3 carregou a base vazia como esperado.
+- Ajustar finamente a tela `Controle Mensal`, que ainda precisa de uma revisão visual maior.
+- Criar cadastros dedicados de entradas recorrentes se o uso real pedir algo alem dos lançamentos planejados.
+
+### Proximos passos
+
+- Fazer commit e push desta rodada.

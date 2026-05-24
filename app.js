@@ -18,6 +18,7 @@ const state = {
   installmentFilter: "open",
   carFilter: "open",
   fgtsFilters: {},
+  installmentFilters: {},
   creditorEditingId: null
 };
 
@@ -39,9 +40,13 @@ const el = {
   projectionScroll: document.querySelector(".projection-scroll"),
   monthlyBoard: document.querySelector("#monthlyBoard"),
   installmentForm: document.querySelector("#installmentForm"),
+  installmentDialog: document.querySelector("#installmentDialog"),
+  newInstallmentButton: document.querySelector("#newInstallmentButton"),
+  closeInstallmentButton: document.querySelector("#closeInstallmentButton"),
   installmentsTable: document.querySelector("#installmentsTable"),
   fixedCostForm: document.querySelector("#fixedCostForm"),
   fixedCostsTable: document.querySelector("#fixedCostsTable"),
+  settingsForm: document.querySelector("#settingsForm"),
   carForm: document.querySelector("#carForm"),
   carTitle: document.querySelector("#carTitle"),
   carKpis: document.querySelector("#carKpis"),
@@ -79,7 +84,10 @@ function bindEvents() {
   el.exportButton.addEventListener("click", exportState);
   el.importInput.addEventListener("change", importState);
   el.installmentForm.addEventListener("submit", addInstallment);
+  el.newInstallmentButton.addEventListener("click", openInstallmentDialog);
+  el.closeInstallmentButton.addEventListener("click", closeInstallmentDialog);
   el.fixedCostForm.addEventListener("submit", addFixedCost);
+  el.settingsForm.addEventListener("submit", updateSettings);
   el.carForm.addEventListener("submit", updateCar);
   el.fgtsForm.addEventListener("submit", addFgtsContract);
   el.creditorForm.addEventListener("submit", addCreditor);
@@ -149,7 +157,17 @@ function listenCloudState() {
       await setDoc(ref, withMeta(state.data));
       return;
     }
-    state.data = normalizeData(snapshot.data());
+    const raw = snapshot.data();
+    if (Number(raw.schemaVersion || 0) < 3) {
+      state.data = createDefaultData();
+      await setDoc(ref, withMeta(state.data));
+      persistLocalState(false);
+      updateSync("Sincronizado", "Dados antigos zerados para cadastro real.", true);
+      hydrateForms();
+      render();
+      return;
+    }
+    state.data = normalizeData(raw);
     persistLocalState(false);
     updateSync("Sincronizado", state.user.email || "Google conectado.", true);
     hydrateForms();
@@ -203,7 +221,7 @@ async function saveState(message) {
 function withMeta(data) {
   return {
     ...structuredClone(data),
-    schemaVersion: 2,
+    schemaVersion: 3,
     updatedAt: Date.now()
   };
 }
@@ -226,6 +244,7 @@ function render() {
   renderCar();
   renderFgts();
   renderOrigins();
+  renderSettings();
   refreshIcons();
 }
 
@@ -266,6 +285,11 @@ function renderProjection() {
     <tbody>${body}</tbody>
   `;
   requestAnimationFrame(syncProjectionTopScroll);
+}
+
+function renderSettings() {
+  el.settingsForm.elements.accountBalance.value = state.data.accountBalance || "";
+  el.settingsForm.elements.kahLimit.value = state.data.kahLimit || "";
 }
 
 function renderOccurrencesLegacy() {
@@ -354,7 +378,7 @@ function monthlyItems(items, month, kind) {
       <article class="monthly-item ${done ? "done" : ""}">
         <div>
           <strong>${escapeHtml(row.label)}</strong>
-          <span>${escapeHtml(row.origin || "-")} · ${row.sourceLabel}</span>
+          <span>${escapeHtml(row.origin || "-")}</span>
         </div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(value)}</strong>
@@ -367,13 +391,25 @@ function monthlyItems(items, month, kind) {
 
 function buildProjectionRows(months, keepPaidValues = false) {
   const rows = [];
+  if (Number(state.data.accountBalance || 0)) {
+    rows.push({
+      id: "account-balance",
+      kind: "income",
+      owner: "Felipe",
+      label: "Saldo em Conta",
+      origin: "manual",
+      sourceLabel: "",
+      values: { [months[0]]: Number(state.data.accountBalance || 0) }
+    });
+  }
   state.data.incomeLines.forEach((line) => {
     rows.push({
       id: line.id,
       kind: "income",
+      owner: line.owner || "Felipe",
       label: line.label,
       origin: line.origin,
-      sourceLabel: "entrada",
+      sourceLabel: "",
       values: valuesFromMonthlyMap(line.values, months)
     });
   });
@@ -382,14 +418,17 @@ function buildProjectionRows(months, keepPaidValues = false) {
     rows.push({
       id: line.id,
       kind: "expense",
+      owner: line.owner || "Felipe",
       label: line.label,
       origin: line.creditorId ? getCreditorName(line.creditorId) : line.origin,
-      sourceLabel: sourceLabel(line),
+      sourceLabel: "",
       values: valuesForProjectionLine(line, months, keepPaidValues)
     });
   });
 
-  return rows;
+  appendDynamicProjectionRows(rows, months, keepPaidValues);
+  appendKahDifferenceRow(rows, months);
+  return rows.sort((a, b) => ownerRank(a.owner) - ownerRank(b.owner));
 }
 
 function valuesForProjectionLine(line, months, keepPaidValues = false) {
@@ -416,6 +455,65 @@ function valuesFromMonthlyMap(map, months) {
     values[month] = map?.[month] ?? map?.[`month-${monthNumber}`] ?? map?.default ?? 0;
   });
   return values;
+}
+
+function appendDynamicProjectionRows(rows, months, keepPaidValues) {
+  const creditors = new Set([
+    ...state.data.installments.map((item) => item.creditorId),
+    ...state.data.fixedCosts.filter((item) => item.includeInProjection !== false).map((item) => item.creditorId),
+    ...state.data.plannedPurchases.map((item) => item.creditorId)
+  ].filter(Boolean));
+
+  creditors.forEach((creditorId) => {
+    const installmentValues = {};
+    const fixedValues = {};
+    const plannedValues = {};
+    months.forEach((month, index) => {
+      installmentValues[month] = installmentTotal(creditorId, index);
+      fixedValues[month] = fixedTotalByOrigin(creditorId);
+      plannedValues[month] = plannedTotal(creditorId, month);
+      ["installments", "fixed", "planned"].forEach((kind) => {
+        const key = `auto-${kind}-${creditorId}:${month}`;
+        if (!keepPaidValues && isOccurrencePaid(key)) {
+          if (kind === "installments") installmentValues[month] = 0;
+          if (kind === "fixed") fixedValues[month] = 0;
+          if (kind === "planned") plannedValues[month] = 0;
+        }
+      });
+    });
+    const owner = ownerForCreditor(creditorId);
+    if (Object.values(installmentValues).some(Boolean)) rows.push({ id: `auto-installments-${creditorId}`, kind: "expense", owner, label: `Parcelas (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: installmentValues });
+    if (Object.values(fixedValues).some(Boolean)) rows.push({ id: `auto-fixed-${creditorId}`, kind: "expense", owner, label: `Custos fixos (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: fixedValues });
+    if (Object.values(plannedValues).some(Boolean)) rows.push({ id: `auto-planned-${creditorId}`, kind: "expense", owner, label: `Compras planejadas (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: plannedValues });
+  });
+}
+
+function appendKahDifferenceRow(rows, months) {
+  const limit = Number(state.data.kahLimit || 0);
+  if (!limit) return;
+  const values = {};
+  months.forEach((month) => {
+    const used = rows
+      .filter((row) => row.kind === "expense" && row.owner === "Kah")
+      .reduce((total, row) => total + Number(row.values[month] || 0), 0);
+    values[month] = Math.max(0, limit - used);
+  });
+  if (Object.values(values).some(Boolean)) {
+    rows.unshift({ id: "kah-difference", kind: "expense", owner: "Kah", label: "Diferença Kah", origin: "Limite Kah", sourceLabel: "", values });
+  }
+}
+
+function ownerForCreditor(creditorId) {
+  const candidates = [
+    ...state.data.installments,
+    ...state.data.fixedCosts,
+    ...state.data.plannedPurchases
+  ].filter((item) => item.creditorId === creditorId);
+  return candidates.find((item) => item.owner === "Kah") ? "Kah" : "Felipe";
+}
+
+function ownerRank(owner) {
+  return owner === "Kah" ? 0 : 1;
 }
 
 function installmentTotal(origin, monthIndex) {
@@ -471,12 +569,11 @@ function buildTotals(rows, months) {
 }
 
 function projectionRow(row, months) {
-  const sectionClass = row.kind === "income" ? "income-row" : "expense-row";
+  const sectionClass = `${row.kind === "income" ? "income-row" : "expense-row"} ${row.owner === "Kah" ? "owner-kah" : ""}`;
   return `
     <tr class="${sectionClass}">
       <th class="sticky-col">
         <span>${escapeHtml(row.label)}</span>
-        <small>${escapeHtml(row.sourceLabel)}</small>
       </th>
       <td>${escapeHtml(row.origin || "-")}</td>
       ${months.map((month) => projectionCell(row, month)).join("")}
@@ -518,78 +615,62 @@ function renderPlanningChart(totals, months) {
     1,
     ...totals.flatMap((item) => [Math.abs(item.income), Math.abs(item.expense), Math.abs(item.balance)])
   );
+  const points = totals.map((item, index) => {
+    const x = 42 + index * 76;
+    const y = 166 - ((item.balance + maxValue) / (maxValue * 2)) * 132;
+    return { x, y, value: item.balance };
+  });
   el.planningChart.innerHTML = `
     <div class="chart-legend">
       <span><i class="legend-dot income"></i>Entradas</span>
       <span><i class="legend-dot expense"></i>Saídas</span>
       <span><i class="legend-dot balance"></i>Saldo</span>
     </div>
-    <div class="bar-chart">
+    <div class="bar-chart-wrap">
+      <svg class="balance-line" viewBox="0 0 900 190" preserveAspectRatio="none" aria-hidden="true">
+        <polyline points="${points.map((point) => `${point.x},${point.y}`).join(" ")}"></polyline>
+        ${points.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="4"></circle>`).join("")}
+      </svg>
+      <div class="bar-chart">
       ${totals.map((item, index) => {
         const incomeHeight = Math.max(4, (item.income / maxValue) * 150);
         const expenseHeight = Math.max(4, (item.expense / maxValue) * 150);
-        const balanceHeight = Math.max(4, (Math.abs(item.balance) / maxValue) * 150);
         return `
           <div class="bar-month">
             <div class="bar-stack" title="${formatMonth(months[index])}">
+              <span class="bar-value income-value">${compactCurrency(item.income)}</span>
               <span class="bar income" style="height:${incomeHeight}px"></span>
               <span class="bar expense" style="height:${expenseHeight}px"></span>
-              <span class="bar balance ${item.balance < 0 ? "negative-bar" : ""}" style="height:${balanceHeight}px"></span>
+              <span class="bar-value expense-value">-${compactCurrency(item.expense)}</span>
+              <span class="line-value ${item.balance < 0 ? "negative" : "positive"}">${compactCurrency(item.balance)}</span>
             </div>
             <strong>${formatMonth(months[index])}</strong>
           </div>
         `;
       }).join("")}
+      </div>
     </div>
   `;
 }
 
 function renderInstallments() {
-  const totals = state.data.installments.reduce((acc, item) => {
-    acc.total += item.amount * item.totalInstallments;
-    acc.paid += item.amount * item.paidInstallments;
-    acc.left += item.amount * Math.max(0, item.totalInstallments - item.paidInstallments);
-    return acc;
-  }, { total: 0, paid: 0, left: 0 });
+  el.installmentsTable.innerHTML = state.data.installments.length
+    ? state.data.installments.map((item) => genericDebtCard({
+      id: item.id,
+      title: item.item,
+      subtitle: `${getCreditorName(item.creditorId)} · ${item.owner || "Felipe"}`,
+      creditorId: item.creditorId,
+      total: item.totalInstallments,
+      paid: item.paidInstallments,
+      amount: item.amount,
+      filter: state.installmentFilters[item.id] || "open",
+      prefix: "installment"
+    })).join("")
+    : `<div class="empty-state">Nenhuma conta parcelada cadastrada.</div>`;
 
-  const filtered = state.data.installments.filter((item) => {
-    const left = Math.max(0, item.totalInstallments - item.paidInstallments);
-    return state.installmentFilter === "paid" ? left === 0 : left > 0;
-  });
-
-  el.installmentsTable.innerHTML = `
-    <thead>
-      <tr><th colspan="6">${tabButtons("installment", state.installmentFilter)}</th></tr>
-      <tr><th>Item</th><th>Credor</th><th>Valor</th><th>Pagas</th><th>Faltam</th><th>Ações</th></tr>
-    </thead>
-    <tbody>
-      <tr class="summary-row"><td colspan="2">Total</td><td>${currency.format(totals.total)}</td><td>${currency.format(totals.paid)}</td><td>${currency.format(totals.left)}</td><td></td></tr>
-      ${filtered.map((item) => {
-        const left = Math.max(0, item.totalInstallments - item.paidInstallments);
-        return `<tr>
-          <td>
-            <details>
-              <summary>${escapeHtml(item.item)}</summary>
-              <div class="detail-list">${installmentDetail(item)}</div>
-            </details>
-          </td>
-          <td>${creditorLogoHtml(item.creditorId)}${escapeHtml(getCreditorName(item.creditorId))}</td>
-          <td>${currency.format(item.amount)}</td>
-          <td>${item.paidInstallments}/${item.totalInstallments}</td>
-          <td>${left}</td>
-          <td class="row-actions">
-            <button class="small-button pay" type="button" data-pay-installment="${item.id}" ${left ? "" : "disabled"}>Pagar próxima</button>
-            <button class="small-button" type="button" data-quit-installment="${item.id}" ${left ? "" : "disabled"}>Quitar</button>
-            <button class="small-button danger-mini" type="button" data-delete-installment="${item.id}">Excluir</button>
-          </td>
-        </tr>`;
-      }).join("")}
-    </tbody>
-  `;
-
-  el.installmentsTable.querySelectorAll("[data-installment-tab]").forEach((button) => {
+  el.installmentsTable.querySelectorAll("[data-installment-card-tab]").forEach((button) => {
     button.addEventListener("click", () => {
-      state.installmentFilter = button.dataset.installmentTab;
+      state.installmentFilters[button.dataset.contractId] = button.dataset.installmentCardTab;
       renderInstallments();
     });
   });
@@ -639,7 +720,6 @@ function renderCar() {
 
   const paid = car.payments.filter((item) => item.status === "Pago");
   const pending = car.payments.filter((item) => item.status !== "Pago");
-  const visiblePayments = state.carFilter === "paid" ? paid : pending;
   const paidValue = paid.reduce((total, item) => total + Number(item.paidAmount || item.value), 0);
   const pendingValue = pending.reduce((total, item) => total + Number(item.value), 0);
   const economy = paid.reduce((total, item) => total + Math.max(0, Number(item.value) - Number(item.paidAmount || item.value)), 0);
@@ -652,24 +732,9 @@ function renderCar() {
     metric("Economia", economy, "positive")
   ].join("");
 
-  el.carTable.innerHTML = `
-    <thead>
-      <tr><th colspan="6">${tabButtons("car", state.carFilter)}</th></tr>
-      <tr><th>Parcela</th><th>Mês</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ações</th></tr>
-    </thead>
-    <tbody>
-      ${visiblePayments.map((item) => `
-        <tr>
-          <td>${item.number}/${car.totalInstallments}</td>
-          <td>${formatMonth(item.month)}</td>
-          <td>${currency.format(item.value)}</td>
-          <td>${item.paidAmount ? currency.format(item.paidAmount) : "-"}</td>
-          <td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td>
-          <td><button class="small-button pay" type="button" data-pay-car="${item.id}" ${item.status === "Pago" ? "disabled" : ""}>Pagar</button></td>
-        </tr>
-      `).join("")}
-    </tbody>
-  `;
+  el.carTable.innerHTML = car.payments.length
+    ? carDebtCard(car)
+    : `<div class="empty-state">Nenhum financiamento cadastrado.</div>`;
 
   el.carTable.querySelectorAll("[data-car-tab]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -784,7 +849,7 @@ function renderFgtsV2() {
 
 function renderOriginsV2() {
   el.creditorList.innerHTML = `
-    <thead><tr><th>Credor</th><th>Tipo</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Credor</th><th>Formas de pagamento</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.creditors.map((creditor) => {
         const inUse = isCreditorInUse(creditor.id);
@@ -796,7 +861,7 @@ function renderOriginsV2() {
                 <strong>${escapeHtml(creditor.name)}</strong>
               </div>
             </td>
-            <td>${escapeHtml(creditor.type || "-")}</td>
+            <td>${escapeHtml((creditor.paymentForms || [creditor.type]).filter(Boolean).join(", ") || "-")}</td>
             <td>${creditorUsageCount(creditor.id)}</td>
             <td>${currency.format(creditorOpenBalance(creditor.id))}</td>
             <td class="row-actions">
@@ -828,6 +893,11 @@ function hydrateForms() {
     select.innerHTML = state.data.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
     if (current) select.value = current;
   });
+  document.querySelectorAll("[data-owner-select]").forEach((select) => {
+    const current = select.value;
+    select.innerHTML = ["Felipe", "Kah"].map((owner) => `<option value="${owner}">${owner}</option>`).join("");
+    if (current) select.value = current;
+  });
   const start = nextMonths(1)[0];
   if (el.plannedForm.elements.month) el.plannedForm.elements.month.value = start;
 }
@@ -843,11 +913,23 @@ async function addInstallment(event) {
     totalInstallments: Number(form.get("total")),
     paidInstallments: Number(form.get("paid") || 0),
     purchaseDate: String(form.get("date") || ""),
+    owner: String(form.get("owner") || "Felipe"),
     active: true
   };
   state.data.installments.push(item);
+  closeInstallmentDialog();
   event.currentTarget.reset();
   await saveState("Parcela cadastrada.");
+}
+
+function openInstallmentDialog() {
+  hydrateForms();
+  el.installmentDialog.showModal();
+}
+
+function closeInstallmentDialog() {
+  el.installmentForm.reset();
+  el.installmentDialog.close();
 }
 
 async function payInstallment(id) {
@@ -877,6 +959,7 @@ async function addFixedCost(event) {
     name: String(form.get("name")).trim(),
     creditorId: String(form.get("creditorId")),
     paymentMethod: String(form.get("paymentMethod")),
+    owner: String(form.get("owner") || "Felipe"),
     group: String(form.get("group") || "").trim(),
     dueDay: Number(form.get("dueDay")),
     amount: Number(form.get("amount")),
@@ -899,7 +982,26 @@ async function updateCar(event) {
   state.data.car.purchase = Number(form.get("purchase") || 0);
   state.data.car.monthly = Number(form.get("monthly") || 0);
   state.data.car.totalInstallments = Number(form.get("totalInstallments") || state.data.car.totalInstallments);
+  if (!state.data.car.payments.length && state.data.car.monthly && state.data.car.totalInstallments) {
+    state.data.car.payments = nextMonths(state.data.car.totalInstallments).map((month, index) => ({
+      id: crypto.randomUUID(),
+      number: index + 1,
+      month,
+      value: state.data.car.monthly,
+      paidAmount: 0,
+      status: "Pendente"
+    }));
+  }
   await saveState("Cadastro do carro atualizado.");
+}
+
+async function updateSettings(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.data.accountBalance = Number(form.get("accountBalance") || 0);
+  state.data.initialBalance = state.data.accountBalance;
+  state.data.kahLimit = Number(form.get("kahLimit") || 0);
+  await saveState("Ajustes salvos.");
 }
 
 async function payCarInstallment(id) {
@@ -989,7 +1091,7 @@ async function addCreditor(event) {
   const payload = {
     id: existing?.id || crypto.randomUUID(),
     name,
-    type: String(form.get("type")),
+    paymentForms: form.getAll("paymentForms").map(String),
     logoUrl: String(form.get("logoUrl") || "")
   };
   if (existing) {
@@ -1010,8 +1112,11 @@ function openCreditorDialog(id = null) {
   const creditor = id ? getCreditor(id) : null;
   el.creditorDialogTitle.textContent = creditor ? "Editar credor" : "Novo credor";
   el.creditorForm.elements.name.value = creditor?.name || "";
-  el.creditorForm.elements.type.value = creditor?.type || "Cartão de crédito";
   el.creditorForm.elements.logoUrl.value = creditor?.logoUrl || "";
+  const forms = creditor?.paymentForms || [creditor?.type].filter(Boolean);
+  el.creditorForm.querySelectorAll("input[name='paymentForms']").forEach((input) => {
+    input.checked = forms.includes(input.value);
+  });
   renderCreditorLogoPreview(creditor?.logoUrl || "");
   el.creditorDialog.showModal();
   refreshIcons();
@@ -1069,16 +1174,30 @@ function openPlannedDialog() {
 async function addPlannedPurchase(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  state.data.plannedPurchases.push({
-    id: crypto.randomUUID(),
-    description: String(form.get("description")).trim(),
-    creditorId: String(form.get("creditorId")),
-    month: String(form.get("month")),
-    amount: Number(form.get("amount"))
-  });
+  const kind = String(form.get("kind") || "expense");
+  const month = String(form.get("month"));
+  const amount = Number(form.get("amount"));
+  if (kind === "income") {
+    state.data.incomeLines.push({
+      id: crypto.randomUUID(),
+      label: String(form.get("description")).trim(),
+      origin: getCreditorName(String(form.get("creditorId"))),
+      owner: String(form.get("owner") || "Felipe"),
+      values: { [month]: amount }
+    });
+  } else {
+    state.data.plannedPurchases.push({
+      id: crypto.randomUUID(),
+      description: String(form.get("description")).trim(),
+      creditorId: String(form.get("creditorId")),
+      month,
+      amount,
+      owner: String(form.get("owner") || "Felipe")
+    });
+  }
   el.plannedDialog.close();
   event.currentTarget.reset();
-  await saveState("Compra planejada adicionada.");
+  await saveState("Lançamento planejado adicionado.");
 }
 
 async function togglePaidOccurrence(key) {
@@ -1152,7 +1271,11 @@ function persistLocalState(write = true) {
 
 function normalizeData(data) {
   const defaults = createDefaultData();
-  const creditors = data.creditors || defaults.creditors;
+  if (!data || Number(data.schemaVersion || 0) < 3) return defaults;
+  const creditors = (data.creditors || defaults.creditors).map((creditor) => ({
+    ...creditor,
+    paymentForms: creditor.paymentForms || [creditor.type].filter(Boolean)
+  }));
   const creditorByName = new Map(creditors.map((creditor) => [creditor.name, creditor.id]));
   return {
     ...defaults,
@@ -1177,102 +1300,34 @@ function normalizeData(data) {
 
 function createDefaultData() {
   const months = nextMonths(12);
-  const paidCarPayments = previousMonths(12).map((month, index) => ({
-    id: `car-paid-${index + 1}`,
-    number: index + 1,
-    month,
-    value: 3621.12,
-    paidAmount: 3621.12,
-    status: "Pago"
-  }));
-  const carPayments = months.map((month, index) => ({
-    id: `car-${index + 13}`,
-    number: index + 13,
-    month,
-    value: 3621.12,
-    paidAmount: 0,
-    status: "Pendente"
-  }));
 
   return {
-    schemaVersion: 2,
-    initialBalance: 320.19,
+    schemaVersion: 3,
+    initialBalance: 0,
+    accountBalance: 0,
+    kahLimit: 0,
     paymentMethods: ["PIX", "Débito em conta", "Cartão de crédito", "Boleto"],
-    creditors: [
-      { id: "cred-santander", name: "Santander", type: "Cartão de crédito", logoUrl: "" },
-      { id: "cred-nubank", name: "Nubank", type: "Cartão de crédito", logoUrl: "" },
-      { id: "cred-itau-click", name: "Itaú Click", type: "Cartão de crédito", logoUrl: "" },
-      { id: "cred-itau-kah", name: "Itaú Kah", type: "Cartão de crédito", logoUrl: "" },
-      { id: "cred-grazziotin", name: "Grazziotin", type: "Cartão de crédito", logoUrl: "" },
-      { id: "cred-sicredi", name: "Sicredi", type: "Empréstimo", logoUrl: "" },
-      { id: "cred-jeep", name: "Jeep Compass", type: "Financiamento", logoUrl: "" }
-    ],
-    incomeLines: [
-      { id: "income-salary", label: "ATP Salário", origin: "Santander", values: { default: 11159.48 } },
-      { id: "income-rent", label: "Aluguel Matheus", origin: "Santander", values: { default: 900 } },
-      { id: "income-13", label: "13º ATP", origin: "Santander", values: { "month-11": 10378.82, "month-12": 4862.83 } },
-      { id: "income-vacation", label: "Férias ATP", origin: "Santander", values: { "2026-09": 7742.42 } },
-      { id: "income-other", label: "Outros / rolagem", origin: "Santander", values: { [months[0]]: 10750, [months[1]]: 2500, [months[2]]: 2500 } }
-    ],
-    projectionLines: [
-      { id: "line-itau-click", label: "Itaú Click", origin: "Débito Itaú Kah", creditorId: "cred-itau-click", source: "installments", match: "cred-itau-click" },
-      { id: "line-grazziotin", label: "Grazziotin", origin: "PIX", creditorId: "cred-grazziotin", source: "installments", match: "cred-grazziotin" },
-      { id: "line-diff-kah", label: "Diferença Kah (limite dela)", origin: "-", source: "difference", limit: 1000, subtractLineIds: ["line-itau-click", "line-grazziotin"] },
-      { id: "line-agua", label: "Água - Semae", origin: "Boleto", source: "fixedByName", match: "Água - Semae" },
-      { id: "line-inter-kah", label: "Inter Kah", origin: "Boleto", source: "manual", monthlyAmount: 667.13 },
-      { id: "line-jeep", label: "Carro", origin: "Boleto", source: "car" },
-      { id: "line-claro", label: "Claro/NET", origin: "Débito Itaú Kah", source: "fixedByName", match: "Claro/NET" },
-      { id: "line-juvo", label: "Juvo", origin: "Boleto", source: "manual", monthlyAmount: 851.66 },
-      { id: "line-nubank-parcelas", label: "Parcelas (Nubank)", origin: "Nubank", creditorId: "cred-nubank", source: "installments", match: "cred-nubank" },
-      { id: "line-nubank-fixo", label: "Custo Fixo (Nubank)", origin: "Nubank", creditorId: "cred-nubank", source: "fixedByOrigin", match: "cred-nubank" },
-      { id: "line-nubank-compras", label: "Compras Gerais (Nubank)", origin: "Nubank", creditorId: "cred-nubank", source: "planned", match: "cred-nubank" },
-      { id: "line-luz", label: "Luz - RGE", origin: "PIX", source: "fixedByName", match: "Luz - RGE" },
-      { id: "line-unimed", label: "Unimed VS", origin: "Boleto", source: "manual", monthlyAmount: 1400 },
-      { id: "line-mei-kah", label: "MEI Kahramelos", origin: "PIX", source: "fixedByName", match: "MEI Kahramelos" },
-      { id: "line-nubank-kah", label: "Nubank Kah", origin: "Boleto", source: "manual", monthlyAmount: 209.4 },
-      { id: "line-luz-kah", label: "Luz - RGE - Kah", origin: "PIX", source: "fixedByName", match: "Luz - RGE - Kah" },
-      { id: "line-mercado-emprestimo", label: "Mercado Pago EmpréstimoK", origin: "Boleto", source: "manual", monthlyAmount: 306.38 }
-    ],
-    installments: [
-      { id: "par-1", item: "Amazon", creditorId: "cred-itau-click", amount: 94.67, totalInstallments: 12, paidInstallments: 6, active: true },
-      { id: "par-2", item: "Curso Kah (Ventosa)", creditorId: "cred-itau-click", amount: 124.91, totalInstallments: 12, paidInstallments: 8, active: true },
-      { id: "par-3", item: "Notebook Dell", creditorId: "cred-santander", amount: 469.08, totalInstallments: 12, paidInstallments: 9, active: true },
-      { id: "par-4", item: "Amazon (Shampos)", creditorId: "cred-nubank", amount: 32.52, totalInstallments: 4, paidInstallments: 3, active: true }
-    ],
-    fixedCosts: [
-      { id: "fix-1", name: "Claro/NET", creditorId: "cred-itau-kah", paymentMethod: "Débito em conta", group: "Residência", dueDay: 10, amount: 193.28, includeInProjection: true },
-      { id: "fix-2", name: "Google GSUITE", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Kupka", dueDay: 1, amount: 40.9, includeInProjection: true },
-      { id: "fix-3", name: "Spotify", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Streaming", dueDay: 5, amount: 31.9, includeInProjection: true },
-      { id: "fix-4", name: "Netflix", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Streaming", dueDay: 9, amount: 44.9, includeInProjection: true },
-      { id: "fix-5", name: "Barbeiro", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Cuidados", dueDay: 20, amount: 230, includeInProjection: true },
-      { id: "fix-6", name: "ChatGPT", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Kupka", dueDay: 25, amount: 125, includeInProjection: true },
-      { id: "fix-7", name: "Água - Semae", creditorId: "cred-santander", paymentMethod: "PIX", group: "Residência", dueDay: 15, amount: 160, includeInProjection: true },
-      { id: "fix-8", name: "Luz - RGE", creditorId: "cred-santander", paymentMethod: "PIX", group: "Residência", dueDay: 13, amount: 1079.52, includeInProjection: true },
-      { id: "fix-9", name: "MEI Kahramelos", creditorId: "cred-santander", paymentMethod: "PIX", group: "Kahramelos", dueDay: 20, amount: 81.9, includeInProjection: true },
-      { id: "fix-10", name: "Luz - RGE - Kah", creditorId: "cred-santander", paymentMethod: "PIX", group: "Residência", dueDay: 28, amount: 130, includeInProjection: true }
-    ],
-    plannedPurchases: [
-      { id: "plan-1", description: "Compras gerais", creditorId: "cred-nubank", month: months[0], amount: 653.38 },
-      { id: "plan-2", description: "Compras gerais", creditorId: "cred-nubank", month: months[1], amount: 2000 }
-    ],
+    creditors: [],
+    incomeLines: [],
+    projectionLines: [],
+    installments: [],
+    fixedCosts: [],
+    plannedPurchases: [],
     paidOccurrences: [],
     receivedOccurrences: [],
     car: {
-      name: "Jeep Compass",
-      financed: 107981,
-      purchase: 133900,
-      monthly: 3621.12,
-      totalInstallments: 60,
-      payments: [...paidCarPayments, ...carPayments]
+      name: "Carro",
+      financed: 0,
+      purchase: 0,
+      monthly: 0,
+      totalInstallments: 0,
+      payments: []
     },
     fgts: {
       balance: 58647.21,
       blocked: 46495.03,
       available: 12152.18,
       contracts: [
-        { id: "fgts-1", description: "FGTS 01", creditorId: "cred-santander", contract: "5645599532", received: 3709.43, toPay: 4274.54, status: "Ativo", annualPayments: [] },
-        { id: "fgts-2", description: "FGTS 02", creditorId: "cred-santander", contract: "5665960713", received: 3280.93, toPay: 3280.93, status: "Ativo", annualPayments: [] },
-        { id: "fgts-3", description: "FGTS 03", creditorId: "cred-santander", contract: "Santander", received: 4662.34, toPay: 4081.53, status: "Ativo", annualPayments: [] }
       ]
     }
   };
@@ -1363,6 +1418,84 @@ function fgtsContractCard(contract) {
               </tr>
             `).join("") || `<tr><td colspan="5" class="muted-cell">Nenhuma parcela nesta aba.</td></tr>`}
           </tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
+function genericDebtCard(config) {
+  const installments = Array.from({ length: Number(config.total || 0) }, (_, index) => ({
+    id: `${config.id}-${index + 1}`,
+    number: index + 1,
+    amount: Number(config.amount || 0),
+    status: index < Number(config.paid || 0) ? "Pago" : "Pendente"
+  }));
+  const paid = installments.filter((item) => item.status === "Pago");
+  const pending = installments.filter((item) => item.status !== "Pago");
+  const visible = config.filter === "paid" ? paid : pending;
+  return `
+    <details class="debt-card">
+      <summary>
+        <div class="entity-cell">
+          ${creditorLogoHtml(config.creditorId)}
+          <div>
+            <strong>${escapeHtml(config.title)}</strong>
+            <span>${escapeHtml(config.subtitle)}</span>
+          </div>
+        </div>
+        <span class="status ${pending.length ? "warn" : "ok"}">${pending.length ? "Pendente" : "Quitado"}</span>
+      </summary>
+      <div class="debt-meta-grid">
+        ${metaBox("Parcelas pagas", `${paid.length} de ${installments.length}`)}
+        ${metaBox("Valor da parcela", currency.format(config.amount || 0))}
+        ${metaBox("Falta pagar", currency.format(pending.length * Number(config.amount || 0)))}
+        <div class="debt-action row-actions">
+          <button class="small-button pay" type="button" data-pay-installment="${config.id}" ${pending.length ? "" : "disabled"}>Registrar pagamento</button>
+          <button class="small-button" type="button" data-quit-installment="${config.id}" ${pending.length ? "" : "disabled"}>Quitar</button>
+          <button class="small-button danger-mini" type="button" data-delete-installment="${config.id}">Excluir</button>
+        </div>
+      </div>
+      <div class="debt-tabs">
+        <button class="debt-tab ${config.filter === "open" ? "active" : ""}" type="button" data-installment-card-tab="open" data-contract-id="${config.id}">Pendentes <span>${pending.length}</span></button>
+        <button class="debt-tab ${config.filter === "paid" ? "active" : ""}" type="button" data-installment-card-tab="paid" data-contract-id="${config.id}">Pagas <span>${paid.length}</span></button>
+      </div>
+      <div class="table-wrap inner-table">
+        <table class="data-table clean-table">
+          <thead><tr><th>Parcela</th><th>Valor</th><th>Status</th></tr></thead>
+          <tbody>${visible.map((item) => `<tr><td>${item.number}/${installments.length}</td><td>${currency.format(item.amount)}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td></tr>`).join("") || `<tr><td colspan="3" class="muted-cell">Nenhuma parcela nesta aba.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
+function carDebtCard(car) {
+  const paid = car.payments.filter((item) => item.status === "Pago");
+  const pending = car.payments.filter((item) => item.status !== "Pago");
+  const visible = state.carFilter === "paid" ? paid : pending;
+  return `
+    <details class="debt-card" open>
+      <summary>
+        <div class="entity-cell">
+          <span class="creditor-logo">CA</span>
+          <div>
+            <strong>${escapeHtml(car.name || "Carro")}</strong>
+            <span>Financiamento</span>
+          </div>
+        </div>
+        <span class="status ${pending.length ? "warn" : "ok"}">${pending.length ? "Pendente" : "Quitado"}</span>
+      </summary>
+      <div class="debt-meta-grid">
+        ${metaBox("Parcelas pagas", `${paid.length} de ${car.payments.length}`)}
+        ${metaBox("Próxima parcela", pending[0] ? formatMonth(pending[0].month) : "-")}
+        ${metaBox("Falta pagar", currency.format(pending.reduce((total, item) => total + Number(item.value || 0), 0)))}
+      </div>
+      ${tabButtons("car", state.carFilter)}
+      <div class="table-wrap inner-table">
+        <table class="data-table clean-table">
+          <thead><tr><th>Parcela</th><th>Mês</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ação</th></tr></thead>
+          <tbody>${visible.map((item) => `<tr><td>${item.number}/${car.payments.length}</td><td>${formatMonth(item.month)}</td><td>${currency.format(item.value)}</td><td>${item.paidAmount ? currency.format(item.paidAmount) : "-"}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td><button class="small-button pay" type="button" data-pay-car="${item.id}" ${item.status === "Pago" ? "disabled" : ""}>Registrar pagamento</button></td></tr>`).join("")}</tbody>
         </table>
       </div>
     </details>
@@ -1515,6 +1648,10 @@ function formatDate(value) {
   const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
   if (!year || !month || !day) return "-";
   return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+}
+
+function compactCurrency(value) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
 }
 
 function todayKey() {
