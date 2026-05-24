@@ -336,3 +336,35 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Fazer uma etapa de leitura/modelagem da planilha antes de alterar codigo.
+
+## Atualizacao - 2026-05-24 14:17:02
+
+### Decisoes tomadas
+
+- A etapa atual foi limitada a analise/modelagem da planilha; nenhuma mudanca no app.
+- Criada pasta `docs/` para documentacao de produto e arquitetura.
+- A planilha segue como fonte de verdade para a proxima versao.
+
+### Mudancas feitas
+
+- Criado `docs/PLANILHA_MODELO.md` com o modelo real da planilha, relacoes entre abas e implicacoes para o sistema.
+- Gerado arquivo tecnico temporario/backup `backups/planilha-modelagem-runtime.json` durante a leitura da planilha.
+
+### Backups criados
+
+- `backups/20260524-141702`
+
+### Comandos relevantes
+
+- Leitura da planilha com Python/openpyxl usando runtime empacotado.
+- `git status --short --branch`
+- `git diff --check`
+
+### Pendencias
+
+- Validar a modelagem documentada com o usuario antes de alterar o app.
+- Depois de validada, redesenhar o modelo de dados e as telas a partir de `docs/PLANILHA_MODELO.md`.
+
+### Proximos passos
+
+- Revisar `docs/PLANILHA_MODELO.md` com o usuario e ajustar pontos que ainda estiverem errados.
