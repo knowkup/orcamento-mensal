@@ -748,3 +748,36 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Validar, commitar e fazer push.
+
+## Atualizacao - 2026-05-24 19:42:53
+
+### Decisoes tomadas
+
+- Pagamento de parcela do carro precisa abrir modal com valor pago editavel.
+- O valor padrao do modal deve ser o valor previsto da parcela, mas o usuario pode informar valor menor/maior.
+- Painel do carro deve refletir a planilha: financiado, compra, financiamento, real projetado, valor pago, parcelas faltantes, falta pagar, economia e progresso.
+
+### Mudancas feitas
+
+- Criado modal `carPaymentDialog` para registrar pagamento do carro.
+- Botao `Registrar pagamento` da parcela do carro agora abre modal em vez de pagar automaticamente.
+- Valor pago fica pre-preenchido com valor da parcela e pode ser editado.
+- Economia do carro passa a considerar diferenca entre valor previsto e valor realmente pago.
+- Painel do carro ganhou: `Valor financiado`, `Valor de compra`, `Financiamento`, `Real projetado`, `Valor pago`, `Faltam`, `Falta pagar`, `Economia` e progresso percentual.
+
+### Backups criados
+
+- `backups/20260524-194253`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `rg -n "renderCar|carKpis|carTable|payCarInstallment|carDebtCard|carForm|carTitle|Carro|carTable|data-pay-car|car-payment|dialog" index.html app.js styles.css`
+
+### Pendencias
+
+- Validar em producao o fluxo de pagamento com valor menor para confirmar economia.
+
+### Proximos passos
+
+- Validar, commitar e fazer push.

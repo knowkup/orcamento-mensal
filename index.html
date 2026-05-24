@@ -384,6 +384,26 @@
       </form>
     </dialog>
 
+    <dialog class="dialog" id="carPaymentDialog">
+      <form class="stack-form" id="carPaymentForm" method="dialog">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Pagamento</p>
+            <h2 id="carPaymentTitle">Parcela do carro</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeCarPaymentButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <input name="paymentId" type="hidden">
+        <label class="money-label">Valor pago<input name="paidAmount" type="number" step="0.01" min="0" required></label>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="check"></i>
+          <span>Registrar pagamento</span>
+        </button>
+      </form>
+    </dialog>
+
     <dialog class="dialog" id="plannedDialog">
       <form class="stack-form" id="plannedForm" method="dialog">
         <div class="panel-heading">

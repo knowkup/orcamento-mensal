@@ -54,6 +54,10 @@ const el = {
   carTitle: document.querySelector("#carTitle"),
   carKpis: document.querySelector("#carKpis"),
   carTable: document.querySelector("#carTable"),
+  carPaymentDialog: document.querySelector("#carPaymentDialog"),
+  carPaymentForm: document.querySelector("#carPaymentForm"),
+  carPaymentTitle: document.querySelector("#carPaymentTitle"),
+  closeCarPaymentButton: document.querySelector("#closeCarPaymentButton"),
   fgtsForm: document.querySelector("#fgtsForm"),
   fgtsKpis: document.querySelector("#fgtsKpis"),
   fgtsTable: document.querySelector("#fgtsTable"),
@@ -94,6 +98,8 @@ function bindEvents() {
   el.fixedCostForm.addEventListener("submit", addFixedCost);
   el.settingsForm.addEventListener("submit", updateSettings);
   el.carForm.addEventListener("submit", updateCar);
+  el.carPaymentForm.addEventListener("submit", payCarInstallment);
+  el.closeCarPaymentButton.addEventListener("click", () => el.carPaymentDialog.close());
   el.fgtsForm.addEventListener("submit", addFgtsContract);
   el.creditorForm.addEventListener("submit", addCreditor);
   el.creditorForm.elements.logoFile.addEventListener("change", handleCreditorLogoUpload);
@@ -773,17 +779,23 @@ function renderCar() {
 
   const paid = car.payments.filter((item) => item.status === "Pago");
   const pending = car.payments.filter((item) => item.status !== "Pago");
-  const paidValue = paid.reduce((total, item) => total + Number(item.paidAmount || item.value), 0);
+  const financing = Number(car.monthly || 0) * Number(car.totalInstallments || 0);
+  const paidValue = paid.reduce((total, item) => total + Number(item.paidAmount || 0), 0);
   const pendingValue = pending.reduce((total, item) => total + Number(item.value), 0);
   const economy = paid.reduce((total, item) => total + Math.max(0, Number(item.value) - Number(item.paidAmount || item.value)), 0);
+  const realProjected = paidValue + pendingValue;
 
   el.carKpis.innerHTML = [
-    metric("Pagas", paid.length, "neutral", false),
-    metric("Pendentes", pending.length, "negative", false),
-    metric("Pago", paidValue, "positive"),
-    metric("Falta", -pendingValue, "negative"),
+    metric("Valor financiado", Number(car.financed || 0), "neutral"),
+    metric("Valor de compra", Number(car.purchase || 0), "neutral"),
+    metric("Financiamento", financing, "negative"),
+    metric("Real projetado", realProjected, "neutral"),
+    metric("Valor pago", paidValue, "positive"),
+    metric("Faltam", `${pending.length} parcelas`, "negative", false),
+    metric("Falta pagar", -pendingValue, "negative"),
     metric("Economia", economy, "positive")
   ].join("");
+  el.carKpis.insertAdjacentHTML("beforeend", carProgress(paid.length, car.payments.length));
 
   el.carTable.innerHTML = car.payments.length
     ? carDebtCard(car)
@@ -796,7 +808,7 @@ function renderCar() {
     });
   });
   el.carTable.querySelectorAll("[data-pay-car]").forEach((button) => {
-    button.addEventListener("click", () => payCarInstallment(button.dataset.payCar));
+    button.addEventListener("click", () => openCarPaymentDialog(button.dataset.payCar));
   });
 }
 
@@ -1081,11 +1093,23 @@ async function updateSettings(event) {
   await saveState("Ajustes salvos.");
 }
 
-async function payCarInstallment(id) {
+function openCarPaymentDialog(id) {
   const payment = state.data.car.payments.find((item) => item.id === id);
   if (!payment) return;
+  el.carPaymentTitle.textContent = `Parcela ${payment.number}/${state.data.car.payments.length}`;
+  el.carPaymentForm.elements.paymentId.value = payment.id;
+  el.carPaymentForm.elements.paidAmount.value = Number(payment.value || 0).toFixed(2);
+  el.carPaymentDialog.showModal();
+}
+
+async function payCarInstallment(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const payment = state.data.car.payments.find((item) => item.id === String(form.get("paymentId")));
+  if (!payment) return;
   payment.status = "Pago";
-  payment.paidAmount = payment.value;
+  payment.paidAmount = Number(form.get("paidAmount") || payment.value || 0);
+  el.carPaymentDialog.close();
   await saveState("Parcela do carro paga.");
 }
 
@@ -1589,6 +1613,17 @@ function carDebtCard(car) {
         </table>
       </div>
     </details>
+  `;
+}
+
+function carProgress(paid, total) {
+  const percent = total ? (paid / total) * 100 : 0;
+  return `
+    <article class="metric car-progress-card">
+      <span>Progresso</span>
+      <div class="progress-line"><span style="width:${percent}%"></span></div>
+      <strong>${percent.toFixed(2).replace(".", ",")}%</strong>
+    </article>
   `;
 }
 
