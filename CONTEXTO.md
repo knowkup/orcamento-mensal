@@ -191,3 +191,35 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Concluir configuracao de Auth e Firestore no console Firebase.
+
+## Atualizacao - 2026-05-24 11:55:00
+
+### Decisoes tomadas
+
+- Usuario informou que Firebase Authentication e Firestore Database foram criados.
+- Como a Firebase CLI nao esta instalada localmente, a publicacao das regras sera feita pelo Firebase Console.
+
+### Mudancas feitas
+
+- Nenhuma mudanca de codigo nesta etapa; apenas registro de progresso.
+
+### Backups criados
+
+- Nenhum backup criado; nao houve alteracao de codigo ou dados.
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `Get-Content -Raw firestore.rules`
+- `firebase --version`
+
+### Pendencias
+
+- Colar e publicar o conteudo de `firestore.rules` no Firebase Console.
+- Testar login Google no app.
+- Criar/conectar repositorio remoto GitHub.
+- Configurar GitHub Pages.
+
+### Proximos passos
+
+- Publicar regras do Firestore pelo console antes de inserir dados reais.
