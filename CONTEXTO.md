@@ -159,3 +159,35 @@ Data inicial: 2026-05-24
 
 - Validar o MVP com dados reais de teste, sem importar a planilha inteira ainda.
 - Depois conectar Firebase e GitHub Pages com a conta do usuario.
+
+## Atualizacao - 2026-05-24 11:49:49
+
+### Decisoes tomadas
+
+- Projeto Firebase criado pelo usuario: `orcamento-mensal-fdc1a`.
+- Configuracao Web App Firebase recebida do usuario e aplicada ao projeto.
+
+### Mudancas feitas
+
+- Atualizado `firebase-config.js` com `apiKey`, `authDomain`, `projectId`, `storageBucket`, `messagingSenderId`, `appId` e `measurementId`.
+
+### Backups criados
+
+- `backups/20260524-114949`
+
+### Comandos relevantes
+
+- `node --check app.js`
+- `node --check firebase-config.js`
+- `git diff --check`
+
+### Pendencias
+
+- Ativar Firebase Authentication com provedor Google.
+- Criar Firestore Database em modo producao.
+- Publicar `firestore.rules` no Firebase Console.
+- Testar login real no app depois que Auth e Firestore estiverem ativos.
+
+### Proximos passos
+
+- Concluir configuracao de Auth e Firestore no console Firebase.
