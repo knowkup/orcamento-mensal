@@ -853,3 +853,38 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Validar, commitar e fazer push.
+
+## Atualizacao - 2026-05-24 19:52:03
+
+### Decisoes tomadas
+
+- Em parcelamentos, a parcela 1 vence no mes seguinte ao mes da compra.
+- No Controle Mensal, entradas devem aparecer acima e saidas abaixo, nao lado a lado.
+- Saidas de parcelamentos devem exibir logo/nome do credor e rotulo por forma de pagamento + dono, por exemplo `Cartão de crédito - Kah`.
+- Itens da Kah devem aparecer primeiro e com fundo diferenciado tambem no Controle Mensal.
+
+### Mudancas feitas
+
+- Ajustado `installmentDueDate()` para somar um mes a partir da data de compra ja na parcela 1.
+- Controle Mensal passou a usar layout vertical: entradas acima, saidas abaixo.
+- Linhas de parcelamentos agora carregam `creditorId`, `paymentMethod`, dono e label mais claro.
+- Cards do Controle Mensal agora mostram logo do credor quando houver.
+- Itens da Kah no Controle Mensal recebem fundo diferenciado.
+- Ordenacao do Controle Mensal prioriza Kah.
+
+### Backups criados
+
+- `backups/20260524-195203`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `rg -n "renderMonthlyControl|monthlyItems|appendDynamicProjectionRows|groupKey|uniqueGroups|installmentDueDate|monthly-board|monthly-column|monthly-item|owner-kah|creditorLogoHtml" app.js styles.css`
+
+### Pendencias
+
+- Validar em producao o exemplo de compra em 11/09/2025 gerando parcela 1 em 11/10/2025.
+
+### Proximos passos
+
+- Validar, commitar e fazer push.

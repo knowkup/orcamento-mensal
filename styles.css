@@ -712,7 +712,7 @@ svg {
 
 .monthly-board {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 14px;
 }
 
@@ -766,6 +766,14 @@ svg {
 
 .monthly-item.done {
   background: rgba(53, 184, 121, 0.06);
+}
+
+.monthly-item.owner-kah-card {
+  background: #fff8e8;
+}
+
+.monthly-item.owner-kah-card.done {
+  background: #f5efd9;
 }
 
 .monthly-item strong,

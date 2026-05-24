@@ -391,16 +391,22 @@ function renderMonthlyControl() {
 
 function monthlyItems(items, month, kind) {
   if (!items.length) return `<div class="empty-state compact">Nada previsto para este mês.</div>`;
-  return items.map(({ row, value }) => {
+  return items
+    .sort((a, b) => ownerRank(a.row.owner) - ownerRank(b.row.owner))
+    .map(({ row, value }) => {
     const key = `${row.id}:${month}`;
     const done = kind === "income" ? isIncomeReceived(key) : isOccurrencePaid(key);
     const attr = kind === "income" ? `data-toggle-income="${key}"` : `data-pay-occurrence="${key}"`;
     const buttonLabel = kind === "income" ? (done ? "Recebido" : "Receber") : (done ? "Pago" : "Pagar");
+    const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : `<span class="creditor-logo">${escapeHtml(initials(row.origin || row.label))}</span>`;
     return `
-      <article class="monthly-item ${done ? "done" : ""}">
-        <div>
-          <strong>${escapeHtml(row.label)}</strong>
-          <span>${escapeHtml(row.origin || "-")}</span>
+      <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""}">
+        <div class="entity-cell">
+          ${marker}
+          <div>
+            <strong>${escapeHtml(row.label)}</strong>
+            <span>${escapeHtml(row.origin || "-")}</span>
+          </div>
         </div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(value)}</strong>
@@ -489,7 +495,17 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
       if (!keepPaidValues && isOccurrencePaid(key)) installmentValues[month] = 0;
     });
     if (Object.values(installmentValues).some(Boolean)) {
-      rows.push({ id: `auto-installments-${group.id}`, kind: "expense", owner: group.owner, label: `Parcelamentos (${group.paymentMethod})`, origin: getCreditorName(group.creditorId), sourceLabel: "", values: installmentValues });
+      rows.push({
+        id: `auto-installments-${group.id}`,
+        kind: "expense",
+        owner: group.owner,
+        creditorId: group.creditorId,
+        paymentMethod: group.paymentMethod,
+        label: `${group.paymentMethod} - ${group.owner}`,
+        origin: getCreditorName(group.creditorId),
+        sourceLabel: "",
+        values: installmentValues
+      });
     }
   });
 
@@ -1822,7 +1838,7 @@ function installmentDueDate(value, monthOffset) {
   if (!value) return "";
   const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
   if (!year || !month || !day) return "";
-  const date = new Date(year, month - 1 + monthOffset, day);
+  const date = new Date(year, month + monthOffset, day);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
