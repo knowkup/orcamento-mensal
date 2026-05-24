@@ -33,8 +33,18 @@ Data inicial: 2026-05-24
 ## Analise recebida da planilha
 
 - Arquivo na raiz: `Orçamento mensal.xlsx`.
+- Arquivos auxiliares colados pelo usuario em `files-mentioned-by-the-user-or/`:
+  - `orcamento_visible_analysis.json`: analise estrutural das abas visiveis.
+  - `orcamento_consistency.json`: consistencia, abas ocultas, validacoes, erros de formula, dependencias e amostras de faixas/formulas.
 - Analise previa considerou somente abas nao ocultas.
 - Abas visiveis mapeadas: `Dívida Cronologia`, `Parcelas`, `Custo Fixo`, `Jeep Compass` e `Ant.FGTS`.
+- O JSON de consistencia registra 28 abas ocultas, 5 abas visiveis, 1 erro de formula, 4 validacoes de lista e 50 amostras de formulas/faixas fixas.
+- Metricas das abas visiveis no JSON estrutural:
+  - `Dívida Cronologia`: 505 celulas preenchidas, 189 formulas.
+  - `Parcelas`: 555 celulas preenchidas, 373 formulas, 1 validacao.
+  - `Custo Fixo`: 182 celulas preenchidas, 4 formulas, 2 validacoes.
+  - `Jeep Compass`: 400 celulas preenchidas, 69 formulas, 1 validacao.
+  - `Ant.FGTS`: 214 celulas preenchidas, 48 formulas.
 - `Dívida Cronologia`: projecao mensal de entradas, custos fixos, parcelas e saldo; depende principalmente de `Parcelas` e `Custo Fixo`.
 - `Parcelas`: compras parceladas com origem, prazo, data, valor, parcelas pagas/faltantes, total pago, diferenca e progresso.
 - Totais em `Parcelas`: divida total R$ 19.269,45; valor pago R$ 13.358,96; falta pagar R$ 5.910,49; curto prazo R$ 3.974,64; medio prazo R$ 1.935,85; longo prazo R$ 0,00.
@@ -59,6 +69,7 @@ Data inicial: 2026-05-24
 - Criado commit inicial da estrutura do projeto.
 - Verificado que ainda nao existe remoto Git configurado; push nao executado.
 - Registrada analise previa da planilha como insumo de produto, sem iniciar desenvolvimento.
+- Lidos os JSONs auxiliares de analise apenas para registrar seu conteudo e utilidade no contexto; nenhum desenvolvimento iniciado.
 
 ## Backups criados
 
@@ -80,12 +91,14 @@ Data inicial: 2026-05-24
 - `git log --oneline -1`
 - `Get-Content -Raw CONTEXTO.md`
 - `Get-ChildItem -Force "files-mentioned-by-the-user-or"`
+- `ConvertFrom-Json` nos arquivos auxiliares para inspecionar estrutura e contagens principais.
 
 ## Pendencias
 
 - Configurar remoto GitHub quando existir.
 - Fazer push para `origin/main` quando o remoto estiver configurado.
 - Decidir posteriormente se a planilha existente deve ser versionada, migrada, importada ou mantida apenas como dado local.
+- Decidir posteriormente se os JSONs auxiliares devem ser versionados como documentacao tecnica ou mantidos apenas como referencia local.
 - Antes de prototipar, decidir se o uso sera local/pessoal ou acessivel pela internet/celular.
 - Antes de prototipar, decidir se a planilha sera fonte recorrente de importacao ou migracao unica.
 - Antes de prototipar, decidir se o sistema controlara pagamento real mes a mes ou apenas projecao.
