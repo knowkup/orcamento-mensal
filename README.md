@@ -2,7 +2,7 @@
 
 Aplicativo pessoal para controle mensal de orçamento, guiado pela lógica da planilha original.
 
-A tela principal é o **Controle Mensal**: uma projeção detalhada dos próximos meses, com entradas, saídas, compras planejadas, parcelas, custos fixos, carro, FGTS e saldo acumulado.
+A tela principal é o **Controle Mensal**: uma projeção detalhada dos próximos meses, com entradas, saídas, compras planejadas, parcelas, custos fixos, carro, FGTS, credores e saldo acumulado.
 
 ## Estrutura
 
@@ -31,6 +31,7 @@ Publique `firestore.rules` antes de usar dados reais.
 - Importar dados reais da planilha.
 - Melhorar a gestão completa do financiamento do carro.
 - Adicionar fluxo futuro de concluir financiamento e preparar um novo.
+- Importar e reconciliar os dados reais da planilha.
 
 ## Validação local
 

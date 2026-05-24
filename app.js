@@ -14,7 +14,9 @@ const state = {
   firestore: null,
   unsubscribe: null,
   firebaseReady: false,
-  saving: false
+  saving: false,
+  installmentFilter: "open",
+  carFilter: "open"
 };
 
 const el = {
@@ -29,6 +31,8 @@ const el = {
   importInput: document.querySelector("#importInput"),
   monthSummary: document.querySelector("#monthSummary"),
   projectionTable: document.querySelector("#projectionTable"),
+  projectionTopScroll: document.querySelector("#projectionTopScroll"),
+  projectionScroll: document.querySelector(".projection-scroll"),
   occurrenceList: document.querySelector("#occurrenceList"),
   installmentForm: document.querySelector("#installmentForm"),
   installmentsTable: document.querySelector("#installmentsTable"),
@@ -41,8 +45,9 @@ const el = {
   fgtsForm: document.querySelector("#fgtsForm"),
   fgtsKpis: document.querySelector("#fgtsKpis"),
   fgtsTable: document.querySelector("#fgtsTable"),
-  originForm: document.querySelector("#originForm"),
-  originList: document.querySelector("#originList"),
+  creditorForm: document.querySelector("#creditorForm"),
+  creditorList: document.querySelector("#creditorList"),
+  creditorLogoPreview: document.querySelector("#creditorLogoPreview"),
   plannedDialog: document.querySelector("#plannedDialog"),
   plannedForm: document.querySelector("#plannedForm"),
   addPlanButton: document.querySelector("#addPlanButton"),
@@ -69,10 +74,17 @@ function bindEvents() {
   el.fixedCostForm.addEventListener("submit", addFixedCost);
   el.carForm.addEventListener("submit", updateCar);
   el.fgtsForm.addEventListener("submit", addFgtsContract);
-  el.originForm.addEventListener("submit", addOrigin);
+  el.creditorForm.addEventListener("submit", addCreditor);
+  el.creditorForm.elements.logoFile.addEventListener("change", handleCreditorLogoUpload);
   el.addPlanButton.addEventListener("click", openPlannedDialog);
   el.closePlanButton.addEventListener("click", () => el.plannedDialog.close());
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
+  el.projectionTopScroll.addEventListener("scroll", () => {
+    el.projectionScroll.scrollLeft = el.projectionTopScroll.scrollLeft;
+  });
+  el.projectionScroll.addEventListener("scroll", () => {
+    el.projectionTopScroll.scrollLeft = el.projectionScroll.scrollLeft;
+  });
 }
 
 async function setupFirebase() {
@@ -94,6 +106,11 @@ async function setupFirebase() {
     state.db = firestoreSdk.getFirestore(app);
     state.firestore = firestoreSdk;
     state.firebaseReady = true;
+
+    authSdk.getRedirectResult(state.auth).catch((error) => {
+      console.error(error);
+      if (error.code === "auth/unauthorized-domain") showToast("Autorize kupka1988.github.io no Firebase Auth.");
+    });
 
     authSdk.onAuthStateChanged(state.auth, (user) => {
       state.user = user;
@@ -140,8 +157,20 @@ async function handleLoginToggle() {
     showToast("Você saiu.");
     return;
   }
-  const { signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
-  await signInWithPopup(state.auth, state.provider);
+  try {
+    const { signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
+    await signInWithPopup(state.auth, state.provider);
+  } catch (error) {
+    console.error(error);
+    const blockedCodes = ["auth/popup-blocked", "auth/popup-closed-by-user", "auth/unauthorized-domain"];
+    if (blockedCodes.includes(error.code)) {
+      showToast(error.code === "auth/unauthorized-domain" ? "Autorize o domínio no Firebase Auth." : "Abrindo login por redirecionamento.");
+      const { signInWithRedirect } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
+      await signInWithRedirect(state.auth, state.provider);
+      return;
+    }
+    showToast("Não consegui abrir o login Google.");
+  }
 }
 
 async function saveState(message) {
@@ -225,6 +254,7 @@ function renderProjection() {
     </thead>
     <tbody>${body}</tbody>
   `;
+  requestAnimationFrame(syncProjectionTopScroll);
 
   el.projectionTable.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
     button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
@@ -276,7 +306,7 @@ function buildProjectionRows(months) {
       id: line.id,
       kind: "expense",
       label: line.label,
-      origin: line.origin,
+      origin: line.creditorId ? getCreditorName(line.creditorId) : line.origin,
       sourceLabel: sourceLabel(line),
       values: valuesForProjectionLine(line, months)
     });
@@ -313,7 +343,7 @@ function valuesFromMonthlyMap(map, months) {
 
 function installmentTotal(origin, monthIndex) {
   return state.data.installments
-    .filter((item) => item.origin === origin && item.active !== false)
+    .filter((item) => item.creditorId === origin && item.active !== false)
     .reduce((total, item) => {
       const left = Math.max(0, Number(item.totalInstallments) - Number(item.paidInstallments));
       return monthIndex < left ? total + Number(item.amount) : total;
@@ -328,13 +358,13 @@ function fixedTotalByName(name) {
 
 function fixedTotalByOrigin(origin) {
   return state.data.fixedCosts
-    .filter((item) => item.includeInProjection !== false && item.payment === origin)
+    .filter((item) => item.includeInProjection !== false && item.creditorId === origin)
     .reduce((total, item) => total + Number(item.amount), 0);
 }
 
 function plannedTotal(origin, month) {
   return state.data.plannedPurchases
-    .filter((item) => item.origin === origin && item.month === month)
+    .filter((item) => item.creditorId === origin && item.month === month)
     .reduce((total, item) => total + Number(item.amount), 0);
 }
 
@@ -364,8 +394,9 @@ function buildTotals(rows, months) {
 }
 
 function projectionRow(row, months) {
+  const sectionClass = row.kind === "income" ? "income-row" : "expense-row";
   return `
-    <tr>
+    <tr class="${sectionClass}">
       <th class="sticky-col">
         <span>${escapeHtml(row.label)}</span>
         <small>${escapeHtml(row.sourceLabel)}</small>
@@ -415,45 +446,80 @@ function renderInstallments() {
     return acc;
   }, { total: 0, paid: 0, left: 0 });
 
+  const filtered = state.data.installments.filter((item) => {
+    const left = Math.max(0, item.totalInstallments - item.paidInstallments);
+    return state.installmentFilter === "paid" ? left === 0 : left > 0;
+  });
+
   el.installmentsTable.innerHTML = `
-    <thead><tr><th>Item</th><th>Origem</th><th>Valor</th><th>Pagas</th><th>Faltam</th><th>Ações</th></tr></thead>
+    <thead>
+      <tr><th colspan="6">${tabButtons("installment", state.installmentFilter)}</th></tr>
+      <tr><th>Item</th><th>Credor</th><th>Valor</th><th>Pagas</th><th>Faltam</th><th>Ações</th></tr>
+    </thead>
     <tbody>
       <tr class="summary-row"><td colspan="2">Total</td><td>${currency.format(totals.total)}</td><td>${currency.format(totals.paid)}</td><td>${currency.format(totals.left)}</td><td></td></tr>
-      ${state.data.installments.map((item) => {
+      ${filtered.map((item) => {
         const left = Math.max(0, item.totalInstallments - item.paidInstallments);
         return `<tr>
-          <td>${escapeHtml(item.item)}</td>
-          <td>${escapeHtml(item.origin)}</td>
+          <td>
+            <details>
+              <summary>${escapeHtml(item.item)}</summary>
+              <div class="detail-list">${installmentDetail(item)}</div>
+            </details>
+          </td>
+          <td>${creditorLogoHtml(item.creditorId)}${escapeHtml(getCreditorName(item.creditorId))}</td>
           <td>${currency.format(item.amount)}</td>
           <td>${item.paidInstallments}/${item.totalInstallments}</td>
           <td>${left}</td>
-          <td><button class="small-button pay" type="button" data-pay-installment="${item.id}" ${left ? "" : "disabled"}>Pagar próxima</button></td>
+          <td class="row-actions">
+            <button class="small-button pay" type="button" data-pay-installment="${item.id}" ${left ? "" : "disabled"}>Pagar próxima</button>
+            <button class="small-button" type="button" data-quit-installment="${item.id}" ${left ? "" : "disabled"}>Quitar</button>
+            <button class="small-button danger-mini" type="button" data-delete-installment="${item.id}">Excluir</button>
+          </td>
         </tr>`;
       }).join("")}
     </tbody>
   `;
 
+  el.installmentsTable.querySelectorAll("[data-installment-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.installmentFilter = button.dataset.installmentTab;
+      renderInstallments();
+    });
+  });
   el.installmentsTable.querySelectorAll("[data-pay-installment]").forEach((button) => {
     button.addEventListener("click", () => payInstallment(button.dataset.payInstallment));
+  });
+  el.installmentsTable.querySelectorAll("[data-quit-installment]").forEach((button) => {
+    button.addEventListener("click", () => quitInstallment(button.dataset.quitInstallment));
+  });
+  el.installmentsTable.querySelectorAll("[data-delete-installment]").forEach((button) => {
+    button.addEventListener("click", () => deleteInstallment(button.dataset.deleteInstallment));
   });
 }
 
 function renderFixedCosts() {
   el.fixedCostsTable.innerHTML = `
-    <thead><tr><th>Custo</th><th>Forma</th><th>Grupo</th><th>Venc.</th><th>Valor</th><th>Projeção</th></tr></thead>
+    <thead><tr><th>Custo</th><th>Credor</th><th>Método</th><th>Grupo</th><th>Venc.</th><th>Valor</th><th>Projeção</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.fixedCosts.map((item) => `
         <tr>
           <td>${escapeHtml(item.name)}</td>
-          <td>${escapeHtml(item.payment)}</td>
+          <td>${creditorLogoHtml(item.creditorId)}${escapeHtml(getCreditorName(item.creditorId))}</td>
+          <td>${escapeHtml(item.paymentMethod || "-")}</td>
           <td>${escapeHtml(item.group || "-")}</td>
           <td>${item.dueDay}</td>
           <td>${currency.format(item.amount)}</td>
           <td>${item.includeInProjection !== false ? "Sim" : "Não"}</td>
+          <td><button class="small-button danger-mini" type="button" data-delete-fixed="${item.id}">Excluir</button></td>
         </tr>
       `).join("")}
     </tbody>
   `;
+
+  el.fixedCostsTable.querySelectorAll("[data-delete-fixed]").forEach((button) => {
+    button.addEventListener("click", () => deleteFixedCost(button.dataset.deleteFixed));
+  });
 }
 
 function renderCar() {
@@ -467,6 +533,7 @@ function renderCar() {
 
   const paid = car.payments.filter((item) => item.status === "Pago");
   const pending = car.payments.filter((item) => item.status !== "Pago");
+  const visiblePayments = state.carFilter === "paid" ? paid : pending;
   const paidValue = paid.reduce((total, item) => total + Number(item.paidAmount || item.value), 0);
   const pendingValue = pending.reduce((total, item) => total + Number(item.value), 0);
   const economy = paid.reduce((total, item) => total + Math.max(0, Number(item.value) - Number(item.paidAmount || item.value)), 0);
@@ -480,9 +547,12 @@ function renderCar() {
   ].join("");
 
   el.carTable.innerHTML = `
-    <thead><tr><th>Parcela</th><th>Mês</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead>
+    <thead>
+      <tr><th colspan="6">${tabButtons("car", state.carFilter)}</th></tr>
+      <tr><th>Parcela</th><th>Mês</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ações</th></tr>
+    </thead>
     <tbody>
-      ${car.payments.map((item) => `
+      ${visiblePayments.map((item) => `
         <tr>
           <td>${item.number}/${car.totalInstallments}</td>
           <td>${formatMonth(item.month)}</td>
@@ -495,6 +565,12 @@ function renderCar() {
     </tbody>
   `;
 
+  el.carTable.querySelectorAll("[data-car-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.carFilter = button.dataset.carTab;
+      renderCar();
+    });
+  });
   el.carTable.querySelectorAll("[data-pay-car]").forEach((button) => {
     button.addEventListener("click", () => payCarInstallment(button.dataset.payCar));
   });
@@ -511,11 +587,28 @@ function renderFgts() {
   ].join("");
 
   el.fgtsTable.innerHTML = `
-    <thead><tr><th>Descrição</th><th>Contrato</th><th>Recebido</th><th>A pagar</th><th>Status</th></tr></thead>
+    <thead><tr><th>Empréstimo</th><th>Credor</th><th>Contrato</th><th>Recebido</th><th>A pagar</th><th>Status</th></tr></thead>
     <tbody>
       ${state.data.fgts.contracts.map((item) => `
         <tr>
-          <td>${escapeHtml(item.description)}</td>
+          <td>
+            <details>
+              <summary>${escapeHtml(item.description)}</summary>
+              <div class="detail-list">
+                ${fgtsAnnualPayments(item)}
+                <form class="inline-form mini-form" data-fgts-payment="${item.id}">
+                  <input name="year" type="number" min="2020" max="2040" placeholder="Ano" required>
+                  <input name="amount" type="number" min="0" step="0.01" placeholder="Valor" required>
+                  <button class="small-button pay" type="submit">Registrar</button>
+                </form>
+                <form class="inline-form mini-form" data-fgts-quit="${item.id}">
+                  <input name="amount" type="number" min="0" step="0.01" placeholder="Valor quitação" required>
+                  <button class="small-button" type="submit">Quitar</button>
+                </form>
+              </div>
+            </details>
+          </td>
+          <td>${creditorLogoHtml(item.creditorId)}${escapeHtml(getCreditorName(item.creditorId))}</td>
           <td>${escapeHtml(item.contract || "-")}</td>
           <td>${currency.format(item.received || 0)}</td>
           <td>${currency.format(item.toPay || 0)}</td>
@@ -524,16 +617,41 @@ function renderFgts() {
       `).join("")}
     </tbody>
   `;
+
+  el.fgtsTable.querySelectorAll("[data-fgts-payment]").forEach((form) => {
+    form.addEventListener("submit", addFgtsAnnualPayment);
+  });
+  el.fgtsTable.querySelectorAll("[data-fgts-quit]").forEach((form) => {
+    form.addEventListener("submit", quitFgtsContract);
+  });
 }
 
 function renderOrigins() {
-  el.originList.innerHTML = state.data.origins.map((origin) => `<span class="pill">${escapeHtml(origin)}</span>`).join("");
+  el.creditorList.innerHTML = state.data.creditors.map((creditor) => `
+    <div class="creditor-card">
+      ${creditorLogoHtml(creditor.id)}
+      <div>
+        <strong>${escapeHtml(creditor.name)}</strong>
+        <span>${escapeHtml(creditor.type)}</span>
+      </div>
+      <button class="small-button danger-mini" type="button" data-delete-creditor="${creditor.id}">Excluir</button>
+    </div>
+  `).join("");
+
+  el.creditorList.querySelectorAll("[data-delete-creditor]").forEach((button) => {
+    button.addEventListener("click", () => deleteCreditor(button.dataset.deleteCreditor));
+  });
 }
 
 function hydrateForms() {
-  document.querySelectorAll("[data-origin-select]").forEach((select) => {
+  document.querySelectorAll("[data-creditor-select]").forEach((select) => {
     const current = select.value;
-    select.innerHTML = state.data.origins.map((origin) => `<option value="${escapeHtml(origin)}">${escapeHtml(origin)}</option>`).join("");
+    select.innerHTML = state.data.creditors.map((creditor) => `<option value="${creditor.id}">${escapeHtml(creditor.name)}</option>`).join("");
+    if (current) select.value = current;
+  });
+  document.querySelectorAll("[data-payment-method-select]").forEach((select) => {
+    const current = select.value;
+    select.innerHTML = state.data.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
     if (current) select.value = current;
   });
   const start = nextMonths(1)[0];
@@ -546,7 +664,7 @@ async function addInstallment(event) {
   const item = {
     id: crypto.randomUUID(),
     item: String(form.get("item")).trim(),
-    origin: String(form.get("origin")),
+    creditorId: String(form.get("creditorId")),
     amount: Number(form.get("amount")),
     totalInstallments: Number(form.get("total")),
     paidInstallments: Number(form.get("paid") || 0),
@@ -565,13 +683,26 @@ async function payInstallment(id) {
   await saveState("Parcela paga.");
 }
 
+async function quitInstallment(id) {
+  const item = state.data.installments.find((entry) => entry.id === id);
+  if (!item) return;
+  item.paidInstallments = item.totalInstallments;
+  await saveState("Parcela quitada.");
+}
+
+async function deleteInstallment(id) {
+  state.data.installments = state.data.installments.filter((item) => item.id !== id);
+  await saveState("Parcela excluída.");
+}
+
 async function addFixedCost(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   state.data.fixedCosts.push({
     id: crypto.randomUUID(),
     name: String(form.get("name")).trim(),
-    payment: String(form.get("payment")),
+    creditorId: String(form.get("creditorId")),
+    paymentMethod: String(form.get("paymentMethod")),
     group: String(form.get("group") || "").trim(),
     dueDay: Number(form.get("dueDay")),
     amount: Number(form.get("amount")),
@@ -579,6 +710,11 @@ async function addFixedCost(event) {
   });
   event.currentTarget.reset();
   await saveState("Custo fixo cadastrado.");
+}
+
+async function deleteFixedCost(id) {
+  state.data.fixedCosts = state.data.fixedCosts.filter((item) => item.id !== id);
+  await saveState("Custo fixo excluído.");
 }
 
 async function updateCar(event) {
@@ -606,21 +742,95 @@ async function addFgtsContract(event) {
   state.data.fgts.contracts.push({
     id: crypto.randomUUID(),
     description: String(form.get("description")).trim(),
+    creditorId: String(form.get("creditorId")),
     contract: String(form.get("contract") || "").trim(),
     received: Number(form.get("received") || 0),
     toPay: Number(form.get("toPay") || 0),
-    status: "Ativo"
+    status: "Ativo",
+    annualPayments: []
   });
   event.currentTarget.reset();
   await saveState("Contrato FGTS cadastrado.");
 }
 
-async function addOrigin(event) {
+async function addFgtsAnnualPayment(event) {
   event.preventDefault();
-  const name = String(new FormData(event.currentTarget).get("name")).trim();
-  if (name && !state.data.origins.includes(name)) state.data.origins.push(name);
+  const contract = state.data.fgts.contracts.find((item) => item.id === event.currentTarget.dataset.fgtsPayment);
+  if (!contract) return;
+  const form = new FormData(event.currentTarget);
+  contract.annualPayments = contract.annualPayments || [];
+  contract.annualPayments.push({ year: Number(form.get("year")), amount: Number(form.get("amount")) });
+  await saveState("Pagamento FGTS registrado.");
+}
+
+async function quitFgtsContract(event) {
+  event.preventDefault();
+  const contract = state.data.fgts.contracts.find((item) => item.id === event.currentTarget.dataset.fgtsQuit);
+  if (!contract) return;
+  const form = new FormData(event.currentTarget);
+  contract.quitAmount = Number(form.get("amount"));
+  contract.status = "Quitado";
+  contract.toPay = 0;
+  await saveState("Empréstimo FGTS quitado.");
+}
+
+async function addCreditor(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const name = String(form.get("name")).trim();
+  if (!name) return;
+  const existing = state.data.creditors.find((creditor) => creditor.name.toLowerCase() === name.toLowerCase());
+  const payload = {
+    id: existing?.id || crypto.randomUUID(),
+    name,
+    type: String(form.get("type")),
+    logoUrl: String(form.get("logoUrl") || "")
+  };
+  if (existing) {
+    Object.assign(existing, payload);
+  } else {
+    state.data.creditors.push(payload);
+  }
   event.currentTarget.reset();
-  await saveState("Origem cadastrada.");
+  renderCreditorLogoPreview("");
+  await saveState(existing ? "Credor atualizado." : "Credor cadastrado.");
+}
+
+async function deleteCreditor(id) {
+  if (isCreditorInUse(id)) {
+    showToast("Este credor está vinculado a lançamentos.");
+    return;
+  }
+  state.data.creditors = state.data.creditors.filter((creditor) => creditor.id !== id);
+  await saveState("Credor excluído.");
+}
+
+function isCreditorInUse(id) {
+  return state.data.installments.some((item) => item.creditorId === id)
+    || state.data.fixedCosts.some((item) => item.creditorId === id)
+    || state.data.plannedPurchases.some((item) => item.creditorId === id)
+    || state.data.fgts.contracts.some((item) => item.creditorId === id)
+    || state.data.projectionLines.some((item) => item.creditorId === id || item.match === id);
+}
+
+function handleCreditorLogoUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 250 * 1024) {
+    showToast("Use uma logo menor, até 250 KB.");
+    event.target.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    el.creditorForm.elements.logoUrl.value = String(reader.result || "");
+    renderCreditorLogoPreview(el.creditorForm.elements.logoUrl.value);
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderCreditorLogoPreview(src) {
+  el.creditorLogoPreview.innerHTML = src ? `<img alt="Logo" src="${escapeHtml(src)}">` : "CR";
 }
 
 function openPlannedDialog() {
@@ -634,7 +844,7 @@ async function addPlannedPurchase(event) {
   state.data.plannedPurchases.push({
     id: crypto.randomUUID(),
     description: String(form.get("description")).trim(),
-    origin: String(form.get("origin")),
+    creditorId: String(form.get("creditorId")),
     month: String(form.get("month")),
     amount: Number(form.get("amount"))
   });
@@ -698,23 +908,39 @@ function persistLocalState(write = true) {
 }
 
 function normalizeData(data) {
+  const defaults = createDefaultData();
+  const creditors = data.creditors || defaults.creditors;
+  const creditorByName = new Map(creditors.map((creditor) => [creditor.name, creditor.id]));
   return {
-    ...createDefaultData(),
+    ...defaults,
     ...data,
-    origins: data.origins || createDefaultData().origins,
-    incomeLines: data.incomeLines || createDefaultData().incomeLines,
-    projectionLines: data.projectionLines || createDefaultData().projectionLines,
-    installments: data.installments || [],
-    fixedCosts: data.fixedCosts || [],
-    plannedPurchases: data.plannedPurchases || [],
+    creditors,
+    paymentMethods: data.paymentMethods || defaults.paymentMethods,
+    incomeLines: data.incomeLines || defaults.incomeLines,
+    projectionLines: (data.projectionLines || defaults.projectionLines).map((line) => ({
+      ...line,
+      match: creditorByName.get(line.match) || line.match,
+      creditorId: line.creditorId || creditorByName.get(line.origin) || null
+    })),
+    installments: (data.installments || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
+    fixedCosts: (data.fixedCosts || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.payment) || item.payment, paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" })),
+    plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
     paidOccurrences: data.paidOccurrences || [],
-    car: { ...createDefaultData().car, ...(data.car || {}) },
-    fgts: { ...createDefaultData().fgts, ...(data.fgts || {}) }
+    car: { ...defaults.car, ...(data.car || {}) },
+    fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditorByName.get("Santander") || creditors[0]?.id })) }
   };
 }
 
 function createDefaultData() {
   const months = nextMonths(12);
+  const paidCarPayments = previousMonths(12).map((month, index) => ({
+    id: `car-paid-${index + 1}`,
+    number: index + 1,
+    month,
+    value: 3621.12,
+    paidAmount: 3621.12,
+    status: "Pago"
+  }));
   const carPayments = months.map((month, index) => ({
     id: `car-${index + 13}`,
     number: index + 13,
@@ -727,7 +953,16 @@ function createDefaultData() {
   return {
     schemaVersion: 2,
     initialBalance: 320.19,
-    origins: ["Santander", "Nubank", "Itaú Click", "Itaú Kah", "PIX", "Boleto", "Sicredi", "Grazziotin"],
+    paymentMethods: ["PIX", "Débito em conta", "Cartão de crédito", "Boleto"],
+    creditors: [
+      { id: "cred-santander", name: "Santander", type: "Cartão de crédito", logoUrl: "" },
+      { id: "cred-nubank", name: "Nubank", type: "Cartão de crédito", logoUrl: "" },
+      { id: "cred-itau-click", name: "Itaú Click", type: "Cartão de crédito", logoUrl: "" },
+      { id: "cred-itau-kah", name: "Itaú Kah", type: "Cartão de crédito", logoUrl: "" },
+      { id: "cred-grazziotin", name: "Grazziotin", type: "Cartão de crédito", logoUrl: "" },
+      { id: "cred-sicredi", name: "Sicredi", type: "Empréstimo", logoUrl: "" },
+      { id: "cred-jeep", name: "Jeep Compass", type: "Financiamento", logoUrl: "" }
+    ],
     incomeLines: [
       { id: "income-salary", label: "ATP Salário", origin: "Santander", values: { default: 11159.48 } },
       { id: "income-rent", label: "Aluguel Matheus", origin: "Santander", values: { default: 900 } },
@@ -736,17 +971,17 @@ function createDefaultData() {
       { id: "income-other", label: "Outros / rolagem", origin: "Santander", values: { [months[0]]: 10750, [months[1]]: 2500, [months[2]]: 2500 } }
     ],
     projectionLines: [
-      { id: "line-itau-click", label: "Itaú Click", origin: "Débito Itaú Kah", source: "installments", match: "Itaú Click" },
-      { id: "line-grazziotin", label: "Grazziotin", origin: "PIX", source: "installments", match: "Grazziotin" },
+      { id: "line-itau-click", label: "Itaú Click", origin: "Débito Itaú Kah", creditorId: "cred-itau-click", source: "installments", match: "cred-itau-click" },
+      { id: "line-grazziotin", label: "Grazziotin", origin: "PIX", creditorId: "cred-grazziotin", source: "installments", match: "cred-grazziotin" },
       { id: "line-diff-kah", label: "Diferença Kah (limite dela)", origin: "-", source: "difference", limit: 1000, subtractLineIds: ["line-itau-click", "line-grazziotin"] },
       { id: "line-agua", label: "Água - Semae", origin: "Boleto", source: "fixedByName", match: "Água - Semae" },
       { id: "line-inter-kah", label: "Inter Kah", origin: "Boleto", source: "manual", monthlyAmount: 667.13 },
       { id: "line-jeep", label: "Carro", origin: "Boleto", source: "car" },
       { id: "line-claro", label: "Claro/NET", origin: "Débito Itaú Kah", source: "fixedByName", match: "Claro/NET" },
       { id: "line-juvo", label: "Juvo", origin: "Boleto", source: "manual", monthlyAmount: 851.66 },
-      { id: "line-nubank-parcelas", label: "Parcelas (Nubank)", origin: "Nubank", source: "installments", match: "Nubank" },
-      { id: "line-nubank-fixo", label: "Custo Fixo (Nubank)", origin: "Nubank", source: "fixedByOrigin", match: "Nubank" },
-      { id: "line-nubank-compras", label: "Compras Gerais (Nubank)", origin: "Nubank", source: "planned", match: "Nubank" },
+      { id: "line-nubank-parcelas", label: "Parcelas (Nubank)", origin: "Nubank", creditorId: "cred-nubank", source: "installments", match: "cred-nubank" },
+      { id: "line-nubank-fixo", label: "Custo Fixo (Nubank)", origin: "Nubank", creditorId: "cred-nubank", source: "fixedByOrigin", match: "cred-nubank" },
+      { id: "line-nubank-compras", label: "Compras Gerais (Nubank)", origin: "Nubank", creditorId: "cred-nubank", source: "planned", match: "cred-nubank" },
       { id: "line-luz", label: "Luz - RGE", origin: "PIX", source: "fixedByName", match: "Luz - RGE" },
       { id: "line-unimed", label: "Unimed VS", origin: "Boleto", source: "manual", monthlyAmount: 1400 },
       { id: "line-mei-kah", label: "MEI Kahramelos", origin: "PIX", source: "fixedByName", match: "MEI Kahramelos" },
@@ -755,26 +990,26 @@ function createDefaultData() {
       { id: "line-mercado-emprestimo", label: "Mercado Pago EmpréstimoK", origin: "Boleto", source: "manual", monthlyAmount: 306.38 }
     ],
     installments: [
-      { id: "par-1", item: "Amazon", origin: "Itaú Click", amount: 94.67, totalInstallments: 12, paidInstallments: 6, active: true },
-      { id: "par-2", item: "Curso Kah (Ventosa)", origin: "Itaú Click", amount: 124.91, totalInstallments: 12, paidInstallments: 8, active: true },
-      { id: "par-3", item: "Notebook Dell", origin: "Santander", amount: 469.08, totalInstallments: 12, paidInstallments: 9, active: true },
-      { id: "par-4", item: "Amazon (Shampos)", origin: "Nubank", amount: 32.52, totalInstallments: 4, paidInstallments: 3, active: true }
+      { id: "par-1", item: "Amazon", creditorId: "cred-itau-click", amount: 94.67, totalInstallments: 12, paidInstallments: 6, active: true },
+      { id: "par-2", item: "Curso Kah (Ventosa)", creditorId: "cred-itau-click", amount: 124.91, totalInstallments: 12, paidInstallments: 8, active: true },
+      { id: "par-3", item: "Notebook Dell", creditorId: "cred-santander", amount: 469.08, totalInstallments: 12, paidInstallments: 9, active: true },
+      { id: "par-4", item: "Amazon (Shampos)", creditorId: "cred-nubank", amount: 32.52, totalInstallments: 4, paidInstallments: 3, active: true }
     ],
     fixedCosts: [
-      { id: "fix-1", name: "Claro/NET", payment: "Itaú Kah", group: "Residência", dueDay: 10, amount: 193.28, includeInProjection: true },
-      { id: "fix-2", name: "Google GSUITE", payment: "Nubank", group: "Kupka", dueDay: 1, amount: 40.9, includeInProjection: true },
-      { id: "fix-3", name: "Spotify", payment: "Nubank", group: "Streaming", dueDay: 5, amount: 31.9, includeInProjection: true },
-      { id: "fix-4", name: "Netflix", payment: "Nubank", group: "Streaming", dueDay: 9, amount: 44.9, includeInProjection: true },
-      { id: "fix-5", name: "Barbeiro", payment: "Nubank", group: "Cuidados", dueDay: 20, amount: 230, includeInProjection: true },
-      { id: "fix-6", name: "ChatGPT", payment: "Nubank", group: "Kupka", dueDay: 25, amount: 125, includeInProjection: true },
-      { id: "fix-7", name: "Água - Semae", payment: "PIX", group: "Residência", dueDay: 15, amount: 160, includeInProjection: true },
-      { id: "fix-8", name: "Luz - RGE", payment: "PIX", group: "Residência", dueDay: 13, amount: 1079.52, includeInProjection: true },
-      { id: "fix-9", name: "MEI Kahramelos", payment: "PIX", group: "Kahramelos", dueDay: 20, amount: 81.9, includeInProjection: true },
-      { id: "fix-10", name: "Luz - RGE - Kah", payment: "PIX", group: "Residência", dueDay: 28, amount: 130, includeInProjection: true }
+      { id: "fix-1", name: "Claro/NET", creditorId: "cred-itau-kah", paymentMethod: "Débito em conta", group: "Residência", dueDay: 10, amount: 193.28, includeInProjection: true },
+      { id: "fix-2", name: "Google GSUITE", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Kupka", dueDay: 1, amount: 40.9, includeInProjection: true },
+      { id: "fix-3", name: "Spotify", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Streaming", dueDay: 5, amount: 31.9, includeInProjection: true },
+      { id: "fix-4", name: "Netflix", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Streaming", dueDay: 9, amount: 44.9, includeInProjection: true },
+      { id: "fix-5", name: "Barbeiro", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Cuidados", dueDay: 20, amount: 230, includeInProjection: true },
+      { id: "fix-6", name: "ChatGPT", creditorId: "cred-nubank", paymentMethod: "Cartão de crédito", group: "Kupka", dueDay: 25, amount: 125, includeInProjection: true },
+      { id: "fix-7", name: "Água - Semae", creditorId: "cred-santander", paymentMethod: "PIX", group: "Residência", dueDay: 15, amount: 160, includeInProjection: true },
+      { id: "fix-8", name: "Luz - RGE", creditorId: "cred-santander", paymentMethod: "PIX", group: "Residência", dueDay: 13, amount: 1079.52, includeInProjection: true },
+      { id: "fix-9", name: "MEI Kahramelos", creditorId: "cred-santander", paymentMethod: "PIX", group: "Kahramelos", dueDay: 20, amount: 81.9, includeInProjection: true },
+      { id: "fix-10", name: "Luz - RGE - Kah", creditorId: "cred-santander", paymentMethod: "PIX", group: "Residência", dueDay: 28, amount: 130, includeInProjection: true }
     ],
     plannedPurchases: [
-      { id: "plan-1", description: "Compras gerais", origin: "Nubank", month: months[0], amount: 653.38 },
-      { id: "plan-2", description: "Compras gerais", origin: "Nubank", month: months[1], amount: 2000 }
+      { id: "plan-1", description: "Compras gerais", creditorId: "cred-nubank", month: months[0], amount: 653.38 },
+      { id: "plan-2", description: "Compras gerais", creditorId: "cred-nubank", month: months[1], amount: 2000 }
     ],
     paidOccurrences: [],
     car: {
@@ -783,16 +1018,16 @@ function createDefaultData() {
       purchase: 133900,
       monthly: 3621.12,
       totalInstallments: 60,
-      payments: carPayments
+      payments: [...paidCarPayments, ...carPayments]
     },
     fgts: {
       balance: 58647.21,
       blocked: 46495.03,
       available: 12152.18,
       contracts: [
-        { id: "fgts-1", description: "FGTS 01", contract: "5645599532", received: 3709.43, toPay: 4274.54, status: "Ativo" },
-        { id: "fgts-2", description: "FGTS 02", contract: "5665960713", received: 3280.93, toPay: 3280.93, status: "Ativo" },
-        { id: "fgts-3", description: "FGTS 03", contract: "Santander", received: 4662.34, toPay: 4081.53, status: "Ativo" }
+        { id: "fgts-1", description: "FGTS 01", creditorId: "cred-santander", contract: "5645599532", received: 3709.43, toPay: 4274.54, status: "Ativo", annualPayments: [] },
+        { id: "fgts-2", description: "FGTS 02", creditorId: "cred-santander", contract: "5665960713", received: 3280.93, toPay: 3280.93, status: "Ativo", annualPayments: [] },
+        { id: "fgts-3", description: "FGTS 03", creditorId: "cred-santander", contract: "Santander", received: 4662.34, toPay: 4081.53, status: "Ativo", annualPayments: [] }
       ]
     }
   };
@@ -820,10 +1055,70 @@ function sourceLabel(line) {
   return labels[line.source] || "projeção";
 }
 
+function tabButtons(prefix, active) {
+  const attr = prefix === "car" ? "data-car-tab" : "data-installment-tab";
+  return `
+    <div class="segmented">
+      <button class="segment ${active === "open" ? "active" : ""}" type="button" ${attr}="open">Pendentes</button>
+      <button class="segment ${active === "paid" ? "active" : ""}" type="button" ${attr}="paid">Pagas</button>
+    </div>
+  `;
+}
+
+function installmentDetail(item) {
+  return Array.from({ length: item.totalInstallments }, (_, index) => {
+    const paid = index < item.paidInstallments;
+    return `<span class="detail-pill ${paid ? "ok" : "warn"}">${index + 1}/${item.totalInstallments} · ${paid ? "Paga" : "Pendente"} · ${currency.format(item.amount)}</span>`;
+  }).join("");
+}
+
+function fgtsAnnualPayments(contract) {
+  const payments = contract.annualPayments || [];
+  if (!payments.length) return `<div class="empty-state compact">Nenhum pagamento anual registrado.</div>`;
+  return payments
+    .map((payment) => `<span class="detail-pill ok">${payment.year} · ${currency.format(payment.amount)}</span>`)
+    .join("");
+}
+
+function getCreditorName(id) {
+  return state.data.creditors.find((creditor) => creditor.id === id)?.name || id || "Credor";
+}
+
+function getCreditor(id) {
+  return state.data.creditors.find((creditor) => creditor.id === id) || null;
+}
+
+function initials(value) {
+  return String(value || "?").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+}
+
+function creditorLogoHtml(id) {
+  const creditor = getCreditor(id);
+  const name = creditor?.name || id || "?";
+  if (creditor?.logoUrl) {
+    return `<span class="creditor-logo"><img alt="${escapeHtml(name)}" src="${escapeHtml(creditor.logoUrl)}"></span>`;
+  }
+  return `<span class="creditor-logo">${escapeHtml(initials(name))}</span>`;
+}
+
+function syncProjectionTopScroll() {
+  if (!el.projectionTable || !el.projectionTopScroll) return;
+  const inner = el.projectionTopScroll.firstElementChild;
+  if (inner) inner.style.width = `${el.projectionTable.scrollWidth}px`;
+}
+
 function nextMonths(count) {
   const now = new Date();
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(now.getFullYear(), now.getMonth() + index + 1, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  });
+}
+
+function previousMonths(count) {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() - count + index + 1, 1);
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   });
 }

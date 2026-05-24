@@ -411,3 +411,52 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Fazer commit e push para producao.
+
+## Atualizacao - 2026-05-24 14:47:47
+
+### Decisoes tomadas
+
+- Usuario reportou que o botao `Entrar` nao abre login Google.
+- `Origens` em Ajustes estava conceitualmente errado; deve virar cadastro de `Credores`.
+- Credor deve permitir tipo: emprestimo, debito em conta, financiamento, cartao de credito ou outro.
+- Credor pode ter logo, inspirado no projeto `Rota Financeira (Dívidas)`.
+- `Forma` em custos fixos deve ser metodo de pagamento: PIX, debito em conta, cartao de credito ou boleto.
+- Custos fixos, parcelas e FGTS devem se vincular a credores.
+- Parcelas e Carro precisam separar pendentes e pagas.
+- FGTS precisa permitir expandir contrato, registrar pagamentos anuais e quitar por valor informado.
+- Controle Mensal precisa separar visualmente entradas/saidas e melhorar rolagem horizontal.
+
+### Mudancas feitas
+
+- Ajustado login Google com tratamento de erro e fallback para redirecionamento.
+- Criado cadastro de credores com tipo e upload de logo pequena.
+- Substituidos selects de origem por selects de credor.
+- Adicionado metodo de pagamento em custos fixos.
+- Adicionada exclusao de custos fixos e parcelas.
+- Adicionadas abas pendentes/pagas em parcelas e carro.
+- Adicionada expansao de parcelas para ver parcelas pagas/pendentes.
+- Adicionada expansao de emprestimos FGTS com pagamentos anuais e acao de quitacao.
+- Adicionada rolagem horizontal superior no Controle Mensal.
+- Melhorada separacao visual entre entradas e saidas no Controle Mensal.
+- Consultado projeto `Rota Financeira (Dívidas)` para inspiracao de credores/logos.
+
+### Backups criados
+
+- `backups/20260524-144747`
+
+### Comandos relevantes
+
+- `rg -n "credor|Credor|config|Config|logo|Logo" "C:\\Users\\felip\\OneDrive\\Documentos\\14. Sistemas Kupka\\Rota Financeira (Dívidas)"`
+- `node --check app.js`
+- `git diff --check`
+- Validacao estatica de seletores `id` usados pelo JavaScript.
+
+### Pendencias
+
+- Validar login em producao. Se aparecer erro `auth/unauthorized-domain`, adicionar `kupka1988.github.io` em Firebase Authentication > Settings > Authorized domains.
+- Validar fluxo real no Firebase com dados do usuario.
+- Ajustar modelo de credores/tipos conforme uso real.
+
+### Proximos passos
+
+- Fazer commit e push para producao.

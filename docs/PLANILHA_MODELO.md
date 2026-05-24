@@ -338,7 +338,9 @@ Exemplos:
 
 O sistema precisa ter estes conceitos antes de qualquer tela bonita:
 
-- `Origem` ou `Conta`: Nubank, Santander, Itaú Click, Itaú Kah, PIX, Boleto, Sicredi etc.
+- `Credor`: Nubank, Santander, Itaú Click, Itaú Kah, Sicredi, bancos/lojas/contratos. Pode ter tipo e logo.
+- `Tipo de credor`: cartão de crédito, empréstimo, débito em conta, financiamento ou outro.
+- `Método de pagamento`: PIX, débito em conta, cartão de crédito ou boleto.
 - `Linha de Projecao`: uma linha que aparece na tela principal, com regra propria.
 - `Ocorrencia Mensal`: valor que aparece em um mes especifico.
 - `Parcela`: compra parcelada que gera ocorrencias futuras.
@@ -359,7 +361,7 @@ Primeiro MVP correto deve reproduzir o fluxo da planilha, mesmo que simples:
 6. Linha de saldo acumulado.
 7. Cadastro de parcelas separado, com origem/cartao.
 8. Parcelas alimentando automaticamente a linha/origem correspondente na projecao.
-9. Cadastro de custos fixos separado.
+9. Cadastro de custos fixos separado, ligado a um credor e a um método de pagamento.
 10. Custos fixos alimentando a projecao por regra explicita.
 11. Compras planejadas editaveis direto por mes na projecao.
 12. Baixa simples por ocorrencia.
