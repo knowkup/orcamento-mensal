@@ -32,10 +32,12 @@ const el = {
   exportButton: document.querySelector("#exportButton"),
   importInput: document.querySelector("#importInput"),
   monthSummary: document.querySelector("#monthSummary"),
+  monthlySummary: document.querySelector("#monthlySummary"),
+  planningChart: document.querySelector("#planningChart"),
   projectionTable: document.querySelector("#projectionTable"),
   projectionTopScroll: document.querySelector("#projectionTopScroll"),
   projectionScroll: document.querySelector(".projection-scroll"),
-  occurrenceList: document.querySelector("#occurrenceList"),
+  monthlyBoard: document.querySelector("#monthlyBoard"),
   installmentForm: document.querySelector("#installmentForm"),
   installmentsTable: document.querySelector("#installmentsTable"),
   fixedCostForm: document.querySelector("#fixedCostForm"),
@@ -218,7 +220,7 @@ function showView(name) {
 
 function render() {
   renderProjection();
-  renderOccurrences();
+  renderMonthlyControl();
   renderInstallments();
   renderFixedCosts();
   renderCar();
@@ -239,6 +241,7 @@ function renderProjection() {
     metric("Sobra do mês", current.balance, current.balance >= 0 ? "positive" : "negative"),
     metric("Saldo acumulado", current.accumulated, current.accumulated >= 0 ? "positive" : "negative")
   ].join("");
+  renderPlanningChart(totals, months);
 
   const monthHeaders = months.map((month) => `<th>${formatMonth(month)}</th>`).join("");
   const body = [
@@ -263,13 +266,9 @@ function renderProjection() {
     <tbody>${body}</tbody>
   `;
   requestAnimationFrame(syncProjectionTopScroll);
-
-  el.projectionTable.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
-    button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
-  });
 }
 
-function renderOccurrences() {
+function renderOccurrencesLegacy() {
   const month = nextMonths(1)[0];
   const rows = buildProjectionRows([month]).filter((row) => row.kind === "expense");
   const occurrences = rows
@@ -296,7 +295,77 @@ function renderOccurrences() {
   });
 }
 
-function buildProjectionRows(months) {
+function renderMonthlyControl() {
+  const month = nextMonths(1)[0];
+  const rows = buildProjectionRows([month], true);
+  const entries = rows
+    .filter((row) => row.kind === "income")
+    .map((row) => ({ row, value: row.values[month] || 0 }))
+    .filter((item) => item.value > 0);
+  const exits = rows
+    .filter((row) => row.kind === "expense")
+    .map((row) => ({ row, value: row.values[month] || 0 }))
+    .filter((item) => item.value > 0 || isOccurrencePaid(`${item.row.id}:${month}`));
+  const received = entries.reduce((total, item) => total + (isIncomeReceived(`${item.row.id}:${month}`) ? item.value : 0), 0);
+  const paid = exits.reduce((total, item) => total + (isOccurrencePaid(`${item.row.id}:${month}`) ? item.value : 0), 0);
+  const expectedIncome = entries.reduce((total, item) => total + item.value, 0);
+  const expectedExpense = exits.reduce((total, item) => total + item.value, 0);
+
+  el.monthlySummary.innerHTML = [
+    metric("Previsto entrar", expectedIncome, "positive"),
+    metric("Já recebido", received, "positive"),
+    metric("Previsto sair", -expectedExpense, "negative"),
+    metric("Já pago", -paid, "negative")
+  ].join("");
+
+  el.monthlyBoard.innerHTML = `
+    <section class="monthly-column income-column">
+      <div class="monthly-column-head">
+        <span>Entradas previstas</span>
+        <strong>${currency.format(expectedIncome)}</strong>
+      </div>
+      ${monthlyItems(entries, month, "income")}
+    </section>
+    <section class="monthly-column expense-column">
+      <div class="monthly-column-head">
+        <span>Saídas previstas</span>
+        <strong>-${currency.format(expectedExpense)}</strong>
+      </div>
+      ${monthlyItems(exits, month, "expense")}
+    </section>
+  `;
+
+  el.monthlyBoard.querySelectorAll("[data-toggle-income]").forEach((button) => {
+    button.addEventListener("click", () => toggleReceivedOccurrence(button.dataset.toggleIncome));
+  });
+  el.monthlyBoard.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
+    button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
+  });
+}
+
+function monthlyItems(items, month, kind) {
+  if (!items.length) return `<div class="empty-state compact">Nada previsto para este mês.</div>`;
+  return items.map(({ row, value }) => {
+    const key = `${row.id}:${month}`;
+    const done = kind === "income" ? isIncomeReceived(key) : isOccurrencePaid(key);
+    const attr = kind === "income" ? `data-toggle-income="${key}"` : `data-pay-occurrence="${key}"`;
+    const buttonLabel = kind === "income" ? (done ? "Recebido" : "Receber") : (done ? "Pago" : "Pagar");
+    return `
+      <article class="monthly-item ${done ? "done" : ""}">
+        <div>
+          <strong>${escapeHtml(row.label)}</strong>
+          <span>${escapeHtml(row.origin || "-")} · ${row.sourceLabel}</span>
+        </div>
+        <div class="monthly-item-action">
+          <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(value)}</strong>
+          <button class="small-button ${kind === "expense" ? "pay" : ""}" type="button" ${attr}>${buttonLabel}</button>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+function buildProjectionRows(months, keepPaidValues = false) {
   const rows = [];
   state.data.incomeLines.forEach((line) => {
     rows.push({
@@ -316,14 +385,14 @@ function buildProjectionRows(months) {
       label: line.label,
       origin: line.creditorId ? getCreditorName(line.creditorId) : line.origin,
       sourceLabel: sourceLabel(line),
-      values: valuesForProjectionLine(line, months)
+      values: valuesForProjectionLine(line, months, keepPaidValues)
     });
   });
 
   return rows;
 }
 
-function valuesForProjectionLine(line, months) {
+function valuesForProjectionLine(line, months, keepPaidValues = false) {
   const values = {};
   months.forEach((month, index) => {
     let value = 0;
@@ -334,7 +403,7 @@ function valuesForProjectionLine(line, months) {
     if (line.source === "manual") value = line.values?.[month] ?? line.monthlyAmount ?? 0;
     if (line.source === "car") value = carValueForMonth(month);
     if (line.source === "difference") value = differenceValue(line, months, month, index);
-    if (isOccurrencePaid(`${line.id}:${month}`)) value = 0;
+    if (!keepPaidValues && isOccurrencePaid(`${line.id}:${month}`)) value = 0;
     values[month] = value;
   });
   return values;
@@ -422,10 +491,8 @@ function projectionCell(row, month) {
   if (!value && !paid) return `<td class="muted-cell">-</td>`;
   const sign = row.kind === "income" ? "" : "-";
   const className = row.kind === "income" ? "positive" : "negative";
-  const payButton = row.kind === "expense"
-    ? `<button class="cell-pay ${paid ? "paid" : ""}" type="button" data-pay-occurrence="${key}" title="${paid ? "Reabrir" : "Pagar"}">${paid ? "Pago" : "Pagar"}</button>`
-    : "";
-  return `<td><span class="${className}">${sign}${currency.format(value)}</span>${payButton}</td>`;
+  const status = paid && row.kind === "expense" ? `<small class="cell-status">pago no controle</small>` : "";
+  return `<td><span class="${className}">${sign}${currency.format(value)}</span>${status}</td>`;
 }
 
 function groupRow(label, monthsCount) {
@@ -443,6 +510,37 @@ function totalRow(label, months, getter, tone) {
         return `<td><strong class="${className}">${currency.format(value)}</strong></td>`;
       }).join("")}
     </tr>
+  `;
+}
+
+function renderPlanningChart(totals, months) {
+  const maxValue = Math.max(
+    1,
+    ...totals.flatMap((item) => [Math.abs(item.income), Math.abs(item.expense), Math.abs(item.balance)])
+  );
+  el.planningChart.innerHTML = `
+    <div class="chart-legend">
+      <span><i class="legend-dot income"></i>Entradas</span>
+      <span><i class="legend-dot expense"></i>Saídas</span>
+      <span><i class="legend-dot balance"></i>Saldo</span>
+    </div>
+    <div class="bar-chart">
+      ${totals.map((item, index) => {
+        const incomeHeight = Math.max(4, (item.income / maxValue) * 150);
+        const expenseHeight = Math.max(4, (item.expense / maxValue) * 150);
+        const balanceHeight = Math.max(4, (Math.abs(item.balance) / maxValue) * 150);
+        return `
+          <div class="bar-month">
+            <div class="bar-stack" title="${formatMonth(months[index])}">
+              <span class="bar income" style="height:${incomeHeight}px"></span>
+              <span class="bar expense" style="height:${expenseHeight}px"></span>
+              <span class="bar balance ${item.balance < 0 ? "negative-bar" : ""}" style="height:${balanceHeight}px"></span>
+            </div>
+            <strong>${formatMonth(months[index])}</strong>
+          </div>
+        `;
+      }).join("")}
+    </div>
   `;
 }
 
@@ -998,6 +1096,21 @@ function isOccurrencePaid(key) {
   return (state.data.paidOccurrences || []).includes(key);
 }
 
+async function toggleReceivedOccurrence(key) {
+  const received = state.data.receivedOccurrences || [];
+  if (received.includes(key)) {
+    state.data.receivedOccurrences = received.filter((item) => item !== key);
+    await saveState("Entrada marcada como prevista.");
+  } else {
+    state.data.receivedOccurrences = [...received, key];
+    await saveState("Entrada recebida.");
+  }
+}
+
+function isIncomeReceived(key) {
+  return (state.data.receivedOccurrences || []).includes(key);
+}
+
 function exportState() {
   const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -1056,6 +1169,7 @@ function normalizeData(data) {
     fixedCosts: (data.fixedCosts || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.payment) || item.payment, paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" })),
     plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
     paidOccurrences: data.paidOccurrences || [],
+    receivedOccurrences: data.receivedOccurrences || [],
     car: { ...defaults.car, ...(data.car || {}) },
     fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditorByName.get("Santander") || creditors[0]?.id })) }
   };
@@ -1142,6 +1256,7 @@ function createDefaultData() {
       { id: "plan-2", description: "Compras gerais", creditorId: "cred-nubank", month: months[1], amount: 2000 }
     ],
     paidOccurrences: [],
+    receivedOccurrences: [],
     car: {
       name: "Jeep Compass",
       financed: 107981,

@@ -19,8 +19,12 @@
         </div>
 
         <nav class="nav-tabs" aria-label="Seções">
-          <button class="nav-tab active" type="button" data-view="controle">
-            <i data-lucide="table-2"></i>
+          <button class="nav-tab active" type="button" data-view="planejamento">
+            <i data-lucide="chart-column"></i>
+            <span>Planejamento</span>
+          </button>
+          <button class="nav-tab" type="button" data-view="controle">
+            <i data-lucide="check-square"></i>
             <span>Controle Mensal</span>
           </button>
           <button class="nav-tab" type="button" data-view="parcelas">
@@ -58,7 +62,7 @@
         <header class="topbar">
           <div>
             <p class="eyebrow">Planilha, só que segura</p>
-            <h1 id="viewTitle">Controle Mensal</h1>
+            <h1 id="viewTitle">Planejamento</h1>
           </div>
           <div class="topbar-actions">
             <button class="icon-button" type="button" id="exportButton" title="Exportar backup">
@@ -75,14 +79,24 @@
           </div>
         </header>
 
-        <section class="view active" id="controleView" data-title="Controle Mensal">
+        <section class="view active" id="planejamentoView" data-title="Planejamento">
           <div class="month-summary" id="monthSummary"></div>
+
+          <section class="panel chart-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Visão futura</p>
+                <h2>Resumo dos próximos 12 meses</h2>
+              </div>
+            </div>
+            <div class="planning-chart" id="planningChart"></div>
+          </section>
 
           <section class="panel projection-panel">
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Próximos 12 meses</p>
-                <h2>Entradas, saídas e sobra acumulada</h2>
+                <h2>Entradas, saídas e saldo projetado</h2>
               </div>
               <button class="ghost-button" type="button" id="addPlanButton">
                 <i data-lucide="plus"></i>
@@ -94,15 +108,18 @@
               <table class="projection-table" id="projectionTable"></table>
             </div>
           </section>
+        </section>
 
+        <section class="view" id="controleView" data-title="Controle Mensal">
+          <div class="month-summary" id="monthlySummary"></div>
           <section class="panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Baixas rápidas</p>
-                <h2>Ocorrências do mês</h2>
+                <p class="eyebrow">Mês atual</p>
+                <h2>Receber e pagar o previsto</h2>
               </div>
             </div>
-            <div class="occurrence-list" id="occurrenceList"></div>
+            <div class="monthly-board" id="monthlyBoard"></div>
           </section>
         </section>
 
@@ -167,7 +184,7 @@
                 <label>Valor<input name="amount" type="number" step="0.01" min="0" required></label>
                 <label class="check-row">
                   <input name="includeInProjection" type="checkbox" checked>
-                  <span>Entrar no Controle Mensal quando houver linha compatível</span>
+                  <span>Entrar no Planejamento quando houver linha compatível</span>
                 </label>
                 <button class="primary-button full" type="submit">
                   <i data-lucide="plus"></i>

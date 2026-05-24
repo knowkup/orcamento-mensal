@@ -506,3 +506,48 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Fazer commit e push desta rodada.
+
+## Atualizacao - 2026-05-24 15:25:12
+
+### Decisoes tomadas
+
+- A tela que mostra o futuro deixa de ser `Controle Mensal` e passa a ser `Planejamento`.
+- `Planejamento` deve ser uma visao de simulacao/projecao, sem botoes de pagar.
+- Criar uma nova tela `Controle Mensal` para a rotina do mes atual.
+- No `Controle Mensal`, o usuario marca entradas como recebidas e saidas como pagas.
+- Ao marcar uma saida como paga no `Controle Mensal`, ela sai da projecao do `Planejamento`, preservando a logica atual da planilha de remover/deletar o valor do futuro.
+- O planejamento deve mostrar sempre uma janela movel de 12 meses com grafico de barras.
+
+### Mudancas feitas
+
+- Renomeada a visao principal para `Planejamento`.
+- Adicionada nova aba `Controle Mensal`.
+- Removidos botoes de pagar da tabela de planejamento.
+- Adicionado grafico de barras para os proximos 12 meses, comparando entradas, saidas e saldo.
+- Criado painel operacional mensal com colunas `Entradas previstas` e `Saidas previstas`.
+- Adicionada marcacao de entrada recebida com `receivedOccurrences`.
+- Mantida a marcacao de saida paga com `paidOccurrences`, agora centralizada no `Controle Mensal`.
+- Ajustados textos para `Planejamento` onde antes falavam `Controle Mensal`.
+- Ajustado menu mobile para comportar sete abas.
+
+### Backups criados
+
+- `backups/20260524-152512`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `node --check app.js` usando runtime empacotado do Codex.
+- `git diff --check`
+- Validacao estatica de seletores `id` usados pelo JavaScript.
+- `Invoke-WebRequest http://127.0.0.1:4897/index.html`
+
+### Pendencias
+
+- Validar visualmente em producao se os nomes `Planejamento` e `Controle Mensal` ficaram naturais.
+- Refinar visual do grafico se o usuario quiser algo ainda mais parecido com a referencia enviada.
+- O navegador interno do Codex continuou indisponivel para QA visual automatizado nesta sessao.
+
+### Proximos passos
+
+- Fazer commit e push desta rodada.
