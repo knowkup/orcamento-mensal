@@ -1,0 +1,11 @@
+backups/
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Dependencias locais, caso sejam adicionadas futuramente
+node_modules/
