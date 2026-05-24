@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Orçamento Mensal</title>
+    <meta name="description" content="Controle financeiro pessoal com projeção mensal e sincronização Firebase.">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegação principal">
+        <div class="brand">
+          <span class="brand-mark">OM</span>
+          <div>
+            <strong>Orçamento Mensal</strong>
+            <span>Projeção financeira</span>
+          </div>
+        </div>
+
+        <nav class="nav-tabs" aria-label="Seções">
+          <button class="nav-tab active" type="button" data-view="dashboard">
+            <i data-lucide="layout-dashboard"></i>
+            <span>Visão</span>
+          </button>
+          <button class="nav-tab" type="button" data-view="projection">
+            <i data-lucide="calendar-range"></i>
+            <span>Projeção</span>
+          </button>
+          <button class="nav-tab" type="button" data-view="items">
+            <i data-lucide="list-checks"></i>
+            <span>Itens</span>
+          </button>
+          <button class="nav-tab" type="button" data-view="settings">
+            <i data-lucide="settings"></i>
+            <span>Ajustes</span>
+          </button>
+        </nav>
+
+        <div class="sync-panel" id="syncPanel">
+          <span class="sync-dot offline"></span>
+          <div>
+            <strong id="syncTitle">Modo demonstração</strong>
+            <span id="syncText">Configure Firebase para sincronizar.</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Seu futuro financeiro</p>
+            <h1 id="viewTitle">Visão do mês</h1>
+          </div>
+          <div class="topbar-actions">
+            <button class="icon-button" type="button" id="exportButton" title="Exportar backup">
+              <i data-lucide="download"></i>
+            </button>
+            <label class="icon-button file-action" title="Importar backup">
+              <i data-lucide="upload"></i>
+              <input type="file" id="importInput" accept="application/json">
+            </label>
+            <button class="primary-button" type="button" id="loginButton">
+              <i data-lucide="log-in"></i>
+              <span>Entrar</span>
+            </button>
+          </div>
+        </header>
+
+        <section class="view active" id="dashboardView" data-title="Visão do mês">
+          <div class="summary-grid">
+            <article class="metric">
+              <span>Entra no mês</span>
+              <strong id="incomeMetric">R$ 0,00</strong>
+            </article>
+            <article class="metric danger">
+              <span>Sai no mês</span>
+              <strong id="expenseMetric">R$ 0,00</strong>
+            </article>
+            <article class="metric" id="balanceMetricCard">
+              <span>Sobra prevista</span>
+              <strong id="balanceMetric">R$ 0,00</strong>
+            </article>
+            <article class="metric">
+              <span>Meses em alerta</span>
+              <strong id="alertMetric">0</strong>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <section class="panel wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Próximos 6 meses</p>
+                  <h2>Quando melhora</h2>
+                </div>
+                <button class="ghost-button" type="button" data-view-link="projection">
+                  <i data-lucide="arrow-right"></i>
+                  <span>Ver projeção</span>
+                </button>
+              </div>
+              <div class="timeline" id="dashboardTimeline"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Agora</p>
+                  <h2>Próximos pagamentos</h2>
+                </div>
+              </div>
+              <div class="item-list compact" id="upcomingList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="projectionView" data-title="Projeção">
+          <section class="panel">
+            <div class="panel-heading projection-heading">
+              <div>
+                <p class="eyebrow">Linha do tempo</p>
+                <h2>Próximos meses</h2>
+              </div>
+              <div class="segmented" role="group" aria-label="Período da projeção">
+                <button class="segment active" type="button" data-month-count="6">6</button>
+                <button class="segment" type="button" data-month-count="12">12</button>
+                <button class="segment" type="button" data-month-count="18">18</button>
+              </div>
+            </div>
+            <div class="projection-list" id="projectionList"></div>
+          </section>
+        </section>
+
+        <section class="view" id="itemsView" data-title="Itens financeiros">
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Novo item</p>
+                  <h2>Lançar futuro</h2>
+                </div>
+              </div>
+              <form class="item-form" id="itemForm">
+                <label>
+                  Nome
+                  <input name="name" type="text" placeholder="Ex.: 13º salário" required>
+                </label>
+                <div class="form-row">
+                  <label>
+                    Tipo
+                    <select name="type">
+                      <option value="income">Entrada</option>
+                      <option value="fixed">Custo fixo</option>
+                      <option value="installment">Parcela</option>
+                      <option value="event">Evento</option>
+                    </select>
+                  </label>
+                  <label>
+                    Valor
+                    <input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required>
+                  </label>
+                </div>
+                <div class="form-row">
+                  <label>
+                    Mês inicial
+                    <input name="startMonth" type="month" required>
+                  </label>
+                  <label>
+                    Repetição
+                    <select name="recurrence">
+                      <option value="once">Uma vez</option>
+                      <option value="monthly">Todo mês</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="form-row">
+                  <label>
+                    Parcelas
+                    <input name="installments" type="number" min="1" step="1" value="1">
+                  </label>
+                  <label>
+                    Grupo
+                    <input name="category" type="text" placeholder="Ex.: Casa">
+                  </label>
+                </div>
+                <button class="primary-button full" type="submit">
+                  <i data-lucide="plus"></i>
+                  <span>Adicionar</span>
+                </button>
+              </form>
+            </section>
+
+            <section class="panel wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Controle simples</p>
+                  <h2>Pendentes e pagos</h2>
+                </div>
+              </div>
+              <div class="filters" role="group" aria-label="Filtro de itens">
+                <button class="filter active" type="button" data-filter="open">Pendentes</button>
+                <button class="filter" type="button" data-filter="paid">Pagos</button>
+                <button class="filter" type="button" data-filter="all">Todos</button>
+              </div>
+              <div class="item-list" id="itemsList"></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="settingsView" data-title="Ajustes">
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Firebase</p>
+                  <h2>Sincronização</h2>
+                </div>
+              </div>
+              <div class="settings-copy">
+                <p>Para sincronizar entre computador e iPhone, preencha `firebase-config.js` com as chaves do seu projeto Firebase e publique as regras do `firestore.rules`.</p>
+                <p>Enquanto isso, o app usa dados de demonstração neste navegador.</p>
+              </div>
+              <button class="ghost-button" type="button" id="copyRulesButton">
+                <i data-lucide="shield-check"></i>
+                <span>Copiar caminho das regras</span>
+              </button>
+            </section>
+
+            <section class="panel wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Modelo</p>
+                  <h2>Como os dados ficam</h2>
+                </div>
+              </div>
+              <div class="data-model">
+                <code>users/{uid}/items/{itemId}</code>
+                <span>Cada usuário enxerga somente seus próprios lançamentos.</span>
+              </div>
+              <div class="data-model">
+                <code>items.paidOccurrences</code>
+                <span>Marcar como pago remove a ocorrência da projeção pendente sem apagar histórico.</span>
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>

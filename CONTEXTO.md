@@ -113,3 +113,49 @@ Data inicial: 2026-05-24
 - Configurar o remoto GitHub `origin` quando o repositorio existir.
 - Fazer push para `origin/main` apos configurar o remoto.
 - Aguardar autorizacao explicita antes de iniciar qualquer desenvolvimento.
+
+## Atualizacao - 2026-05-24 11:43:22
+
+### Decisoes tomadas
+
+- Desenvolvimento autorizado pelo usuario nesta conversa.
+- MVP inicial sera um app web estatico preparado para GitHub Pages e Firebase.
+- Firebase sera usado para sincronizacao entre computadores e iPhone.
+- A experiencia inicial prioriza web desktop responsiva; mobile completo pode ser refinado em etapa seguinte.
+- Dados financeiros locais sensiveis (`*.xlsx`, `*.csv`, JSONs auxiliares e backups) nao devem ser publicados no GitHub por padrao.
+
+### Mudancas feitas
+
+- Criado `index.html` com a estrutura do app.
+- Criado `styles.css` com identidade visual clara e premium financeiro.
+- Criado `app.js` com dashboard, projecao, itens, adicionar item, marcar pagamento, desfazer pagamento, exportar/importar JSON e integracao Firebase preparada.
+- Criado `firebase-config.js` com campos vazios para a configuracao do projeto Firebase.
+- Criado `firestore.rules` com regra por usuario autenticado: `users/{uid}/...`.
+- Criado `README.md` com estrutura e orientacao Firebase.
+- Criado `.nojekyll` para compatibilidade com GitHub Pages.
+- Atualizado `.gitignore` para evitar versionamento acidental da planilha, CSVs, JSONs auxiliares, backups e saidas de teste.
+
+### Backups criados
+
+- `backups/20260524-113457`
+
+### Comandos relevantes
+
+- `node --check app.js` usando Node empacotado do Codex.
+- `git diff --check`
+- `Start-Process ... python -m http.server 4897 --bind 127.0.0.1`
+- Teste local no navegador em `http://127.0.0.1:4897/`.
+
+### Pendencias
+
+- Criar/configurar o projeto Firebase na conta do usuario.
+- Preencher `firebase-config.js` com as credenciais publicas do Web App Firebase.
+- Publicar `firestore.rules` no Firebase antes de usar dados reais.
+- Criar ou conectar repositorio remoto no GitHub.
+- Configurar GitHub Pages para publicar a branch `main` pela raiz do repositorio.
+- Refinar mobile em uma etapa dedicada apos validar a experiencia web principal.
+
+### Proximos passos
+
+- Validar o MVP com dados reais de teste, sem importar a planilha inteira ainda.
+- Depois conectar Firebase e GitHub Pages com a conta do usuario.

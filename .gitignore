@@ -1,4 +1,11 @@
 backups/
+files-mentioned-by-the-user-or/
+
+# Dados financeiros locais
+*.xlsx
+*.xls
+*.csv
+*.tsv
 
 # Sistema operacional
 .DS_Store
@@ -9,3 +16,6 @@ Thumbs.db
 
 # Dependencias locais, caso sejam adicionadas futuramente
 node_modules/
+
+# Saidas temporarias de testes
+playwright-*.png
