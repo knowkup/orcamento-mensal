@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Orçamento Mensal</title>
-    <meta name="description" content="Controle financeiro pessoal com projeção mensal e sincronização Firebase.">
+    <meta name="description" content="Controle mensal financeiro com projeção detalhada, parcelas, custos fixos, carro e FGTS.">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -14,34 +14,42 @@
           <span class="brand-mark">OM</span>
           <div>
             <strong>Orçamento Mensal</strong>
-            <span>Projeção financeira</span>
+            <span>Controle do futuro</span>
           </div>
         </div>
 
         <nav class="nav-tabs" aria-label="Seções">
-          <button class="nav-tab active" type="button" data-view="dashboard">
-            <i data-lucide="layout-dashboard"></i>
-            <span>Visão</span>
+          <button class="nav-tab active" type="button" data-view="controle">
+            <i data-lucide="table-2"></i>
+            <span>Controle Mensal</span>
           </button>
-          <button class="nav-tab" type="button" data-view="projection">
-            <i data-lucide="calendar-range"></i>
-            <span>Projeção</span>
+          <button class="nav-tab" type="button" data-view="parcelas">
+            <i data-lucide="credit-card"></i>
+            <span>Parcelas</span>
           </button>
-          <button class="nav-tab" type="button" data-view="items">
-            <i data-lucide="list-checks"></i>
-            <span>Itens</span>
+          <button class="nav-tab" type="button" data-view="custos">
+            <i data-lucide="repeat-2"></i>
+            <span>Custos Fixos</span>
           </button>
-          <button class="nav-tab" type="button" data-view="settings">
+          <button class="nav-tab" type="button" data-view="carro">
+            <i data-lucide="car"></i>
+            <span>Carro</span>
+          </button>
+          <button class="nav-tab" type="button" data-view="fgts">
+            <i data-lucide="landmark"></i>
+            <span>FGTS</span>
+          </button>
+          <button class="nav-tab" type="button" data-view="ajustes">
             <i data-lucide="settings"></i>
             <span>Ajustes</span>
           </button>
         </nav>
 
-        <div class="sync-panel" id="syncPanel">
+        <div class="sync-panel">
           <span class="sync-dot offline"></span>
           <div>
-            <strong id="syncTitle">Modo demonstração</strong>
-            <span id="syncText">Configure Firebase para sincronizar.</span>
+            <strong id="syncTitle">Carregando</strong>
+            <span id="syncText">Preparando dados.</span>
           </div>
         </div>
       </aside>
@@ -49,8 +57,8 @@
       <main class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Seu futuro financeiro</p>
-            <h1 id="viewTitle">Visão do mês</h1>
+            <p class="eyebrow">Planilha, só que segura</p>
+            <h1 id="viewTitle">Controle Mensal</h1>
           </div>
           <div class="topbar-actions">
             <button class="icon-button" type="button" id="exportButton" title="Exportar backup">
@@ -67,125 +75,59 @@
           </div>
         </header>
 
-        <section class="view active" id="dashboardView" data-title="Visão do mês">
-          <div class="summary-grid">
-            <article class="metric">
-              <span>Entra no mês</span>
-              <strong id="incomeMetric">R$ 0,00</strong>
-            </article>
-            <article class="metric danger">
-              <span>Sai no mês</span>
-              <strong id="expenseMetric">R$ 0,00</strong>
-            </article>
-            <article class="metric" id="balanceMetricCard">
-              <span>Sobra prevista</span>
-              <strong id="balanceMetric">R$ 0,00</strong>
-            </article>
-            <article class="metric">
-              <span>Meses em alerta</span>
-              <strong id="alertMetric">0</strong>
-            </article>
-          </div>
+        <section class="view active" id="controleView" data-title="Controle Mensal">
+          <div class="month-summary" id="monthSummary"></div>
 
-          <div class="content-grid">
-            <section class="panel wide">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Próximos 6 meses</p>
-                  <h2>Quando melhora</h2>
-                </div>
-                <button class="ghost-button" type="button" data-view-link="projection">
-                  <i data-lucide="arrow-right"></i>
-                  <span>Ver projeção</span>
-                </button>
-              </div>
-              <div class="timeline" id="dashboardTimeline"></div>
-            </section>
-
-            <section class="panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Agora</p>
-                  <h2>Próximos pagamentos</h2>
-                </div>
-              </div>
-              <div class="item-list compact" id="upcomingList"></div>
-            </section>
-          </div>
-        </section>
-
-        <section class="view" id="projectionView" data-title="Projeção">
-          <section class="panel">
-            <div class="panel-heading projection-heading">
+          <section class="panel projection-panel">
+            <div class="panel-heading">
               <div>
-                <p class="eyebrow">Linha do tempo</p>
-                <h2>Próximos meses</h2>
+                <p class="eyebrow">Próximos 12 meses</p>
+                <h2>Entradas, saídas e sobra acumulada</h2>
               </div>
-              <div class="segmented" role="group" aria-label="Período da projeção">
-                <button class="segment active" type="button" data-month-count="6">6</button>
-                <button class="segment" type="button" data-month-count="12">12</button>
-                <button class="segment" type="button" data-month-count="18">18</button>
+              <button class="ghost-button" type="button" id="addPlanButton">
+                <i data-lucide="plus"></i>
+                <span>Compra planejada</span>
+              </button>
+            </div>
+            <div class="projection-scroll">
+              <table class="projection-table" id="projectionTable"></table>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Baixas rápidas</p>
+                <h2>Ocorrências do mês</h2>
               </div>
             </div>
-            <div class="projection-list" id="projectionList"></div>
+            <div class="occurrence-list" id="occurrenceList"></div>
           </section>
         </section>
 
-        <section class="view" id="itemsView" data-title="Itens financeiros">
+        <section class="view" id="parcelasView" data-title="Parcelas">
           <div class="content-grid">
             <section class="panel">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Novo item</p>
-                  <h2>Lançar futuro</h2>
+                  <p class="eyebrow">Cartão / origem</p>
+                  <h2>Nova parcela</h2>
                 </div>
               </div>
-              <form class="item-form" id="itemForm">
-                <label>
-                  Nome
-                  <input name="name" type="text" placeholder="Ex.: 13º salário" required>
-                </label>
+              <form class="stack-form" id="installmentForm">
+                <label>Item<input name="item" required placeholder="Ex.: Amazon"></label>
+                <label>Origem<select name="origin" data-origin-select></select></label>
                 <div class="form-row">
-                  <label>
-                    Tipo
-                    <select name="type">
-                      <option value="income">Entrada</option>
-                      <option value="fixed">Custo fixo</option>
-                      <option value="installment">Parcela</option>
-                      <option value="event">Evento</option>
-                    </select>
-                  </label>
-                  <label>
-                    Valor
-                    <input name="amount" type="number" min="0" step="0.01" placeholder="0,00" required>
-                  </label>
+                  <label>Valor da parcela<input name="amount" type="number" step="0.01" min="0" required></label>
+                  <label>Total parcelas<input name="total" type="number" step="1" min="1" required></label>
                 </div>
                 <div class="form-row">
-                  <label>
-                    Mês inicial
-                    <input name="startMonth" type="month" required>
-                  </label>
-                  <label>
-                    Repetição
-                    <select name="recurrence">
-                      <option value="once">Uma vez</option>
-                      <option value="monthly">Todo mês</option>
-                    </select>
-                  </label>
-                </div>
-                <div class="form-row">
-                  <label>
-                    Parcelas
-                    <input name="installments" type="number" min="1" step="1" value="1">
-                  </label>
-                  <label>
-                    Grupo
-                    <input name="category" type="text" placeholder="Ex.: Casa">
-                  </label>
+                  <label>Pagas<input name="paid" type="number" step="1" min="0" value="0"></label>
+                  <label>Data compra<input name="date" type="date"></label>
                 </div>
                 <button class="primary-button full" type="submit">
                   <i data-lucide="plus"></i>
-                  <span>Adicionar</span>
+                  <span>Cadastrar parcela</span>
                 </button>
               </form>
             </section>
@@ -193,59 +135,197 @@
             <section class="panel wide">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Controle simples</p>
-                  <h2>Pendentes e pagos</h2>
+                  <p class="eyebrow">Controle geral</p>
+                  <h2>Parcelas por cartão</h2>
                 </div>
               </div>
-              <div class="filters" role="group" aria-label="Filtro de itens">
-                <button class="filter active" type="button" data-filter="open">Pendentes</button>
-                <button class="filter" type="button" data-filter="paid">Pagos</button>
-                <button class="filter" type="button" data-filter="all">Todos</button>
+              <div class="table-wrap">
+                <table class="data-table" id="installmentsTable"></table>
               </div>
-              <div class="item-list" id="itemsList"></div>
             </section>
           </div>
         </section>
 
-        <section class="view" id="settingsView" data-title="Ajustes">
+        <section class="view" id="custosView" data-title="Custos Fixos">
           <div class="content-grid">
             <section class="panel">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Firebase</p>
-                  <h2>Sincronização</h2>
+                  <p class="eyebrow">Recorrente</p>
+                  <h2>Novo custo fixo</h2>
                 </div>
               </div>
-              <div class="settings-copy">
-                <p>Para sincronizar entre computador e iPhone, preencha `firebase-config.js` com as chaves do seu projeto Firebase e publique as regras do `firestore.rules`.</p>
-                <p>Enquanto isso, o app usa dados de demonstração neste navegador.</p>
-              </div>
-              <button class="ghost-button" type="button" id="copyRulesButton">
-                <i data-lucide="shield-check"></i>
-                <span>Copiar caminho das regras</span>
-              </button>
+              <form class="stack-form" id="fixedCostForm">
+                <label>Custo<input name="name" required placeholder="Ex.: Netflix"></label>
+                <label>Forma de pagamento<select name="payment" data-origin-select></select></label>
+                <div class="form-row">
+                  <label>Grupo<input name="group" placeholder="Ex.: Streaming"></label>
+                  <label>Vencimento<input name="dueDay" type="number" min="1" max="31" required></label>
+                </div>
+                <label>Valor<input name="amount" type="number" step="0.01" min="0" required></label>
+                <label class="check-row">
+                  <input name="includeInProjection" type="checkbox" checked>
+                  <span>Entrar no Controle Mensal quando houver linha compatível</span>
+                </label>
+                <button class="primary-button full" type="submit">
+                  <i data-lucide="plus"></i>
+                  <span>Cadastrar custo</span>
+                </button>
+              </form>
             </section>
 
             <section class="panel wide">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Modelo</p>
-                  <h2>Como os dados ficam</h2>
+                  <p class="eyebrow">Cadastro</p>
+                  <h2>Custos por origem</h2>
                 </div>
               </div>
-              <div class="data-model">
-                <code>users/{uid}/items/{itemId}</code>
-                <span>Cada usuário enxerga somente seus próprios lançamentos.</span>
+              <div class="table-wrap">
+                <table class="data-table" id="fixedCostsTable"></table>
               </div>
-              <div class="data-model">
-                <code>items.paidOccurrences</code>
-                <span>Marcar como pago remove a ocorrência da projeção pendente sem apagar histórico.</span>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="carroView" data-title="Carro">
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Financiamento</p>
+                  <h2 id="carTitle">Carro</h2>
+                </div>
+              </div>
+              <div class="finance-kpis" id="carKpis"></div>
+              <form class="stack-form" id="carForm">
+                <label>Nome do carro<input name="name" required></label>
+                <div class="form-row">
+                  <label>Valor financiado<input name="financed" type="number" step="0.01" min="0"></label>
+                  <label>Valor compra<input name="purchase" type="number" step="0.01" min="0"></label>
+                </div>
+                <div class="form-row">
+                  <label>Parcela padrão<input name="monthly" type="number" step="0.01" min="0"></label>
+                  <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
+                </div>
+                <button class="ghost-button full" type="submit">
+                  <i data-lucide="save"></i>
+                  <span>Atualizar cadastro</span>
+                </button>
+                <button class="danger-button full" type="button" disabled title="Roadmap: encerrar e preparar novo financiamento">
+                  <i data-lucide="archive"></i>
+                  <span>Concluir financiamento</span>
+                </button>
+              </form>
+            </section>
+
+            <section class="panel wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Parcelas</p>
+                  <h2>Gestão do financiamento</h2>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table" id="carTable"></table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="fgtsView" data-title="FGTS">
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Antecipações</p>
+                  <h2>Novo contrato</h2>
+                </div>
+              </div>
+              <form class="stack-form" id="fgtsForm">
+                <label>Descrição<input name="description" required placeholder="Ex.: FGTS 06"></label>
+                <label>Contrato<input name="contract" placeholder="Número ou banco"></label>
+                <div class="form-row">
+                  <label>Recebido<input name="received" type="number" step="0.01" min="0"></label>
+                  <label>A pagar<input name="toPay" type="number" step="0.01" min="0"></label>
+                </div>
+                <button class="primary-button full" type="submit">
+                  <i data-lucide="plus"></i>
+                  <span>Cadastrar contrato</span>
+                </button>
+              </form>
+            </section>
+
+            <section class="panel wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Resumo</p>
+                  <h2>FGTS bloqueado e contratos</h2>
+                </div>
+              </div>
+              <div class="finance-kpis" id="fgtsKpis"></div>
+              <div class="table-wrap">
+                <table class="data-table" id="fgtsTable"></table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" id="ajustesView" data-title="Ajustes">
+          <div class="content-grid">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Origens</p>
+                  <h2>Cartões e formas</h2>
+                </div>
+              </div>
+              <form class="inline-form" id="originForm">
+                <input name="name" required placeholder="Nova origem">
+                <button class="primary-button" type="submit">
+                  <i data-lucide="plus"></i>
+                </button>
+              </form>
+              <div class="pill-list" id="originList"></div>
+            </section>
+
+            <section class="panel wide">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Dados</p>
+                  <h2>Sincronização e backup</h2>
+                </div>
+              </div>
+              <div class="settings-copy">
+                <p>Os dados ficam em `users/{uid}/app/state` no Firestore quando você entra com Google.</p>
+                <p>O botão de exportar gera um backup JSON do estado atual.</p>
               </div>
             </section>
           </div>
         </section>
       </main>
     </div>
+
+    <dialog class="dialog" id="plannedDialog">
+      <form class="stack-form" id="plannedForm" method="dialog">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Simulação</p>
+            <h2>Compra planejada</h2>
+          </div>
+          <button class="icon-button" type="button" id="closePlanButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Descrição<input name="description" required placeholder="Ex.: compras gerais"></label>
+        <div class="form-row">
+          <label>Origem<select name="origin" data-origin-select></select></label>
+          <label>Mês<input name="month" type="month" required></label>
+        </div>
+        <label>Valor<input name="amount" type="number" step="0.01" min="0" required></label>
+        <button class="primary-button full" type="submit">Adicionar ao mês</button>
+      </form>
+    </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 

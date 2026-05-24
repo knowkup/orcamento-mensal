@@ -368,3 +368,46 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Revisar `docs/PLANILHA_MODELO.md` com o usuario e ajustar pontos que ainda estiverem errados.
+
+## Atualizacao - 2026-05-24 14:26:36
+
+### Decisoes tomadas
+
+- Usuario aprovou a modelagem geral e autorizou codar uma nova versao para validar em producao.
+- A antiga `Dívida Cronologia` passa a se chamar `Controle Mensal`.
+- A antiga aba `Jeep Compass` passa a ser modulo `Carro`.
+- O modulo `Carro` deve cadastrar carro e financiamento e permitir gestao das parcelas.
+- Funcao de concluir financiamento e preparar novo financiamento fica no roadmap futuro.
+
+### Mudancas feitas
+
+- Refatorado `index.html` para telas: `Controle Mensal`, `Parcelas`, `Custos Fixos`, `Carro`, `FGTS` e `Ajustes`.
+- Refatorado `app.js` para modelo de dados unico em `users/{uid}/app/state`.
+- Implementada grade de 12 meses com entradas, saidas, totais, sobra mensal e saldo acumulado.
+- Implementados cadastros separados de parcelas, custos fixos, compras planejadas, carro e FGTS.
+- Parcelas e custos fixos agora alimentam linhas especificas do `Controle Mensal` por origem/descricao.
+- Implementada baixa simples por ocorrencia na grade e nas ocorrencias do mes.
+- Atualizado `styles.css` para comportar grade operacional, tabelas e modulos.
+- Atualizado `README.md` e `docs/PLANILHA_MODELO.md` com nomes e roadmap.
+
+### Backups criados
+
+- `backups/20260524-142636`
+
+### Comandos relevantes
+
+- `node --check app.js`
+- `git diff --check`
+- Validacao estatica de seletores `id` usados pelo JavaScript.
+- `Invoke-WebRequest http://127.0.0.1:4897/index.html`
+
+### Pendencias
+
+- Validar visualmente em producao pelo GitHub Pages.
+- Ajustar a logica com base na validacao real do usuario.
+- Importar dados reais da planilha em etapa futura.
+- Refinar mobile em etapa posterior.
+
+### Proximos passos
+
+- Fazer commit e push para producao.

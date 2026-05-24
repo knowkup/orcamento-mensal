@@ -26,9 +26,11 @@ O sistema deve preservar essa sensacao: abrir a tela principal e entender o cami
 - `Jeep Compass`: modulo proprio do financiamento do carro.
 - `Ant.FGTS`: modulo proprio de antecipacoes/emprestimos de FGTS.
 
-## Dívida Cronologia
+## Controle Mensal
 
-Nome ruim, mas funcao central. No sistema, a tela pode se chamar `Projecao`, `Futuro` ou `Linha do Tempo`, mas deve manter a logica da planilha.
+Nome escolhido para substituir `Dívida Cronologia`: `Controle Mensal`.
+
+A ideia e manter a funcao central da aba original, mas com um nome mais claro e menos pesado.
 
 ### Estrutura observada
 
@@ -237,9 +239,11 @@ Essa funcionalidade e essencial. O usuario usa isso para responder:
 
 No sistema, isso deve virar uma edicao rapida direto na projecao do mes, sem burocracia.
 
-## Jeep Compass
+## Carro
 
-Modulo proprio para financiamento do carro.
+Nome escolhido para substituir `Jeep Compass`: `Carro`.
+
+Modulo proprio para cadastro do carro, cadastro do financiamento e gestao das parcelas.
 
 ### Campos observados
 
@@ -271,6 +275,13 @@ Tabela principal:
 - a aba principal hoje possui linha `Jeep Compass` com valores mensais, mas a ligacao parece parcialmente manual na planilha visivel.
 
 No sistema, o financiamento deve ser modulo proprio e suas parcelas futuras devem alimentar a projecao principal.
+
+Roadmap futuro:
+
+- botao de concluir financiamento;
+- ao concluir, arquivar o financiamento atual;
+- zerar/preparar a area para um proximo financiamento;
+- manter historico do carro/financiamento anterior.
 
 ## Ant.FGTS
 
@@ -340,7 +351,7 @@ O sistema precisa ter estes conceitos antes de qualquer tela bonita:
 
 Primeiro MVP correto deve reproduzir o fluxo da planilha, mesmo que simples:
 
-1. Tela principal `Projecao`, com 12 meses em grade detalhada.
+1. Tela principal `Controle Mensal`, com 12 meses em grade detalhada.
 2. Bloco de entradas no topo.
 3. Bloco de saidas abaixo, com linhas por descricao/origem.
 4. Linha de total de entradas.

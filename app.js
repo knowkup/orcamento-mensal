@@ -1,561 +1,866 @@
 import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js";
 
-const currency = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL"
-});
+const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
+const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit" });
 
-const monthFormatter = new Intl.DateTimeFormat("pt-BR", {
-  month: "short",
-  year: "2-digit"
-});
+const STORAGE_KEY = "orcamento-mensal-state-v2";
 
 const state = {
-  items: [],
+  data: createDefaultData(),
   user: null,
   db: null,
   auth: null,
+  provider: null,
+  firestore: null,
   unsubscribe: null,
-  monthCount: 6,
-  filter: "open",
-  firebaseReady: false
+  firebaseReady: false,
+  saving: false
 };
 
-const demoItems = [
-  {
-    id: "demo-income",
-    name: "Renda mensal",
-    type: "income",
-    amount: 15101.14,
-    startMonth: getMonthKey(new Date()),
-    recurrence: "monthly",
-    installments: 1,
-    category: "Renda",
-    paidOccurrences: []
-  },
-  {
-    id: "demo-fixed",
-    name: "Custos fixos",
-    type: "fixed",
-    amount: 10288.39,
-    startMonth: getMonthKey(new Date()),
-    recurrence: "monthly",
-    installments: 1,
-    category: "Base do mês",
-    paidOccurrences: []
-  },
-  {
-    id: "demo-card",
-    name: "Parcelas em aberto",
-    type: "installment",
-    amount: 985.08,
-    startMonth: getMonthKey(new Date()),
-    recurrence: "monthly",
-    installments: 6,
-    category: "Cartões",
-    paidOccurrences: []
-  },
-  {
-    id: "demo-13",
-    name: "13º salário",
-    type: "income",
-    amount: 7500,
-    startMonth: `${new Date().getFullYear()}-11`,
-    recurrence: "once",
-    installments: 1,
-    category: "Extra",
-    paidOccurrences: []
-  }
-];
-
-const elements = {
+const el = {
   views: document.querySelectorAll(".view"),
   navTabs: document.querySelectorAll(".nav-tab"),
   viewTitle: document.querySelector("#viewTitle"),
-  incomeMetric: document.querySelector("#incomeMetric"),
-  expenseMetric: document.querySelector("#expenseMetric"),
-  balanceMetric: document.querySelector("#balanceMetric"),
-  balanceMetricCard: document.querySelector("#balanceMetricCard"),
-  alertMetric: document.querySelector("#alertMetric"),
-  dashboardTimeline: document.querySelector("#dashboardTimeline"),
-  projectionList: document.querySelector("#projectionList"),
-  upcomingList: document.querySelector("#upcomingList"),
-  itemsList: document.querySelector("#itemsList"),
-  itemForm: document.querySelector("#itemForm"),
-  toast: document.querySelector("#toast"),
-  loginButton: document.querySelector("#loginButton"),
   syncTitle: document.querySelector("#syncTitle"),
   syncText: document.querySelector("#syncText"),
   syncDot: document.querySelector(".sync-dot"),
+  loginButton: document.querySelector("#loginButton"),
   exportButton: document.querySelector("#exportButton"),
   importInput: document.querySelector("#importInput"),
-  copyRulesButton: document.querySelector("#copyRulesButton")
+  monthSummary: document.querySelector("#monthSummary"),
+  projectionTable: document.querySelector("#projectionTable"),
+  occurrenceList: document.querySelector("#occurrenceList"),
+  installmentForm: document.querySelector("#installmentForm"),
+  installmentsTable: document.querySelector("#installmentsTable"),
+  fixedCostForm: document.querySelector("#fixedCostForm"),
+  fixedCostsTable: document.querySelector("#fixedCostsTable"),
+  carForm: document.querySelector("#carForm"),
+  carTitle: document.querySelector("#carTitle"),
+  carKpis: document.querySelector("#carKpis"),
+  carTable: document.querySelector("#carTable"),
+  fgtsForm: document.querySelector("#fgtsForm"),
+  fgtsKpis: document.querySelector("#fgtsKpis"),
+  fgtsTable: document.querySelector("#fgtsTable"),
+  originForm: document.querySelector("#originForm"),
+  originList: document.querySelector("#originList"),
+  plannedDialog: document.querySelector("#plannedDialog"),
+  plannedForm: document.querySelector("#plannedForm"),
+  addPlanButton: document.querySelector("#addPlanButton"),
+  closePlanButton: document.querySelector("#closePlanButton"),
+  toast: document.querySelector("#toast")
 };
 
 boot();
 
 async function boot() {
-  state.items = loadLocalItems();
-  setInitialMonth();
+  state.data = loadLocalState();
   bindEvents();
-  await setupFirebase();
+  hydrateForms();
   render();
-  refreshIcons();
+  await setupFirebase();
 }
 
 function bindEvents() {
-  elements.navTabs.forEach((tab) => {
-    tab.addEventListener("click", () => showView(tab.dataset.view));
-  });
-
-  document.querySelectorAll("[data-view-link]").forEach((button) => {
-    button.addEventListener("click", () => showView(button.dataset.viewLink));
-  });
-
-  document.querySelectorAll("[data-month-count]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.monthCount = Number(button.dataset.monthCount);
-      document.querySelectorAll("[data-month-count]").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      renderProjection();
-    });
-  });
-
-  document.querySelectorAll("[data-filter]").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.filter = button.dataset.filter;
-      document.querySelectorAll("[data-filter]").forEach((item) => item.classList.remove("active"));
-      button.classList.add("active");
-      renderItems();
-    });
-  });
-
-  elements.itemForm.addEventListener("submit", handleItemSubmit);
-  elements.loginButton.addEventListener("click", handleLoginToggle);
-  elements.exportButton.addEventListener("click", exportData);
-  elements.importInput.addEventListener("change", importData);
-  elements.copyRulesButton.addEventListener("click", copyRulesPath);
+  el.navTabs.forEach((button) => button.addEventListener("click", () => showView(button.dataset.view)));
+  el.loginButton.addEventListener("click", handleLoginToggle);
+  el.exportButton.addEventListener("click", exportState);
+  el.importInput.addEventListener("change", importState);
+  el.installmentForm.addEventListener("submit", addInstallment);
+  el.fixedCostForm.addEventListener("submit", addFixedCost);
+  el.carForm.addEventListener("submit", updateCar);
+  el.fgtsForm.addEventListener("submit", addFgtsContract);
+  el.originForm.addEventListener("submit", addOrigin);
+  el.addPlanButton.addEventListener("click", openPlannedDialog);
+  el.closePlanButton.addEventListener("click", () => el.plannedDialog.close());
+  el.plannedForm.addEventListener("submit", addPlannedPurchase);
 }
 
 async function setupFirebase() {
   if (!isFirebaseConfigured) {
-    updateSyncStatus("Modo demonstração", "Configure Firebase para sincronizar.", false);
+    updateSync("Modo local", "Firebase não configurado.", false);
     return;
   }
 
   try {
-    const [{ initializeApp }, { getAuth, GoogleAuthProvider, onAuthStateChanged }, firestore] = await Promise.all([
+    const [{ initializeApp }, authSdk, firestoreSdk] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js"),
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js")
     ]);
 
     const app = initializeApp(firebaseConfig);
-    state.auth = getAuth(app);
-    state.provider = new GoogleAuthProvider();
-    state.db = firestore.getFirestore(app);
-    state.firestore = firestore;
+    state.auth = authSdk.getAuth(app);
+    state.provider = new authSdk.GoogleAuthProvider();
+    state.db = firestoreSdk.getFirestore(app);
+    state.firestore = firestoreSdk;
     state.firebaseReady = true;
 
-    onAuthStateChanged(state.auth, (user) => {
+    authSdk.onAuthStateChanged(state.auth, (user) => {
       state.user = user;
       if (state.unsubscribe) state.unsubscribe();
-      if (user) {
-        elements.loginButton.innerHTML = iconMarkup("log-out") + "<span>Sair</span>";
-        listenToCloudItems();
-      } else {
-        elements.loginButton.innerHTML = iconMarkup("log-in") + "<span>Entrar</span>";
-        updateSyncStatus("Firebase pronto", "Entre para sincronizar.", false);
-        state.items = loadLocalItems();
-        render();
+      if (!user) {
+        el.loginButton.innerHTML = icon("log-in") + "<span>Entrar</span>";
+        updateSync("Firebase pronto", "Entre para sincronizar.", false);
+        refreshIcons();
+        return;
       }
+      el.loginButton.innerHTML = icon("log-out") + "<span>Sair</span>";
+      listenCloudState();
       refreshIcons();
     });
   } catch (error) {
-    updateSyncStatus("Firebase indisponível", "Revise a configuração.", false);
-    showToast("Não consegui iniciar o Firebase.");
     console.error(error);
+    updateSync("Firebase indisponível", "Revise a configuração.", false);
   }
 }
 
-function listenToCloudItems() {
-  const { collection, onSnapshot, query, orderBy } = state.firestore;
-  const itemsRef = collection(state.db, "users", state.user.uid, "items");
-  const itemsQuery = query(itemsRef, orderBy("createdAt", "asc"));
-
-  state.unsubscribe = onSnapshot(itemsQuery, (snapshot) => {
-    state.items = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    updateSyncStatus("Sincronizado", state.user.email || "Firebase conectado.", true);
+function listenCloudState() {
+  const { doc, onSnapshot, setDoc } = state.firestore;
+  const ref = doc(state.db, "users", state.user.uid, "app", "state");
+  state.unsubscribe = onSnapshot(ref, async (snapshot) => {
+    if (!snapshot.exists()) {
+      await setDoc(ref, withMeta(state.data));
+      return;
+    }
+    state.data = normalizeData(snapshot.data());
+    persistLocalState(false);
+    updateSync("Sincronizado", state.user.email || "Google conectado.", true);
+    hydrateForms();
     render();
   });
 }
 
 async function handleLoginToggle() {
   if (!state.firebaseReady) {
-    showToast("Preencha firebase-config.js antes de entrar.");
-    showView("settings");
+    showToast("Firebase ainda não está pronto.");
     return;
   }
-
   if (state.user) {
     await state.auth.signOut();
     showToast("Você saiu.");
     return;
   }
-
   const { signInWithPopup } = await import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js");
   await signInWithPopup(state.auth, state.provider);
 }
 
-async function handleItemSubmit(event) {
-  event.preventDefault();
-  const formElement = event.currentTarget;
-  const form = new FormData(formElement);
-  const item = {
-    name: String(form.get("name")).trim(),
-    type: String(form.get("type")),
-    amount: Number(form.get("amount")),
-    startMonth: String(form.get("startMonth")),
-    recurrence: String(form.get("recurrence")),
-    installments: Math.max(1, Number(form.get("installments") || 1)),
-    category: String(form.get("category")).trim(),
-    paidOccurrences: [],
-    createdAt: Date.now()
+async function saveState(message) {
+  persistLocalState();
+  if (state.user && state.db && !state.saving) {
+    state.saving = true;
+    try {
+      const { doc, setDoc } = state.firestore;
+      await setDoc(doc(state.db, "users", state.user.uid, "app", "state"), withMeta(state.data));
+      updateSync("Sincronizado", state.user.email || "Google conectado.", true);
+    } finally {
+      state.saving = false;
+    }
+  }
+  hydrateForms();
+  render();
+  if (message) showToast(message);
+}
+
+function withMeta(data) {
+  return {
+    ...structuredClone(data),
+    schemaVersion: 2,
+    updatedAt: Date.now()
   };
-
-  if (!item.name || !item.amount || !item.startMonth) return;
-
-  await saveItem(item);
-  formElement.reset();
-  setInitialMonth();
-  showToast("Item adicionado.");
 }
 
-async function saveItem(item) {
-  if (state.user && state.db) {
-    const { addDoc, collection, serverTimestamp } = state.firestore;
-    await addDoc(collection(state.db, "users", state.user.uid, "items"), {
-      ...item,
-      createdAt: serverTimestamp()
-    });
-    return;
-  }
-
-  state.items = [...state.items, { ...item, id: crypto.randomUUID() }];
-  persistLocalItems();
-  render();
-}
-
-async function updateItem(itemId, patch) {
-  if (state.user && state.db) {
-    const { doc, updateDoc } = state.firestore;
-    await updateDoc(doc(state.db, "users", state.user.uid, "items", itemId), patch);
-    return;
-  }
-
-  state.items = state.items.map((item) => (item.id === itemId ? { ...item, ...patch } : item));
-  persistLocalItems();
-  render();
-}
-
-function showView(viewName) {
-  elements.navTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === viewName));
-  elements.views.forEach((view) => {
-    const isActive = view.id === `${viewName}View`;
-    view.classList.toggle("active", isActive);
-    if (isActive) elements.viewTitle.textContent = view.dataset.title;
+function showView(name) {
+  el.navTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === name));
+  el.views.forEach((view) => {
+    const active = view.id === `${name}View`;
+    view.classList.toggle("active", active);
+    if (active) el.viewTitle.textContent = view.dataset.title;
   });
   refreshIcons();
 }
 
 function render() {
-  renderDashboard();
   renderProjection();
-  renderItems();
+  renderOccurrences();
+  renderInstallments();
+  renderFixedCosts();
+  renderCar();
+  renderFgts();
+  renderOrigins();
   refreshIcons();
 }
 
-function renderDashboard() {
-  const projection = buildProjection(6);
-  const current = projection[0];
-  const alertCount = projection.filter((month) => month.balance < 0).length;
-
-  elements.incomeMetric.textContent = currency.format(current.income);
-  elements.expenseMetric.textContent = currency.format(current.expense);
-  elements.balanceMetric.textContent = currency.format(current.balance);
-  elements.balanceMetricCard.classList.toggle("positive", current.balance >= 0);
-  elements.balanceMetricCard.classList.toggle("negative", current.balance < 0);
-  elements.alertMetric.textContent = String(alertCount);
-  elements.dashboardTimeline.innerHTML = projection.map(renderMonthRow).join("");
-  elements.upcomingList.innerHTML = renderUpcoming();
-}
-
 function renderProjection() {
-  elements.projectionList.innerHTML = buildProjection(state.monthCount).map(renderMonthRow).join("");
+  const months = nextMonths(12);
+  const rows = buildProjectionRows(months);
+  const totals = buildTotals(rows, months);
+  const current = totals[0];
+
+  el.monthSummary.innerHTML = [
+    metric("Entradas", current.income, "positive"),
+    metric("Saídas", -current.expense, "negative"),
+    metric("Sobra do mês", current.balance, current.balance >= 0 ? "positive" : "negative"),
+    metric("Saldo acumulado", current.accumulated, current.accumulated >= 0 ? "positive" : "negative")
+  ].join("");
+
+  const monthHeaders = months.map((month) => `<th>${formatMonth(month)}</th>`).join("");
+  const body = [
+    groupRow("Entradas", months.length),
+    ...rows.filter((row) => row.kind === "income").map((row) => projectionRow(row, months)),
+    totalRow("Total entradas", months, (month) => totals.find((item) => item.month === month).income, "positive"),
+    groupRow("Saídas", months.length),
+    ...rows.filter((row) => row.kind === "expense").map((row) => projectionRow(row, months)),
+    totalRow("Total saídas", months, (month) => -totals.find((item) => item.month === month).expense, "negative"),
+    totalRow("Sobra do mês", months, (month) => totals.find((item) => item.month === month).balance, "balance"),
+    totalRow("Saldo acumulado", months, (month) => totals.find((item) => item.month === month).accumulated, "balance")
+  ].join("");
+
+  el.projectionTable.innerHTML = `
+    <thead>
+      <tr>
+        <th class="sticky-col">Linha</th>
+        <th>Origem</th>
+        ${monthHeaders}
+      </tr>
+    </thead>
+    <tbody>${body}</tbody>
+  `;
+
+  el.projectionTable.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
+    button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
+  });
 }
 
-function renderItems() {
-  const occurrences = buildOccurrences(18).sort((a, b) => a.month.localeCompare(b.month));
-  const filtered = occurrences.filter((occurrence) => {
-    if (state.filter === "all") return true;
-    if (state.filter === "paid") return occurrence.paid;
-    return !occurrence.paid;
-  });
+function renderOccurrences() {
+  const month = nextMonths(1)[0];
+  const rows = buildProjectionRows([month]).filter((row) => row.kind === "expense");
+  const occurrences = rows
+    .map((row) => ({ row, value: row.values[month] || 0 }))
+    .filter((item) => item.value > 0);
 
-  elements.itemsList.innerHTML = filtered.length
-    ? filtered.map(renderItemRow).join("")
-    : `<div class="empty-state">Nada para mostrar aqui.</div>`;
+  el.occurrenceList.innerHTML = occurrences.length
+    ? occurrences.map(({ row, value }) => `
+        <div class="occurrence-card">
+          <div>
+            <strong>${escapeHtml(row.label)}</strong>
+            <span>${escapeHtml(row.origin || "-")} · ${row.sourceLabel}</span>
+          </div>
+          <div class="occurrence-actions">
+            <strong class="negative">-${currency.format(value)}</strong>
+            <button class="small-button pay" type="button" data-pay-occurrence="${row.id}:${month}">Pagar</button>
+          </div>
+        </div>
+      `).join("")
+    : `<div class="empty-state">Sem ocorrências pendentes neste mês.</div>`;
 
-  elements.itemsList.querySelectorAll("[data-pay]").forEach((button) => {
-    button.addEventListener("click", () => markPaid(button.dataset.pay, button.dataset.month));
-  });
-
-  elements.itemsList.querySelectorAll("[data-undo]").forEach((button) => {
-    button.addEventListener("click", () => undoPaid(button.dataset.undo, button.dataset.month));
-  });
-}
-
-function buildProjection(monthCount) {
-  const months = getNextMonths(monthCount);
-  const occurrences = buildOccurrences(monthCount);
-
-  return months.map((month) => {
-    const monthItems = occurrences.filter((item) => item.month === month && !item.paid);
-    const income = sum(monthItems.filter((item) => item.type === "income"));
-    const expense = sum(monthItems.filter((item) => item.type !== "income"));
-    return {
-      month,
-      income,
-      expense,
-      balance: income - expense
-    };
+  el.occurrenceList.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
+    button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
   });
 }
 
-function buildOccurrences(monthCount) {
-  const months = getNextMonths(monthCount);
-  const occurrences = [];
-
-  state.items.forEach((item) => {
-    months.forEach((month) => {
-      if (!occursInMonth(item, month)) return;
-      occurrences.push({
-        ...item,
-        month,
-        occurrenceKey: `${item.id}:${month}`,
-        paid: item.paidOccurrences?.includes(month)
-      });
+function buildProjectionRows(months) {
+  const rows = [];
+  state.data.incomeLines.forEach((line) => {
+    rows.push({
+      id: line.id,
+      kind: "income",
+      label: line.label,
+      origin: line.origin,
+      sourceLabel: "entrada",
+      values: valuesFromMonthlyMap(line.values, months)
     });
   });
 
-  return occurrences;
+  state.data.projectionLines.forEach((line) => {
+    rows.push({
+      id: line.id,
+      kind: "expense",
+      label: line.label,
+      origin: line.origin,
+      sourceLabel: sourceLabel(line),
+      values: valuesForProjectionLine(line, months)
+    });
+  });
+
+  return rows;
 }
 
-function occursInMonth(item, month) {
-  if (month < item.startMonth) return false;
-  const offset = monthDiff(item.startMonth, month);
-
-  if (item.recurrence === "monthly" && item.type !== "installment") return true;
-  if (item.type === "installment") return offset >= 0 && offset < Number(item.installments || 1);
-  return offset === 0;
+function valuesForProjectionLine(line, months) {
+  const values = {};
+  months.forEach((month, index) => {
+    let value = 0;
+    if (line.source === "installments") value = installmentTotal(line.match, index);
+    if (line.source === "fixedByName") value = fixedTotalByName(line.match);
+    if (line.source === "fixedByOrigin") value = fixedTotalByOrigin(line.match);
+    if (line.source === "planned") value = plannedTotal(line.match, month);
+    if (line.source === "manual") value = line.values?.[month] ?? line.monthlyAmount ?? 0;
+    if (line.source === "car") value = carValueForMonth(month);
+    if (line.source === "difference") value = differenceValue(line, months, month, index);
+    if (isOccurrencePaid(`${line.id}:${month}`)) value = 0;
+    values[month] = value;
+  });
+  return values;
 }
 
-function renderMonthRow(month) {
-  const max = Math.max(month.income, month.expense, 1);
-  const incomeWidth = Math.min(100, (month.income / max) * 100);
-  const expenseWidth = Math.min(100, (month.expense / max) * 100);
-  const statusClass = month.balance >= 0 ? "positive" : "negative";
+function valuesFromMonthlyMap(map, months) {
+  const values = {};
+  months.forEach((month) => {
+    const monthNumber = Number(month.slice(5, 7));
+    values[month] = map?.[month] ?? map?.[`month-${monthNumber}`] ?? map?.default ?? 0;
+  });
+  return values;
+}
 
+function installmentTotal(origin, monthIndex) {
+  return state.data.installments
+    .filter((item) => item.origin === origin && item.active !== false)
+    .reduce((total, item) => {
+      const left = Math.max(0, Number(item.totalInstallments) - Number(item.paidInstallments));
+      return monthIndex < left ? total + Number(item.amount) : total;
+    }, 0);
+}
+
+function fixedTotalByName(name) {
+  return state.data.fixedCosts
+    .filter((item) => item.includeInProjection !== false && item.name === name)
+    .reduce((total, item) => total + Number(item.amount), 0);
+}
+
+function fixedTotalByOrigin(origin) {
+  return state.data.fixedCosts
+    .filter((item) => item.includeInProjection !== false && item.payment === origin)
+    .reduce((total, item) => total + Number(item.amount), 0);
+}
+
+function plannedTotal(origin, month) {
+  return state.data.plannedPurchases
+    .filter((item) => item.origin === origin && item.month === month)
+    .reduce((total, item) => total + Number(item.amount), 0);
+}
+
+function carValueForMonth(month) {
+  const payment = state.data.car.payments.find((item) => item.month === month && item.status !== "Pago");
+  return payment ? Number(payment.value) : 0;
+}
+
+function differenceValue(line, months, month, index) {
+  const limit = Number(line.limit || 0);
+  const used = (line.subtractLineIds || []).reduce((total, id) => {
+    const sibling = state.data.projectionLines.find((item) => item.id === id);
+    return total + (sibling ? valuesForProjectionLine(sibling, months)[month] || 0 : 0);
+  }, 0);
+  return Math.max(0, limit - used);
+}
+
+function buildTotals(rows, months) {
+  let accumulated = Number(state.data.initialBalance || 0);
+  return months.map((month) => {
+    const income = rows.filter((row) => row.kind === "income").reduce((total, row) => total + (row.values[month] || 0), 0);
+    const expense = rows.filter((row) => row.kind === "expense").reduce((total, row) => total + (row.values[month] || 0), 0);
+    const balance = income - expense;
+    accumulated += balance;
+    return { month, income, expense, balance, accumulated };
+  });
+}
+
+function projectionRow(row, months) {
   return `
-    <div class="month-row">
-      <div>
-        <div class="month-name">${formatMonth(month.month)}</div>
-        <span class="${statusClass}">${month.balance >= 0 ? "Saudável" : "Alerta"}</span>
-      </div>
-      <div class="month-bars">
-        <div class="bar bar-income"><span style="width: ${incomeWidth}%"></span></div>
-        <div class="bar bar-expense"><span style="width: ${expenseWidth}%"></span></div>
-      </div>
-      <div class="month-balance ${statusClass}">${currency.format(month.balance)}</div>
-    </div>
+    <tr>
+      <th class="sticky-col">
+        <span>${escapeHtml(row.label)}</span>
+        <small>${escapeHtml(row.sourceLabel)}</small>
+      </th>
+      <td>${escapeHtml(row.origin || "-")}</td>
+      ${months.map((month) => projectionCell(row, month)).join("")}
+    </tr>
   `;
 }
 
-function renderUpcoming() {
-  const upcoming = buildOccurrences(3)
-    .filter((item) => item.type !== "income" && !item.paid)
-    .slice(0, 5);
-
-  if (!upcoming.length) return `<div class="empty-state">Sem pagamentos pendentes próximos.</div>`;
-
-  return upcoming
-    .map(
-      (item) => `
-        <div class="item-row">
-          <div class="item-main">
-            <strong>${escapeHtml(item.name)}</strong>
-            <span>${formatMonth(item.month)} · ${escapeHtml(item.category || "Sem grupo")}</span>
-          </div>
-          <strong class="negative">-${currency.format(item.amount)}</strong>
-        </div>
-      `
-    )
-    .join("");
+function projectionCell(row, month) {
+  const value = row.values[month] || 0;
+  const key = `${row.id}:${month}`;
+  const paid = isOccurrencePaid(key);
+  if (!value && !paid) return `<td class="muted-cell">-</td>`;
+  const sign = row.kind === "income" ? "" : "-";
+  const className = row.kind === "income" ? "positive" : "negative";
+  const payButton = row.kind === "expense"
+    ? `<button class="cell-pay ${paid ? "paid" : ""}" type="button" data-pay-occurrence="${key}" title="${paid ? "Reabrir" : "Pagar"}">${paid ? "Pago" : "Pagar"}</button>`
+    : "";
+  return `<td><span class="${className}">${sign}${currency.format(value)}</span>${payButton}</td>`;
 }
 
-function renderItemRow(item) {
-  const isIncome = item.type === "income";
-  const value = `${isIncome ? "" : "-"}${currency.format(item.amount)}`;
-  const action = item.paid
-    ? `<button class="small-button undo" type="button" data-undo="${item.id}" data-month="${item.month}">Desfazer</button>`
-    : `<button class="small-button pay" type="button" data-pay="${item.id}" data-month="${item.month}">Pagar</button>`;
+function groupRow(label, monthsCount) {
+  return `<tr class="group-row"><th colspan="${monthsCount + 2}">${label}</th></tr>`;
+}
 
+function totalRow(label, months, getter, tone) {
   return `
-    <div class="item-row">
-      <div class="item-main">
-        <strong>${escapeHtml(item.name)}</strong>
-        <span>${formatMonth(item.month)} · ${labelForType(item.type)} · ${escapeHtml(item.category || "Sem grupo")}</span>
-      </div>
-      <div class="item-actions">
-        <strong class="${isIncome ? "positive" : "negative"}">${value}</strong>
-        ${isIncome ? "" : action}
-      </div>
-    </div>
+    <tr class="total-row">
+      <th class="sticky-col">${label}</th>
+      <td></td>
+      ${months.map((month) => {
+        const value = getter(month);
+        const className = tone === "balance" ? (value >= 0 ? "positive" : "negative") : tone;
+        return `<td><strong class="${className}">${currency.format(value)}</strong></td>`;
+      }).join("")}
+    </tr>
   `;
 }
 
-async function markPaid(itemId, month) {
-  const item = state.items.find((entry) => entry.id === itemId);
-  if (!item) return;
-  const paidOccurrences = Array.from(new Set([...(item.paidOccurrences || []), month]));
-  await updateItem(itemId, { paidOccurrences });
-  showToast("Pagamento marcado.");
+function renderInstallments() {
+  const totals = state.data.installments.reduce((acc, item) => {
+    acc.total += item.amount * item.totalInstallments;
+    acc.paid += item.amount * item.paidInstallments;
+    acc.left += item.amount * Math.max(0, item.totalInstallments - item.paidInstallments);
+    return acc;
+  }, { total: 0, paid: 0, left: 0 });
+
+  el.installmentsTable.innerHTML = `
+    <thead><tr><th>Item</th><th>Origem</th><th>Valor</th><th>Pagas</th><th>Faltam</th><th>Ações</th></tr></thead>
+    <tbody>
+      <tr class="summary-row"><td colspan="2">Total</td><td>${currency.format(totals.total)}</td><td>${currency.format(totals.paid)}</td><td>${currency.format(totals.left)}</td><td></td></tr>
+      ${state.data.installments.map((item) => {
+        const left = Math.max(0, item.totalInstallments - item.paidInstallments);
+        return `<tr>
+          <td>${escapeHtml(item.item)}</td>
+          <td>${escapeHtml(item.origin)}</td>
+          <td>${currency.format(item.amount)}</td>
+          <td>${item.paidInstallments}/${item.totalInstallments}</td>
+          <td>${left}</td>
+          <td><button class="small-button pay" type="button" data-pay-installment="${item.id}" ${left ? "" : "disabled"}>Pagar próxima</button></td>
+        </tr>`;
+      }).join("")}
+    </tbody>
+  `;
+
+  el.installmentsTable.querySelectorAll("[data-pay-installment]").forEach((button) => {
+    button.addEventListener("click", () => payInstallment(button.dataset.payInstallment));
+  });
 }
 
-async function undoPaid(itemId, month) {
-  const item = state.items.find((entry) => entry.id === itemId);
-  if (!item) return;
-  const paidOccurrences = (item.paidOccurrences || []).filter((entry) => entry !== month);
-  await updateItem(itemId, { paidOccurrences });
-  showToast("Pagamento reaberto.");
+function renderFixedCosts() {
+  el.fixedCostsTable.innerHTML = `
+    <thead><tr><th>Custo</th><th>Forma</th><th>Grupo</th><th>Venc.</th><th>Valor</th><th>Projeção</th></tr></thead>
+    <tbody>
+      ${state.data.fixedCosts.map((item) => `
+        <tr>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${escapeHtml(item.payment)}</td>
+          <td>${escapeHtml(item.group || "-")}</td>
+          <td>${item.dueDay}</td>
+          <td>${currency.format(item.amount)}</td>
+          <td>${item.includeInProjection !== false ? "Sim" : "Não"}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify({ items: state.items }, null, 2)], { type: "application/json" });
+function renderCar() {
+  const car = state.data.car;
+  el.carTitle.textContent = car.name || "Carro";
+  el.carForm.elements.name.value = car.name || "";
+  el.carForm.elements.financed.value = car.financed || "";
+  el.carForm.elements.purchase.value = car.purchase || "";
+  el.carForm.elements.monthly.value = car.monthly || "";
+  el.carForm.elements.totalInstallments.value = car.totalInstallments || "";
+
+  const paid = car.payments.filter((item) => item.status === "Pago");
+  const pending = car.payments.filter((item) => item.status !== "Pago");
+  const paidValue = paid.reduce((total, item) => total + Number(item.paidAmount || item.value), 0);
+  const pendingValue = pending.reduce((total, item) => total + Number(item.value), 0);
+  const economy = paid.reduce((total, item) => total + Math.max(0, Number(item.value) - Number(item.paidAmount || item.value)), 0);
+
+  el.carKpis.innerHTML = [
+    metric("Pagas", paid.length, "neutral", false),
+    metric("Pendentes", pending.length, "negative", false),
+    metric("Pago", paidValue, "positive"),
+    metric("Falta", -pendingValue, "negative"),
+    metric("Economia", economy, "positive")
+  ].join("");
+
+  el.carTable.innerHTML = `
+    <thead><tr><th>Parcela</th><th>Mês</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ações</th></tr></thead>
+    <tbody>
+      ${car.payments.map((item) => `
+        <tr>
+          <td>${item.number}/${car.totalInstallments}</td>
+          <td>${formatMonth(item.month)}</td>
+          <td>${currency.format(item.value)}</td>
+          <td>${item.paidAmount ? currency.format(item.paidAmount) : "-"}</td>
+          <td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td>
+          <td><button class="small-button pay" type="button" data-pay-car="${item.id}" ${item.status === "Pago" ? "disabled" : ""}>Pagar</button></td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+
+  el.carTable.querySelectorAll("[data-pay-car]").forEach((button) => {
+    button.addEventListener("click", () => payCarInstallment(button.dataset.payCar));
+  });
+}
+
+function renderFgts() {
+  const received = state.data.fgts.contracts.reduce((total, item) => total + Number(item.received || 0), 0);
+  const toPay = state.data.fgts.contracts.reduce((total, item) => total + Number(item.toPay || 0), 0);
+  el.fgtsKpis.innerHTML = [
+    metric("Recebido", received, "positive"),
+    metric("A pagar", -toPay, "negative"),
+    metric("Saldo", state.data.fgts.balance, "neutral"),
+    metric("Liberado", state.data.fgts.available, "positive")
+  ].join("");
+
+  el.fgtsTable.innerHTML = `
+    <thead><tr><th>Descrição</th><th>Contrato</th><th>Recebido</th><th>A pagar</th><th>Status</th></tr></thead>
+    <tbody>
+      ${state.data.fgts.contracts.map((item) => `
+        <tr>
+          <td>${escapeHtml(item.description)}</td>
+          <td>${escapeHtml(item.contract || "-")}</td>
+          <td>${currency.format(item.received || 0)}</td>
+          <td>${currency.format(item.toPay || 0)}</td>
+          <td>${escapeHtml(item.status || "Ativo")}</td>
+        </tr>
+      `).join("")}
+    </tbody>
+  `;
+}
+
+function renderOrigins() {
+  el.originList.innerHTML = state.data.origins.map((origin) => `<span class="pill">${escapeHtml(origin)}</span>`).join("");
+}
+
+function hydrateForms() {
+  document.querySelectorAll("[data-origin-select]").forEach((select) => {
+    const current = select.value;
+    select.innerHTML = state.data.origins.map((origin) => `<option value="${escapeHtml(origin)}">${escapeHtml(origin)}</option>`).join("");
+    if (current) select.value = current;
+  });
+  const start = nextMonths(1)[0];
+  if (el.plannedForm.elements.month) el.plannedForm.elements.month.value = start;
+}
+
+async function addInstallment(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const item = {
+    id: crypto.randomUUID(),
+    item: String(form.get("item")).trim(),
+    origin: String(form.get("origin")),
+    amount: Number(form.get("amount")),
+    totalInstallments: Number(form.get("total")),
+    paidInstallments: Number(form.get("paid") || 0),
+    purchaseDate: String(form.get("date") || ""),
+    active: true
+  };
+  state.data.installments.push(item);
+  event.currentTarget.reset();
+  await saveState("Parcela cadastrada.");
+}
+
+async function payInstallment(id) {
+  const item = state.data.installments.find((entry) => entry.id === id);
+  if (!item) return;
+  item.paidInstallments = Math.min(item.totalInstallments, Number(item.paidInstallments) + 1);
+  await saveState("Parcela paga.");
+}
+
+async function addFixedCost(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.data.fixedCosts.push({
+    id: crypto.randomUUID(),
+    name: String(form.get("name")).trim(),
+    payment: String(form.get("payment")),
+    group: String(form.get("group") || "").trim(),
+    dueDay: Number(form.get("dueDay")),
+    amount: Number(form.get("amount")),
+    includeInProjection: form.get("includeInProjection") === "on"
+  });
+  event.currentTarget.reset();
+  await saveState("Custo fixo cadastrado.");
+}
+
+async function updateCar(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.data.car.name = String(form.get("name")).trim();
+  state.data.car.financed = Number(form.get("financed") || 0);
+  state.data.car.purchase = Number(form.get("purchase") || 0);
+  state.data.car.monthly = Number(form.get("monthly") || 0);
+  state.data.car.totalInstallments = Number(form.get("totalInstallments") || state.data.car.totalInstallments);
+  await saveState("Cadastro do carro atualizado.");
+}
+
+async function payCarInstallment(id) {
+  const payment = state.data.car.payments.find((item) => item.id === id);
+  if (!payment) return;
+  payment.status = "Pago";
+  payment.paidAmount = payment.value;
+  await saveState("Parcela do carro paga.");
+}
+
+async function addFgtsContract(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.data.fgts.contracts.push({
+    id: crypto.randomUUID(),
+    description: String(form.get("description")).trim(),
+    contract: String(form.get("contract") || "").trim(),
+    received: Number(form.get("received") || 0),
+    toPay: Number(form.get("toPay") || 0),
+    status: "Ativo"
+  });
+  event.currentTarget.reset();
+  await saveState("Contrato FGTS cadastrado.");
+}
+
+async function addOrigin(event) {
+  event.preventDefault();
+  const name = String(new FormData(event.currentTarget).get("name")).trim();
+  if (name && !state.data.origins.includes(name)) state.data.origins.push(name);
+  event.currentTarget.reset();
+  await saveState("Origem cadastrada.");
+}
+
+function openPlannedDialog() {
+  hydrateForms();
+  el.plannedDialog.showModal();
+}
+
+async function addPlannedPurchase(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.data.plannedPurchases.push({
+    id: crypto.randomUUID(),
+    description: String(form.get("description")).trim(),
+    origin: String(form.get("origin")),
+    month: String(form.get("month")),
+    amount: Number(form.get("amount"))
+  });
+  el.plannedDialog.close();
+  event.currentTarget.reset();
+  await saveState("Compra planejada adicionada.");
+}
+
+async function togglePaidOccurrence(key) {
+  const paid = state.data.paidOccurrences || [];
+  if (paid.includes(key)) {
+    state.data.paidOccurrences = paid.filter((item) => item !== key);
+    await saveState("Ocorrência reaberta.");
+  } else {
+    state.data.paidOccurrences = [...paid, key];
+    await saveState("Ocorrência baixada.");
+  }
+}
+
+function isOccurrencePaid(key) {
+  return (state.data.paidOccurrences || []).includes(key);
+}
+
+function exportState() {
+  const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = `orcamento-mensal-${getMonthKey(new Date())}.json`;
-  anchor.click();
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `orcamento-mensal-${todayKey()}.json`;
+  link.click();
   URL.revokeObjectURL(url);
   showToast("Backup exportado.");
 }
 
-function importData(event) {
+function importState(event) {
   const file = event.target.files?.[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      const parsed = JSON.parse(String(reader.result));
-      if (!Array.isArray(parsed.items)) throw new Error("Formato inválido");
-      state.items = parsed.items;
-      persistLocalItems();
-      render();
-      showToast("Backup importado neste navegador.");
+      state.data = normalizeData(JSON.parse(String(reader.result)));
+      await saveState("Backup importado.");
     } catch {
-      showToast("Não consegui importar esse arquivo.");
+      showToast("Arquivo inválido.");
     }
   };
   reader.readAsText(file);
 }
 
-async function copyRulesPath() {
-  await navigator.clipboard.writeText("firestore.rules");
-  showToast("Caminho copiado.");
-}
-
-function loadLocalItems() {
-  const saved = localStorage.getItem("orcamento-mensal-items");
-  if (!saved) return demoItems;
+function loadLocalState() {
   try {
-    return JSON.parse(saved);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? normalizeData(JSON.parse(saved)) : createDefaultData();
   } catch {
-    return demoItems;
+    return createDefaultData();
   }
 }
 
-function persistLocalItems() {
-  localStorage.setItem("orcamento-mensal-items", JSON.stringify(state.items));
+function persistLocalState(write = true) {
+  if (write) localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
 }
 
-function setInitialMonth() {
-  const input = elements.itemForm.elements.startMonth;
-  if (input) input.value = getMonthKey(new Date());
+function normalizeData(data) {
+  return {
+    ...createDefaultData(),
+    ...data,
+    origins: data.origins || createDefaultData().origins,
+    incomeLines: data.incomeLines || createDefaultData().incomeLines,
+    projectionLines: data.projectionLines || createDefaultData().projectionLines,
+    installments: data.installments || [],
+    fixedCosts: data.fixedCosts || [],
+    plannedPurchases: data.plannedPurchases || [],
+    paidOccurrences: data.paidOccurrences || [],
+    car: { ...createDefaultData().car, ...(data.car || {}) },
+    fgts: { ...createDefaultData().fgts, ...(data.fgts || {}) }
+  };
 }
 
-function getNextMonths(count) {
+function createDefaultData() {
+  const months = nextMonths(12);
+  const carPayments = months.map((month, index) => ({
+    id: `car-${index + 13}`,
+    number: index + 13,
+    month,
+    value: 3621.12,
+    paidAmount: 0,
+    status: "Pendente"
+  }));
+
+  return {
+    schemaVersion: 2,
+    initialBalance: 320.19,
+    origins: ["Santander", "Nubank", "Itaú Click", "Itaú Kah", "PIX", "Boleto", "Sicredi", "Grazziotin"],
+    incomeLines: [
+      { id: "income-salary", label: "ATP Salário", origin: "Santander", values: { default: 11159.48 } },
+      { id: "income-rent", label: "Aluguel Matheus", origin: "Santander", values: { default: 900 } },
+      { id: "income-13", label: "13º ATP", origin: "Santander", values: { "month-11": 10378.82, "month-12": 4862.83 } },
+      { id: "income-vacation", label: "Férias ATP", origin: "Santander", values: { "2026-09": 7742.42 } },
+      { id: "income-other", label: "Outros / rolagem", origin: "Santander", values: { [months[0]]: 10750, [months[1]]: 2500, [months[2]]: 2500 } }
+    ],
+    projectionLines: [
+      { id: "line-itau-click", label: "Itaú Click", origin: "Débito Itaú Kah", source: "installments", match: "Itaú Click" },
+      { id: "line-grazziotin", label: "Grazziotin", origin: "PIX", source: "installments", match: "Grazziotin" },
+      { id: "line-diff-kah", label: "Diferença Kah (limite dela)", origin: "-", source: "difference", limit: 1000, subtractLineIds: ["line-itau-click", "line-grazziotin"] },
+      { id: "line-agua", label: "Água - Semae", origin: "Boleto", source: "fixedByName", match: "Água - Semae" },
+      { id: "line-inter-kah", label: "Inter Kah", origin: "Boleto", source: "manual", monthlyAmount: 667.13 },
+      { id: "line-jeep", label: "Carro", origin: "Boleto", source: "car" },
+      { id: "line-claro", label: "Claro/NET", origin: "Débito Itaú Kah", source: "fixedByName", match: "Claro/NET" },
+      { id: "line-juvo", label: "Juvo", origin: "Boleto", source: "manual", monthlyAmount: 851.66 },
+      { id: "line-nubank-parcelas", label: "Parcelas (Nubank)", origin: "Nubank", source: "installments", match: "Nubank" },
+      { id: "line-nubank-fixo", label: "Custo Fixo (Nubank)", origin: "Nubank", source: "fixedByOrigin", match: "Nubank" },
+      { id: "line-nubank-compras", label: "Compras Gerais (Nubank)", origin: "Nubank", source: "planned", match: "Nubank" },
+      { id: "line-luz", label: "Luz - RGE", origin: "PIX", source: "fixedByName", match: "Luz - RGE" },
+      { id: "line-unimed", label: "Unimed VS", origin: "Boleto", source: "manual", monthlyAmount: 1400 },
+      { id: "line-mei-kah", label: "MEI Kahramelos", origin: "PIX", source: "fixedByName", match: "MEI Kahramelos" },
+      { id: "line-nubank-kah", label: "Nubank Kah", origin: "Boleto", source: "manual", monthlyAmount: 209.4 },
+      { id: "line-luz-kah", label: "Luz - RGE - Kah", origin: "PIX", source: "fixedByName", match: "Luz - RGE - Kah" },
+      { id: "line-mercado-emprestimo", label: "Mercado Pago EmpréstimoK", origin: "Boleto", source: "manual", monthlyAmount: 306.38 }
+    ],
+    installments: [
+      { id: "par-1", item: "Amazon", origin: "Itaú Click", amount: 94.67, totalInstallments: 12, paidInstallments: 6, active: true },
+      { id: "par-2", item: "Curso Kah (Ventosa)", origin: "Itaú Click", amount: 124.91, totalInstallments: 12, paidInstallments: 8, active: true },
+      { id: "par-3", item: "Notebook Dell", origin: "Santander", amount: 469.08, totalInstallments: 12, paidInstallments: 9, active: true },
+      { id: "par-4", item: "Amazon (Shampos)", origin: "Nubank", amount: 32.52, totalInstallments: 4, paidInstallments: 3, active: true }
+    ],
+    fixedCosts: [
+      { id: "fix-1", name: "Claro/NET", payment: "Itaú Kah", group: "Residência", dueDay: 10, amount: 193.28, includeInProjection: true },
+      { id: "fix-2", name: "Google GSUITE", payment: "Nubank", group: "Kupka", dueDay: 1, amount: 40.9, includeInProjection: true },
+      { id: "fix-3", name: "Spotify", payment: "Nubank", group: "Streaming", dueDay: 5, amount: 31.9, includeInProjection: true },
+      { id: "fix-4", name: "Netflix", payment: "Nubank", group: "Streaming", dueDay: 9, amount: 44.9, includeInProjection: true },
+      { id: "fix-5", name: "Barbeiro", payment: "Nubank", group: "Cuidados", dueDay: 20, amount: 230, includeInProjection: true },
+      { id: "fix-6", name: "ChatGPT", payment: "Nubank", group: "Kupka", dueDay: 25, amount: 125, includeInProjection: true },
+      { id: "fix-7", name: "Água - Semae", payment: "PIX", group: "Residência", dueDay: 15, amount: 160, includeInProjection: true },
+      { id: "fix-8", name: "Luz - RGE", payment: "PIX", group: "Residência", dueDay: 13, amount: 1079.52, includeInProjection: true },
+      { id: "fix-9", name: "MEI Kahramelos", payment: "PIX", group: "Kahramelos", dueDay: 20, amount: 81.9, includeInProjection: true },
+      { id: "fix-10", name: "Luz - RGE - Kah", payment: "PIX", group: "Residência", dueDay: 28, amount: 130, includeInProjection: true }
+    ],
+    plannedPurchases: [
+      { id: "plan-1", description: "Compras gerais", origin: "Nubank", month: months[0], amount: 653.38 },
+      { id: "plan-2", description: "Compras gerais", origin: "Nubank", month: months[1], amount: 2000 }
+    ],
+    paidOccurrences: [],
+    car: {
+      name: "Jeep Compass",
+      financed: 107981,
+      purchase: 133900,
+      monthly: 3621.12,
+      totalInstallments: 60,
+      payments: carPayments
+    },
+    fgts: {
+      balance: 58647.21,
+      blocked: 46495.03,
+      available: 12152.18,
+      contracts: [
+        { id: "fgts-1", description: "FGTS 01", contract: "5645599532", received: 3709.43, toPay: 4274.54, status: "Ativo" },
+        { id: "fgts-2", description: "FGTS 02", contract: "5665960713", received: 3280.93, toPay: 3280.93, status: "Ativo" },
+        { id: "fgts-3", description: "FGTS 03", contract: "Santander", received: 4662.34, toPay: 4081.53, status: "Ativo" }
+      ]
+    }
+  };
+}
+
+function metric(label, value, tone, money = true) {
+  return `
+    <article class="metric ${tone}">
+      <span>${label}</span>
+      <strong>${money ? currency.format(value) : value}</strong>
+    </article>
+  `;
+}
+
+function sourceLabel(line) {
+  const labels = {
+    installments: "vem de Parcelas",
+    fixedByName: "vem de Custo Fixo",
+    fixedByOrigin: "custos da origem",
+    planned: "compras planejadas",
+    manual: "projeção manual",
+    car: "financiamento",
+    difference: "limite/diferença"
+  };
+  return labels[line.source] || "projeção";
+}
+
+function nextMonths(count) {
   const now = new Date();
   return Array.from({ length: count }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() + index, 1);
-    return getMonthKey(date);
+    const date = new Date(now.getFullYear(), now.getMonth() + index + 1, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
   });
 }
 
-function getMonthKey(date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function formatMonth(month) {
-  const [year, monthNumber] = month.split("-").map(Number);
-  return monthFormatter.format(new Date(year, monthNumber - 1, 1)).replace(".", "");
+  const [year, value] = month.split("-").map(Number);
+  return monthLabel.format(new Date(year, value - 1, 1)).replace(".", "");
 }
 
-function monthDiff(startMonth, endMonth) {
-  const [startYear, start] = startMonth.split("-").map(Number);
-  const [endYear, end] = endMonth.split("-").map(Number);
-  return (endYear - startYear) * 12 + (end - start);
+function todayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
 }
 
-function sum(items) {
-  return items.reduce((total, item) => total + Number(item.amount || 0), 0);
-}
-
-function labelForType(type) {
-  const labels = {
-    income: "Entrada",
-    fixed: "Custo fixo",
-    installment: "Parcela",
-    event: "Evento"
-  };
-  return labels[type] || "Item";
-}
-
-function updateSyncStatus(title, text, online) {
-  elements.syncTitle.textContent = title;
-  elements.syncText.textContent = text;
-  elements.syncDot.classList.toggle("offline", !online);
+function updateSync(title, text, online) {
+  el.syncTitle.textContent = title;
+  el.syncText.textContent = text;
+  el.syncDot.classList.toggle("offline", !online);
 }
 
 function showToast(message) {
-  elements.toast.textContent = message;
-  elements.toast.classList.add("show");
-  window.clearTimeout(showToast.timeout);
-  showToast.timeout = window.setTimeout(() => {
-    elements.toast.classList.remove("show");
-  }, 2600);
+  el.toast.textContent = message;
+  el.toast.classList.add("show");
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => el.toast.classList.remove("show"), 2500);
 }
 
 function refreshIcons() {
   if (window.lucide) window.lucide.createIcons();
 }
 
-function iconMarkup(name) {
+function icon(name) {
   return `<i data-lucide="${name}"></i>`;
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
