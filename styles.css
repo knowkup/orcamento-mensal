@@ -1,17 +1,17 @@
 :root {
-  --bg: #f4f7f6;
+  --bg: #eef4f3;
   --surface: #ffffff;
-  --surface-soft: #edf3f1;
+  --surface-soft: #f5f8f7;
   --surface-warm: #fbfaf7;
   --ink: #131b17;
   --muted: #66736d;
   --line: #d7e0dc;
-  --green: #18744b;
+  --green: #35b879;
   --red: #b63d38;
   --gold: #b88732;
   --blue: #265d73;
-  --sidebar: #111b16;
-  --shadow: 0 18px 55px rgba(19, 27, 23, 0.08);
+  --sidebar: #06233a;
+  --shadow: 0 16px 42px rgba(6, 35, 58, 0.07);
 }
 
 * {
@@ -207,8 +207,8 @@ h2 {
 }
 
 .primary-button {
-  border-color: var(--sidebar);
-  background: var(--sidebar);
+  border-color: var(--green);
+  background: var(--green);
   color: #ffffff;
   font-weight: 800;
 }
@@ -288,7 +288,7 @@ svg {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: var(--shadow);
+  box-shadow: 0 1px 2px rgba(6, 35, 58, 0.04);
 }
 
 .metric {
@@ -383,6 +383,28 @@ svg {
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
+}
+
+.clean-table tbody tr:hover td {
+  background: #fbfdfc;
+}
+
+.entity-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.entity-cell strong,
+.entity-cell span {
+  display: block;
+}
+
+.entity-cell span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .projection-table .sticky-col {
@@ -695,6 +717,112 @@ select {
   align-items: stretch;
 }
 
+.mini-icon {
+  width: 38px;
+  min-height: 38px;
+  padding: 0;
+}
+
+.debt-list {
+  display: grid;
+  gap: 12px;
+}
+
+.debt-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.debt-card > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.debt-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.debt-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 0 16px 14px;
+}
+
+.meta-box {
+  min-height: 74px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfdfc;
+}
+
+.meta-box span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.meta-box strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 15px;
+}
+
+.debt-action {
+  min-height: 74px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fbfdfc;
+}
+
+.debt-tabs {
+  display: flex;
+  gap: 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  padding: 0 16px;
+}
+
+.debt-tab {
+  min-height: 46px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 850;
+}
+
+.debt-tab.active {
+  border-bottom-color: var(--green);
+  color: var(--green);
+}
+
+.debt-tab span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 23px;
+  height: 23px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.inner-table {
+  margin: 16px;
+}
+
 .dialog {
   width: min(520px, calc(100vw - 30px));
   border: 1px solid var(--line);
@@ -785,12 +913,15 @@ select {
 
   .month-summary,
   .content-grid,
-  .finance-kpis {
+  .finance-kpis,
+  .debt-meta-grid {
     grid-template-columns: 1fr;
   }
 
   .form-row,
-  .occurrence-actions {
+  .occurrence-actions,
+  .debt-card > summary,
+  .debt-action {
     flex-direction: column;
     align-items: stretch;
   }

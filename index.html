@@ -245,16 +245,24 @@
                 </div>
               </div>
               <form class="stack-form" id="fgtsForm">
-                <label>Descrição<input name="description" required placeholder="Ex.: FGTS 06"></label>
+                <label>Empréstimo<input name="description" required placeholder="Ex.: FGTS 06"></label>
                 <label>Credor<select name="creditorId" data-creditor-select></select></label>
                 <label>Contrato<input name="contract" placeholder="Número ou banco"></label>
                 <div class="form-row">
                   <label>Recebido<input name="received" type="number" step="0.01" min="0"></label>
-                  <label>A pagar<input name="toPay" type="number" step="0.01" min="0"></label>
+                  <label>Valor da parcela<input name="installmentAmount" type="number" step="0.01" min="0"></label>
+                </div>
+                <div class="form-row">
+                  <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
+                  <label>Pagas<input name="paidInstallments" type="number" min="0" step="1" value="0"></label>
+                </div>
+                <div class="form-row">
+                  <label>Primeiro vencimento<input name="firstDueDate" type="date"></label>
+                  <label>Valor quitação<input name="settlementAmount" type="number" step="0.01" min="0"></label>
                 </div>
                 <button class="primary-button full" type="submit">
                   <i data-lucide="plus"></i>
-                  <span>Cadastrar contrato</span>
+                  <span>Cadastrar empréstimo</span>
                 </button>
               </form>
             </section>
@@ -267,62 +275,63 @@
                 </div>
               </div>
               <div class="finance-kpis" id="fgtsKpis"></div>
-              <div class="table-wrap">
-                <table class="data-table" id="fgtsTable"></table>
-              </div>
+              <div class="debt-list" id="fgtsTable"></div>
             </section>
           </div>
         </section>
 
         <section class="view" id="ajustesView" data-title="Ajustes">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Credores</p>
-                  <h2>Cadastro base</h2>
-                </div>
+          <section class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Credores</p>
+                <h2>Cadastro base</h2>
               </div>
-              <form class="stack-form" id="creditorForm">
-                <div class="creditor-editor">
-                  <div class="creditor-logo large" id="creditorLogoPreview">CR</div>
-                  <div>
-                    <label>Nome<input name="name" required placeholder="Ex.: Nubank"></label>
-                    <input name="logoUrl" type="hidden">
-                    <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
-                  </div>
-                </div>
-                <label>Tipo<select name="type">
-                  <option value="Cartão de crédito">Cartão de crédito</option>
-                  <option value="Empréstimo">Empréstimo</option>
-                  <option value="Débito em conta">Débito em conta</option>
-                  <option value="Financiamento">Financiamento</option>
-                  <option value="Outro">Outro</option>
-                </select></label>
-                <button class="primary-button full" type="submit">
-                  <i data-lucide="plus"></i>
-                  <span>Salvar credor</span>
-                </button>
-              </form>
-              <div class="creditor-list" id="creditorList"></div>
-            </section>
-
-            <section class="panel wide">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Dados</p>
-                  <h2>Sincronização e backup</h2>
-                </div>
-              </div>
-              <div class="settings-copy">
-                <p>Os dados ficam em `users/{uid}/app/state` no Firestore quando você entra com Google.</p>
-                <p>O botão de exportar gera um backup JSON do estado atual.</p>
-              </div>
-            </section>
-          </div>
+              <button class="primary-button" type="button" id="newCreditorButton">
+                <i data-lucide="plus"></i>
+                <span>Novo credor</span>
+              </button>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table clean-table" id="creditorList"></table>
+            </div>
+          </section>
         </section>
       </main>
     </div>
+
+    <dialog class="dialog" id="creditorDialog">
+      <form class="stack-form" id="creditorForm" method="dialog">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Credor</p>
+            <h2 id="creditorDialogTitle">Novo credor</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeCreditorButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="creditor-editor">
+          <div class="creditor-logo large" id="creditorLogoPreview">CR</div>
+          <div>
+            <label>Nome<input name="name" required placeholder="Ex.: Nubank"></label>
+            <input name="logoUrl" type="hidden">
+            <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+          </div>
+        </div>
+        <label>Tipo<select name="type">
+          <option value="Cartão de crédito">Cartão de crédito</option>
+          <option value="Empréstimo">Empréstimo</option>
+          <option value="Débito em conta">Débito em conta</option>
+          <option value="Financiamento">Financiamento</option>
+          <option value="Outro">Outro</option>
+        </select></label>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="save"></i>
+          <span>Salvar credor</span>
+        </button>
+      </form>
+    </dialog>
 
     <dialog class="dialog" id="plannedDialog">
       <form class="stack-form" id="plannedForm" method="dialog">

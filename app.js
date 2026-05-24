@@ -16,7 +16,9 @@ const state = {
   firebaseReady: false,
   saving: false,
   installmentFilter: "open",
-  carFilter: "open"
+  carFilter: "open",
+  fgtsFilters: {},
+  creditorEditingId: null
 };
 
 const el = {
@@ -48,6 +50,10 @@ const el = {
   creditorForm: document.querySelector("#creditorForm"),
   creditorList: document.querySelector("#creditorList"),
   creditorLogoPreview: document.querySelector("#creditorLogoPreview"),
+  creditorDialog: document.querySelector("#creditorDialog"),
+  creditorDialogTitle: document.querySelector("#creditorDialogTitle"),
+  newCreditorButton: document.querySelector("#newCreditorButton"),
+  closeCreditorButton: document.querySelector("#closeCreditorButton"),
   plannedDialog: document.querySelector("#plannedDialog"),
   plannedForm: document.querySelector("#plannedForm"),
   addPlanButton: document.querySelector("#addPlanButton"),
@@ -76,6 +82,8 @@ function bindEvents() {
   el.fgtsForm.addEventListener("submit", addFgtsContract);
   el.creditorForm.addEventListener("submit", addCreditor);
   el.creditorForm.elements.logoFile.addEventListener("change", handleCreditorLogoUpload);
+  el.newCreditorButton.addEventListener("click", () => openCreditorDialog());
+  el.closeCreditorButton.addEventListener("click", closeCreditorDialog);
   el.addPlanButton.addEventListener("click", openPlannedDialog);
   el.closePlanButton.addEventListener("click", () => el.plannedDialog.close());
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
@@ -577,6 +585,8 @@ function renderCar() {
 }
 
 function renderFgts() {
+  renderFgtsV2();
+  return;
   const received = state.data.fgts.contracts.reduce((total, item) => total + Number(item.received || 0), 0);
   const toPay = state.data.fgts.contracts.reduce((total, item) => total + Number(item.toPay || 0), 0);
   el.fgtsKpis.innerHTML = [
@@ -627,6 +637,8 @@ function renderFgts() {
 }
 
 function renderOrigins() {
+  renderOriginsV2();
+  return;
   el.creditorList.innerHTML = state.data.creditors.map((creditor) => `
     <div class="creditor-card">
       ${creditorLogoHtml(creditor.id)}
@@ -638,6 +650,70 @@ function renderOrigins() {
     </div>
   `).join("");
 
+  el.creditorList.querySelectorAll("[data-delete-creditor]").forEach((button) => {
+    button.addEventListener("click", () => deleteCreditor(button.dataset.deleteCreditor));
+  });
+}
+
+function renderFgtsV2() {
+  state.data.fgts.contracts.forEach(normalizeFgtsContract);
+  const received = state.data.fgts.contracts.reduce((total, item) => total + Number(item.received || 0), 0);
+  const toPay = state.data.fgts.contracts.reduce((total, item) => total + fgtsPendingTotal(item), 0);
+  el.fgtsKpis.innerHTML = [
+    metric("Recebido", received, "positive"),
+    metric("A pagar", -toPay, "negative"),
+    metric("Saldo", state.data.fgts.balance, "neutral"),
+    metric("Liberado", state.data.fgts.available, "positive")
+  ].join("");
+
+  el.fgtsTable.innerHTML = state.data.fgts.contracts.length
+    ? state.data.fgts.contracts.map((item) => fgtsContractCard(item)).join("")
+    : `<div class="empty-state">Nenhum empréstimo FGTS cadastrado.</div>`;
+
+  el.fgtsTable.querySelectorAll("[data-fgts-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fgtsFilters[button.dataset.contractId] = button.dataset.fgtsTab;
+      renderFgts();
+    });
+  });
+  el.fgtsTable.querySelectorAll("[data-pay-fgts-installment]").forEach((button) => {
+    button.addEventListener("click", () => payFgtsInstallment(button.dataset.payFgtsInstallment));
+  });
+  el.fgtsTable.querySelectorAll("[data-fgts-quit]").forEach((form) => {
+    form.addEventListener("submit", quitFgtsContract);
+  });
+}
+
+function renderOriginsV2() {
+  el.creditorList.innerHTML = `
+    <thead><tr><th>Credor</th><th>Tipo</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
+    <tbody>
+      ${state.data.creditors.map((creditor) => {
+        const inUse = isCreditorInUse(creditor.id);
+        return `
+          <tr>
+            <td>
+              <div class="entity-cell">
+                ${creditorLogoHtml(creditor.id)}
+                <strong>${escapeHtml(creditor.name)}</strong>
+              </div>
+            </td>
+            <td>${escapeHtml(creditor.type || "-")}</td>
+            <td>${creditorUsageCount(creditor.id)}</td>
+            <td>${currency.format(creditorOpenBalance(creditor.id))}</td>
+            <td class="row-actions">
+              <button class="icon-button mini-icon" type="button" title="Editar" data-edit-creditor="${creditor.id}">${icon("pencil")}</button>
+              <button class="icon-button mini-icon danger-mini" type="button" title="${inUse ? "Credor vinculado" : "Excluir"}" data-delete-creditor="${creditor.id}">${icon(inUse ? "ban" : "trash-2")}</button>
+            </td>
+          </tr>
+        `;
+      }).join("")}
+    </tbody>
+  `;
+
+  el.creditorList.querySelectorAll("[data-edit-creditor]").forEach((button) => {
+    button.addEventListener("click", () => openCreditorDialog(button.dataset.editCreditor));
+  });
   el.creditorList.querySelectorAll("[data-delete-creditor]").forEach((button) => {
     button.addEventListener("click", () => deleteCreditor(button.dataset.deleteCreditor));
   });
@@ -739,18 +815,29 @@ async function payCarInstallment(id) {
 async function addFgtsContract(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  const totalInstallments = Number(form.get("totalInstallments") || 1);
+  const installmentAmount = Number(form.get("installmentAmount") || 0);
+  const paidInstallments = Math.min(Number(form.get("paidInstallments") || 0), totalInstallments);
+  const firstDueDate = String(form.get("firstDueDate") || "");
   state.data.fgts.contracts.push({
     id: crypto.randomUUID(),
     description: String(form.get("description")).trim(),
     creditorId: String(form.get("creditorId")),
     contract: String(form.get("contract") || "").trim(),
+    createdAt: todayIsoDate(),
     received: Number(form.get("received") || 0),
-    toPay: Number(form.get("toPay") || 0),
+    toPay: installmentAmount * (totalInstallments - paidInstallments),
+    installmentAmount,
+    totalInstallments,
+    paidInstallments,
+    firstDueDate,
+    settlementAmount: Number(form.get("settlementAmount") || 0),
     status: "Ativo",
-    annualPayments: []
+    annualPayments: [],
+    installments: createFgtsInstallments(totalInstallments, installmentAmount, paidInstallments, firstDueDate)
   });
   event.currentTarget.reset();
-  await saveState("Contrato FGTS cadastrado.");
+  await saveState("Empréstimo FGTS cadastrado.");
 }
 
 async function addFgtsAnnualPayment(event) {
@@ -771,7 +858,26 @@ async function quitFgtsContract(event) {
   contract.quitAmount = Number(form.get("amount"));
   contract.status = "Quitado";
   contract.toPay = 0;
+  normalizeFgtsContract(contract);
+  contract.installments.forEach((installment) => {
+    installment.status = "Pago";
+    installment.paidAmount = Number(installment.paidAmount || installment.amount);
+  });
   await saveState("Empréstimo FGTS quitado.");
+}
+
+async function payFgtsInstallment(key) {
+  const [contractId, installmentId] = key.split(":");
+  const contract = state.data.fgts.contracts.find((item) => item.id === contractId);
+  if (!contract) return;
+  normalizeFgtsContract(contract);
+  const installment = contract.installments.find((item) => item.id === installmentId);
+  if (!installment) return;
+  installment.status = "Pago";
+  installment.paidAmount = Number(installment.amount || 0);
+  contract.paidInstallments = contract.installments.filter((item) => item.status === "Pago").length;
+  contract.toPay = fgtsPendingTotal(contract);
+  await saveState("Parcela FGTS paga.");
 }
 
 async function addCreditor(event) {
@@ -779,7 +885,9 @@ async function addCreditor(event) {
   const form = new FormData(event.currentTarget);
   const name = String(form.get("name")).trim();
   if (!name) return;
-  const existing = state.data.creditors.find((creditor) => creditor.name.toLowerCase() === name.toLowerCase());
+  const existing = state.creditorEditingId
+    ? state.data.creditors.find((creditor) => creditor.id === state.creditorEditingId)
+    : state.data.creditors.find((creditor) => creditor.name.toLowerCase() === name.toLowerCase());
   const payload = {
     id: existing?.id || crypto.randomUUID(),
     name,
@@ -792,8 +900,30 @@ async function addCreditor(event) {
     state.data.creditors.push(payload);
   }
   event.currentTarget.reset();
+  state.creditorEditingId = null;
+  el.creditorDialog.close();
   renderCreditorLogoPreview("");
   await saveState(existing ? "Credor atualizado." : "Credor cadastrado.");
+}
+
+function openCreditorDialog(id = null) {
+  state.creditorEditingId = id;
+  el.creditorForm.reset();
+  const creditor = id ? getCreditor(id) : null;
+  el.creditorDialogTitle.textContent = creditor ? "Editar credor" : "Novo credor";
+  el.creditorForm.elements.name.value = creditor?.name || "";
+  el.creditorForm.elements.type.value = creditor?.type || "Cartão de crédito";
+  el.creditorForm.elements.logoUrl.value = creditor?.logoUrl || "";
+  renderCreditorLogoPreview(creditor?.logoUrl || "");
+  el.creditorDialog.showModal();
+  refreshIcons();
+}
+
+function closeCreditorDialog() {
+  state.creditorEditingId = null;
+  el.creditorForm.reset();
+  renderCreditorLogoPreview("");
+  el.creditorDialog.close();
 }
 
 async function deleteCreditor(id) {
@@ -1072,6 +1202,131 @@ function installmentDetail(item) {
   }).join("");
 }
 
+function fgtsContractCard(contract) {
+  normalizeFgtsContract(contract);
+  const paid = contract.installments.filter((item) => item.status === "Pago");
+  const pending = contract.installments.filter((item) => item.status !== "Pago");
+  const activeTab = state.fgtsFilters[contract.id] || "open";
+  const visible = activeTab === "paid" ? paid : pending.slice(0, 5);
+  const nextDue = pending[0]?.dueDate || "";
+  return `
+    <details class="debt-card" open>
+      <summary>
+        <div class="entity-cell">
+          ${creditorLogoHtml(contract.creditorId)}
+          <div>
+            <strong>${escapeHtml(contract.description)}</strong>
+            <span>${escapeHtml(getCreditorName(contract.creditorId))} · ${escapeHtml(contract.contract || "sem contrato")}</span>
+          </div>
+        </div>
+        <span class="status ${contract.status === "Quitado" ? "ok" : "warn"}">${escapeHtml(contract.status || "Ativo")}</span>
+      </summary>
+      <div class="debt-meta-grid">
+        ${metaBox("Criada em", formatDate(contract.createdAt || contract.firstDueDate))}
+        ${metaBox("Tipo", "Empréstimo")}
+        ${metaBox("Parcelas pagas", `${paid.length} de ${contract.installments.length}`)}
+        ${metaBox("Próximo vencimento", nextDue ? formatDate(nextDue) : "-")}
+        <form class="inline-form debt-action" data-fgts-quit="${contract.id}">
+          <input name="amount" type="number" min="0" step="0.01" placeholder="Valor quitação" value="${contract.settlementAmount || ""}" required>
+          <button class="small-button" type="submit">Quitar</button>
+        </form>
+      </div>
+      ${debtTabs("fgts", contract.id, activeTab, pending.length, paid.length)}
+      <div class="table-wrap inner-table">
+        <table class="data-table clean-table">
+          <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
+          <tbody>
+            ${visible.map((installment) => `
+              <tr>
+                <td>${installment.number}/${contract.installments.length}</td>
+                <td>${formatDate(installment.dueDate)}</td>
+                <td>${currency.format(installment.amount || 0)}</td>
+                <td><span class="status ${installment.status === "Pago" ? "ok" : "warn"}">${escapeHtml(installment.status)}</span></td>
+                <td>
+                  <button class="small-button pay" type="button" data-pay-fgts-installment="${contract.id}:${installment.id}" ${installment.status === "Pago" ? "disabled" : ""}>Registrar pagamento</button>
+                </td>
+              </tr>
+            `).join("") || `<tr><td colspan="5" class="muted-cell">Nenhuma parcela nesta aba.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  `;
+}
+
+function debtTabs(prefix, id, active, openCount, paidCount) {
+  return `
+    <div class="debt-tabs">
+      <button class="debt-tab ${active === "open" ? "active" : ""}" type="button" data-${prefix}-tab="open" data-contract-id="${id}">Pendentes <span>${openCount}</span></button>
+      <button class="debt-tab ${active === "paid" ? "active" : ""}" type="button" data-${prefix}-tab="paid" data-contract-id="${id}">Pagas <span>${paidCount}</span></button>
+    </div>
+  `;
+}
+
+function metaBox(label, value) {
+  return `<div class="meta-box"><span>${label}</span><strong>${value}</strong></div>`;
+}
+
+function normalizeFgtsContract(contract) {
+  const total = Number(contract.totalInstallments || contract.installments?.length || 1);
+  const amount = Number(contract.installmentAmount || (contract.toPay && total ? Number(contract.toPay) / total : 0));
+  const paid = Number(contract.paidInstallments || 0);
+  contract.totalInstallments = total;
+  contract.installmentAmount = amount;
+  contract.installments = contract.installments?.length
+    ? contract.installments
+    : createFgtsInstallments(total, amount, paid, contract.firstDueDate);
+  contract.paidInstallments = contract.installments.filter((item) => item.status === "Pago").length;
+  contract.toPay = fgtsPendingTotal(contract);
+}
+
+function createFgtsInstallments(total, amount, paid, firstDueDate) {
+  const start = firstDueDate || nextAnnualDate();
+  return Array.from({ length: total }, (_, index) => {
+    const status = index < paid ? "Pago" : "Pendente";
+    return {
+      id: crypto.randomUUID(),
+      number: index + 1,
+      dueDate: addYearsToDate(start, index),
+      amount,
+      paidAmount: status === "Pago" ? amount : 0,
+      status
+    };
+  });
+}
+
+function fgtsPendingTotal(contract) {
+  normalizeFgtsContractShallow(contract);
+  return (contract.installments || [])
+    .filter((item) => item.status !== "Pago")
+    .reduce((total, item) => total + Number(item.amount || 0), 0);
+}
+
+function normalizeFgtsContractShallow(contract) {
+  if (contract.installments?.length) return;
+  const total = Number(contract.totalInstallments || 1);
+  const amount = Number(contract.installmentAmount || (contract.toPay && total ? Number(contract.toPay) / total : 0));
+  contract.installments = createFgtsInstallments(total, amount, Number(contract.paidInstallments || 0), contract.firstDueDate);
+}
+
+function creditorUsageCount(id) {
+  return state.data.installments.filter((item) => item.creditorId === id).length
+    + state.data.fixedCosts.filter((item) => item.creditorId === id).length
+    + state.data.plannedPurchases.filter((item) => item.creditorId === id).length
+    + state.data.fgts.contracts.filter((item) => item.creditorId === id).length
+    + state.data.projectionLines.filter((item) => item.creditorId === id || item.match === id).length;
+}
+
+function creditorOpenBalance(id) {
+  const installments = state.data.installments
+    .filter((item) => item.creditorId === id)
+    .reduce((total, item) => total + Number(item.amount || 0) * Math.max(0, Number(item.totalInstallments || 0) - Number(item.paidInstallments || 0)), 0);
+  const fgts = state.data.fgts.contracts
+    .filter((item) => item.creditorId === id)
+    .reduce((total, item) => total + fgtsPendingTotal(item), 0);
+  return installments + fgts;
+}
+
 function fgtsAnnualPayments(contract) {
   const payments = contract.annualPayments || [];
   if (!payments.length) return `<div class="empty-state compact">Nenhum pagamento anual registrado.</div>`;
@@ -1123,14 +1378,38 @@ function previousMonths(count) {
   });
 }
 
+function nextAnnualDate() {
+  const now = new Date();
+  const date = new Date(now.getFullYear() + 1, 5, 28);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function addYearsToDate(value, years) {
+  const [year, month, day] = String(value || nextAnnualDate()).split("-").map(Number);
+  const date = new Date(year + years, (month || 1) - 1, day || 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function formatMonth(month) {
   const [year, value] = month.split("-").map(Number);
   return monthLabel.format(new Date(year, value - 1, 1)).replace(".", "");
 }
 
+function formatDate(value) {
+  if (!value) return "-";
+  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return "-";
+  return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+}
+
 function todayKey() {
   const now = new Date();
   return `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+}
+
+function todayIsoDate() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 function updateSync(title, text, online) {

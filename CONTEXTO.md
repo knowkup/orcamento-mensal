@@ -460,3 +460,49 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Fazer commit e push para producao.
+
+## Atualizacao - 2026-05-24 15:08:01
+
+### Decisoes tomadas
+
+- Cadastro de credores deve seguir o padrao visual do projeto `Rota Financeira`: lista limpa, logo, tipo e botoes de acao.
+- O card `Dados` da tela Ajustes nao faz sentido neste produto e foi removido.
+- Credor passa a ser editavel em modal, nao em formulario fixo ocupando a tela.
+- FGTS deve tratar cada emprestimo como contrato parcelado, com parcelas pendentes e pagas dentro do item expandido.
+- O padrao visual de parcelas deve caminhar para resumo superior, abas `Pendentes`/`Pagas` e tabela operacional.
+- A interface deve ficar mais clean, clara e premium, com menos cara de mockup e menos cartoes decorativos.
+
+### Mudancas feitas
+
+- Ajustes agora mostra somente a lista de credores, com botao `Novo credor`.
+- Criado modal para cadastrar e editar credores com nome, tipo e logo.
+- Adicionados botoes de editar e excluir/bloquear exclusao na lista de credores.
+- Removido o painel `Dados` de Ajustes.
+- FGTS passou a cadastrar emprestimos com valor da parcela, total de parcelas, parcelas pagas, primeiro vencimento e valor de quitacao.
+- Cada emprestimo FGTS agora gera parcelas, separa pendentes/pagas, permite registrar pagamento de parcela e permite quitar o contrato.
+- Adicionado resumo expandido por emprestimo FGTS com criada em, tipo, parcelas pagas e proximo vencimento.
+- Ajustado visual geral com primario verde, tabelas mais limpas, cards de divida e menor sensacao de mockup.
+- Corrigidos textos novos para evitar encoding quebrado na interface.
+
+### Backups criados
+
+- `backups/20260524-150801`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `node --check app.js` usando runtime empacotado do Codex.
+- `git diff --check`
+- Validacao estatica de seletores `id` usados pelo JavaScript.
+- `Invoke-WebRequest http://127.0.0.1:4897/index.html`
+
+### Pendencias
+
+- Testar visualmente em producao pelo GitHub Pages apos o push.
+- O navegador interno do Codex nao estava disponivel nesta sessao (`No active Codex browser pane available`), entao a verificacao visual automatizada nao foi concluida.
+- Replicar o mesmo padrao visual completo de parcelas pendentes/pagas em `Parcelas` e `Carro` com ainda mais fidelidade ao print, se a validacao do FGTS ficar boa.
+- Ajustar dados reais do Firebase conforme o usuario validar a modelagem.
+
+### Proximos passos
+
+- Fazer commit e push desta rodada.
