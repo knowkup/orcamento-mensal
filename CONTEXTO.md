@@ -223,3 +223,36 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Publicar regras do Firestore pelo console antes de inserir dados reais.
+
+## Atualizacao - 2026-05-24 12:00:00
+
+### Decisoes tomadas
+
+- Usuario informou que as regras do Firestore foram alteradas e publicadas no Firebase Console.
+- Repositorio GitHub criado pelo usuario: `kupka1988/orcamento-mensal`.
+- Remoto esperado: `https://github.com/kupka1988/orcamento-mensal.git`.
+
+### Mudancas feitas
+
+- Nenhuma mudanca de codigo nesta etapa; pronto para conectar remoto e publicar no GitHub.
+
+### Backups criados
+
+- Nenhum backup criado; nao houve alteracao em codigo nem dados.
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `git remote -v`
+- `git diff --check`
+
+### Pendencias
+
+- Adicionar remoto `origin`.
+- Fazer push para `origin/main`.
+- Ativar GitHub Pages no repositorio, se ainda nao estiver ativo.
+- Testar URL publicada com Firebase Auth e Firestore.
+
+### Proximos passos
+
+- Publicar branch `main` no GitHub.
