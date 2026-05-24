@@ -54,6 +54,9 @@ const el = {
   carTitle: document.querySelector("#carTitle"),
   carKpis: document.querySelector("#carKpis"),
   carTable: document.querySelector("#carTable"),
+  editCarButton: document.querySelector("#editCarButton"),
+  carContractDialog: document.querySelector("#carContractDialog"),
+  closeCarContractButton: document.querySelector("#closeCarContractButton"),
   carPaymentDialog: document.querySelector("#carPaymentDialog"),
   carPaymentForm: document.querySelector("#carPaymentForm"),
   carPaymentTitle: document.querySelector("#carPaymentTitle"),
@@ -98,8 +101,15 @@ function bindEvents() {
   el.fixedCostForm.addEventListener("submit", addFixedCost);
   el.settingsForm.addEventListener("submit", updateSettings);
   el.carForm.addEventListener("submit", updateCar);
+  el.editCarButton.addEventListener("click", openCarContractDialog);
+  el.closeCarContractButton.addEventListener("click", () => el.carContractDialog.close());
   el.carPaymentForm.addEventListener("submit", payCarInstallment);
   el.closeCarPaymentButton.addEventListener("click", () => el.carPaymentDialog.close());
+  ["financed", "purchase", "monthly"].forEach((name) => {
+    el.carForm.elements[name].addEventListener("blur", (event) => {
+      event.currentTarget.value = formatCurrencyInput(event.currentTarget.value);
+    });
+  });
   el.fgtsForm.addEventListener("submit", addFgtsContract);
   el.creditorForm.addEventListener("submit", addCreditor);
   el.creditorForm.elements.logoFile.addEventListener("change", handleCreditorLogoUpload);
@@ -772,11 +782,6 @@ function renderFixedCosts() {
 function renderCar() {
   const car = state.data.car;
   el.carTitle.textContent = car.name || "Carro";
-  el.carForm.elements.name.value = car.name || "";
-  el.carForm.elements.financed.value = car.financed ? Number(car.financed).toFixed(2) : "";
-  el.carForm.elements.purchase.value = car.purchase ? Number(car.purchase).toFixed(2) : "";
-  el.carForm.elements.monthly.value = car.monthly ? Number(car.monthly).toFixed(2) : "";
-  el.carForm.elements.totalInstallments.value = car.totalInstallments || "";
 
   const paid = car.payments.filter((item) => item.status === "Pago");
   const pending = car.payments.filter((item) => item.status !== "Pago");
@@ -810,6 +815,9 @@ function renderCar() {
   });
   el.carTable.querySelectorAll("[data-pay-car]").forEach((button) => {
     button.addEventListener("click", () => openCarPaymentDialog(button.dataset.payCar));
+  });
+  el.carTable.querySelectorAll("[data-unpay-car]").forEach((button) => {
+    button.addEventListener("click", () => unpayCarInstallment(button.dataset.unpayCar));
   });
 }
 
@@ -1069,21 +1077,46 @@ async function updateCar(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   state.data.car.name = String(form.get("name")).trim();
-  state.data.car.financed = Number(form.get("financed") || 0);
-  state.data.car.purchase = Number(form.get("purchase") || 0);
-  state.data.car.monthly = Number(form.get("monthly") || 0);
+  state.data.car.financed = parseCurrencyInput(form.get("financed"));
+  state.data.car.purchase = parseCurrencyInput(form.get("purchase"));
+  state.data.car.monthly = parseCurrencyInput(form.get("monthly"));
   state.data.car.totalInstallments = Number(form.get("totalInstallments") || state.data.car.totalInstallments);
-  if (!state.data.car.payments.length && state.data.car.monthly && state.data.car.totalInstallments) {
-    state.data.car.payments = nextMonths(state.data.car.totalInstallments).map((month, index) => ({
-      id: crypto.randomUUID(),
-      number: index + 1,
+  syncCarPayments();
+  el.carContractDialog.close();
+  await saveState("Cadastro do carro atualizado.");
+}
+
+function openCarContractDialog() {
+  const car = state.data.car;
+  el.carForm.elements.name.value = car.name || "";
+  el.carForm.elements.financed.value = formatCurrencyInput(car.financed || "");
+  el.carForm.elements.purchase.value = formatCurrencyInput(car.purchase || "");
+  el.carForm.elements.monthly.value = formatCurrencyInput(car.monthly || "");
+  el.carForm.elements.totalInstallments.value = car.totalInstallments || "";
+  el.carContractDialog.showModal();
+}
+
+function syncCarPayments() {
+  const car = state.data.car;
+  const total = Number(car.totalInstallments || 0);
+  if (!total || !car.monthly) {
+    car.payments = [];
+    return;
+  }
+  const existing = new Map((car.payments || []).map((payment) => [Number(payment.number), payment]));
+  car.payments = nextMonths(total).map((month, index) => {
+    const number = index + 1;
+    const current = existing.get(number);
+    if (current?.status === "Pago") return { ...current, number, month };
+    return {
+      id: current?.id || crypto.randomUUID(),
+      number,
       month,
-      value: state.data.car.monthly,
+      value: car.monthly,
       paidAmount: 0,
       status: "Pendente"
-    }));
-  }
-  await saveState("Cadastro do carro atualizado.");
+    };
+  });
 }
 
 async function updateSettings(event) {
@@ -1113,6 +1146,14 @@ async function payCarInstallment(event) {
   payment.paidAmount = Number(form.get("paidAmount") || payment.value || 0);
   el.carPaymentDialog.close();
   await saveState("Parcela do carro paga.");
+}
+
+async function unpayCarInstallment(id) {
+  const payment = state.data.car.payments.find((item) => item.id === id);
+  if (!payment) return;
+  payment.status = "Pendente";
+  payment.paidAmount = 0;
+  await saveState("Pagamento do carro removido.");
 }
 
 async function addFgtsContract(event) {
@@ -1623,7 +1664,7 @@ function carDebtCard(car) {
       <div class="table-wrap inner-table">
         <table class="data-table clean-table">
           <thead><tr><th>Parcela</th><th>Mês</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ação</th></tr></thead>
-          <tbody>${visible.map((item) => `<tr><td>${item.number}/${car.payments.length}</td><td>${formatMonth(item.month)}</td><td>${currency.format(item.value)}</td><td>${item.paidAmount ? currency.format(item.paidAmount) : "-"}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td><button class="small-button pay" type="button" data-pay-car="${item.id}" ${item.status === "Pago" ? "disabled" : ""}>Registrar pagamento</button></td></tr>`).join("")}</tbody>
+          <tbody>${visible.map((item) => `<tr><td>${item.number}/${car.payments.length}</td><td>${formatMonth(item.month)}</td><td>${currency.format(item.value)}</td><td>${item.paidAmount ? currency.format(item.paidAmount) : "-"}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td>${item.status === "Pago" ? `<button class="small-button danger-mini" type="button" data-unpay-car="${item.id}">Excluir pagamento</button>` : `<button class="small-button pay" type="button" data-pay-car="${item.id}">Registrar pagamento</button>`}</td></tr>`).join("")}</tbody>
         </table>
       </div>
     </details>
@@ -1799,6 +1840,18 @@ function formatDate(value) {
 
 function compactCurrency(value) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact", maximumFractionDigits: 1 }).format(value || 0);
+}
+
+function parseCurrencyInput(value) {
+  const text = String(value || "").replace(/[^\d,.-]/g, "").trim();
+  if (!text) return 0;
+  if (text.includes(",")) return Number(text.replaceAll(".", "").replace(",", ".")) || 0;
+  return Number(text) || 0;
+}
+
+function formatCurrencyInput(value) {
+  const number = typeof value === "number" ? value : parseCurrencyInput(value);
+  return number ? currency.format(number).replace("R$", "").trim() : "";
 }
 
 function todayKey() {

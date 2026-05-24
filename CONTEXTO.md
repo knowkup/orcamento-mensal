@@ -817,3 +817,39 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Validar, commitar e fazer push.
+
+## Atualizacao - 2026-05-24 19:48:16
+
+### Decisoes tomadas
+
+- Dados do contrato do carro devem ficar em botao/modal, nao como formulario fixo no painel.
+- Campos monetarios do contrato devem aceitar/exibir formato brasileiro, como `R$ 3.621,12`.
+- Ao editar valor da parcela padrao ou total de parcelas, parcelas pendentes devem ser recalculadas.
+- Parcelas ja pagas devem preservar valor pago real.
+- Na aba `Pagas` do carro deve existir opcao de excluir pagamento, voltando a parcela para pendente.
+
+### Mudancas feitas
+
+- Criado modal `Dados do contrato` para editar financiamento do carro.
+- Movido `Concluir financiamento` para dentro do modal do contrato.
+- Campos monetarios do contrato agora usam input de texto com formatação brasileira no blur e parsing ao salvar.
+- `syncCarPayments()` recalcula parcelas pendentes a partir do contrato atualizado, preservando pagamentos ja feitos.
+- Adicionado botao `Excluir pagamento` nas parcelas pagas do carro.
+- Pagamento excluido volta para pendente e zera `paidAmount`.
+
+### Backups criados
+
+- `backups/20260524-194816`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- Leituras de `index.html`, `app.js` e `styles.css` nas secoes de carro.
+
+### Pendencias
+
+- Validar em producao edicao de contrato com valor de parcela em formato brasileiro.
+
+### Proximos passos
+
+- Validar, commitar e fazer push.

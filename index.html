@@ -195,27 +195,12 @@
                   <p class="eyebrow">Financiamento</p>
                   <h2 id="carTitle">Carro</h2>
                 </div>
+                <button class="primary-button" type="button" id="editCarButton">
+                  <i data-lucide="pencil"></i>
+                  <span>Dados do contrato</span>
+                </button>
               </div>
               <div class="finance-kpis" id="carKpis"></div>
-              <form class="stack-form" id="carForm">
-                <label>Nome do carro<input name="name" required></label>
-                <div class="form-row">
-                  <label class="money-label">Valor financiado<input name="financed" type="number" step="0.01" min="0"></label>
-                  <label class="money-label">Valor compra<input name="purchase" type="number" step="0.01" min="0"></label>
-                </div>
-                <div class="form-row">
-                  <label class="money-label">Parcela padrão<input name="monthly" type="number" step="0.01" min="0"></label>
-                  <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
-                </div>
-                <button class="ghost-button full" type="submit">
-                  <i data-lucide="save"></i>
-                  <span>Atualizar cadastro</span>
-                </button>
-                <button class="danger-button full" type="button" disabled title="Roadmap: encerrar e preparar novo financiamento">
-                  <i data-lucide="archive"></i>
-                  <span>Concluir financiamento</span>
-                </button>
-              </form>
             </section>
 
             <section class="panel">
@@ -400,6 +385,37 @@
         <button class="primary-button full" type="submit">
           <i data-lucide="check"></i>
           <span>Registrar pagamento</span>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="dialog" id="carContractDialog">
+      <form class="stack-form" id="carForm" method="dialog">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Financiamento</p>
+            <h2>Dados do contrato</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeCarContractButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Nome do carro<input name="name" required></label>
+        <div class="form-row">
+          <label class="money-label">Valor financiado<input name="financed" type="text" inputmode="decimal"></label>
+          <label class="money-label">Valor compra<input name="purchase" type="text" inputmode="decimal"></label>
+        </div>
+        <div class="form-row">
+          <label class="money-label">Parcela padrão<input name="monthly" type="text" inputmode="decimal"></label>
+          <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
+        </div>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="save"></i>
+          <span>Salvar contrato</span>
+        </button>
+        <button class="danger-button full" type="button" disabled title="Roadmap: encerrar e preparar novo financiamento">
+          <i data-lucide="archive"></i>
+          <span>Concluir financiamento</span>
         </button>
       </form>
     </dialog>
