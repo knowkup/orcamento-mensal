@@ -1069,6 +1069,12 @@ select {
   list-style: none;
 }
 
+.debt-card > summary.installment-summary {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.7fr) minmax(120px, 0.8fr) repeat(4, minmax(120px, 0.8fr));
+  align-items: center;
+}
+
 .debt-card > summary::-webkit-details-marker {
   display: none;
 }
@@ -1145,6 +1151,42 @@ select {
 
 .inner-table {
   margin: 16px;
+}
+
+.summary-progress,
+.summary-stat {
+  display: grid;
+  gap: 4px;
+  color: var(--ink);
+}
+
+.summary-progress span,
+.summary-stat span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 650;
+  text-transform: none;
+}
+
+.summary-progress strong,
+.summary-stat strong {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.mini-progress {
+  width: 54px;
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-soft);
+}
+
+.mini-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #36aeb4;
 }
 
 .dialog {
@@ -1252,8 +1294,14 @@ select {
   .occurrence-actions,
   .monthly-item,
   .monthly-item-action,
-  .debt-card > summary,
   .debt-action {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .debt-card > summary,
+  .debt-card > summary.installment-summary {
+    display: flex;
     flex-direction: column;
     align-items: stretch;
   }

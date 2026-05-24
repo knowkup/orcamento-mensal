@@ -781,3 +781,39 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Validar, commitar e fazer push.
+
+## Atualizacao - 2026-05-24 19:45:34
+
+### Decisoes tomadas
+
+- Editar parcelamento deve carregar o nome atual; o usuario nao deve precisar redigitar.
+- Valor da parcela deve ter prefixo visual `R$`.
+- Parcelas pendentes e pagas devem exibir data de vencimento.
+- Vencimento das parcelas sera calculado a partir da data de compra, somando um mes por parcela no mesmo dia.
+- Card fechado do parcelamento deve mostrar resumo parecido com o print: credor/nome, progresso, valor da parcela, proxima parcela, status e saldo.
+
+### Mudancas feitas
+
+- Corrigido modal de edicao de parcelamento para preencher nome atual, com fallback para dados antigos.
+- Campo `Valor da parcela` do modal recebeu prefixo visual `R$`.
+- Adicionada funcao `installmentDueDate()` para calcular vencimento mensal.
+- Tabelas de pendentes/pagas do parcelamento receberam coluna `Vencimento`.
+- Card fechado do parcelamento foi redesenhado com progresso, parcela, proxima parcela, status e saldo.
+- Normalizacao de parcelamentos antigos agora garante nome exibivel.
+
+### Backups criados
+
+- `backups/20260524-194534`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `rg -n "genericDebtCard|openInstallmentDialog|installmentForm|purchaseDate|Data compra|Valor da parcela|paymentMethod|progress|addMonths|formatDate" index.html app.js styles.css`
+
+### Pendencias
+
+- Validar visualmente em producao se o resumo fechado ficou compacto em larguras menores.
+
+### Proximos passos
+
+- Validar, commitar e fazer push.

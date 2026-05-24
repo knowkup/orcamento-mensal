@@ -712,6 +712,7 @@ function renderInstallments() {
       total: item.totalInstallments,
       paid: item.paidInstallments,
       amount: item.amount,
+      purchaseDate: item.purchaseDate,
       filter: state.installmentFilters[item.id] || "open",
       prefix: "installment",
       open: state.expandedInstallments[item.id] === true
@@ -999,12 +1000,13 @@ function openInstallmentDialog(id = null) {
   hydrateForms();
   state.installmentEditingId = id;
   const item = id ? state.data.installments.find((entry) => entry.id === id) : null;
+  if (item) item.item = item.item || item.name || item.description || "";
   el.installmentDialogTitle.textContent = item ? "Editar parcelamento" : "Novo parcelamento";
   el.installmentForm.elements.item.value = item?.item || "";
   el.installmentForm.elements.creditorId.value = item?.creditorId || el.installmentForm.elements.creditorId.value;
   el.installmentForm.elements.owner.value = item?.owner || "Felipe";
   el.installmentForm.elements.paymentMethod.value = item?.paymentMethod || "Cartão de crédito";
-  el.installmentForm.elements.amount.value = item?.amount || "";
+  el.installmentForm.elements.amount.value = item?.amount ? Number(item.amount).toFixed(2) : "";
   el.installmentForm.elements.total.value = item?.totalInstallments || "";
   el.installmentForm.elements.paid.value = item?.paidInstallments || 0;
   el.installmentForm.elements.date.value = item?.purchaseDate || "";
@@ -1398,7 +1400,7 @@ function normalizeData(data) {
       match: creditorByName.get(line.match) || line.match,
       creditorId: line.creditorId || creditorByName.get(line.origin) || null
     })),
-    installments: (data.installments || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin, owner: item.owner || "Felipe", paymentMethod: item.paymentMethod || "Cartão de crédito" })),
+    installments: (data.installments || []).map((item) => ({ ...item, item: item.item || item.name || item.description || "Parcelamento", creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin, owner: item.owner || "Felipe", paymentMethod: item.paymentMethod || "Cartão de crédito" })),
     fixedCosts: (data.fixedCosts || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.payment) || item.payment, paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" })),
     plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
     paidOccurrences: data.paidOccurrences || [],
@@ -1544,14 +1546,18 @@ function genericDebtCard(config) {
     id: `${config.id}-${index + 1}`,
     number: index + 1,
     amount: Number(config.amount || 0),
+    dueDate: installmentDueDate(config.purchaseDate, index),
     status: index < Number(config.paid || 0) ? "Pago" : "Pendente"
   }));
   const paid = installments.filter((item) => item.status === "Pago");
   const pending = installments.filter((item) => item.status !== "Pago");
   const visible = config.filter === "paid" ? paid : pending;
+  const progress = installments.length ? Math.round((paid.length / installments.length) * 100) : 0;
+  const balance = pending.length * Number(config.amount || 0);
+  const nextDue = pending[0]?.dueDate || "";
   return `
     <details class="debt-card" data-installment-details="${config.id}" ${config.open ? "open" : ""}>
-      <summary>
+      <summary class="installment-summary">
         <div class="entity-cell">
           ${creditorLogoHtml(config.creditorId)}
           <div>
@@ -1559,12 +1565,20 @@ function genericDebtCard(config) {
             <span>${escapeHtml(config.subtitle)}</span>
           </div>
         </div>
-        <span class="status ${pending.length ? "warn" : "ok"}">${pending.length ? "Pendente" : "Quitado"}</span>
+        <div class="summary-progress">
+          <span>Progresso</span>
+          <div class="mini-progress"><i style="width:${progress}%"></i></div>
+          <strong>${progress}%</strong>
+        </div>
+        <div class="summary-stat"><span>Parcela</span><strong>${currency.format(config.amount || 0)}</strong></div>
+        <div class="summary-stat"><span>Próxima parcela</span><strong>${nextDue ? formatDate(nextDue) : "-"}</strong></div>
+        <div class="summary-stat"><span>Status</span><strong>${paid.length}/${installments.length}</strong></div>
+        <div class="summary-stat"><span>Saldo</span><strong>${currency.format(balance)}</strong></div>
       </summary>
       <div class="debt-meta-grid">
         ${metaBox("Parcelas pagas", `${paid.length} de ${installments.length}`)}
         ${metaBox("Valor da parcela", currency.format(config.amount || 0))}
-        ${metaBox("Falta pagar", currency.format(pending.length * Number(config.amount || 0)))}
+        ${metaBox("Falta pagar", currency.format(balance))}
         <div class="debt-action row-actions">
           <button class="small-button" type="button" data-edit-installment="${config.id}">Editar</button>
           <button class="small-button danger-mini" type="button" data-delete-installment="${config.id}">Excluir</button>
@@ -1576,8 +1590,8 @@ function genericDebtCard(config) {
       </div>
       <div class="table-wrap inner-table">
         <table class="data-table clean-table">
-          <thead><tr><th>Parcela</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
-          <tbody>${visible.map((item) => `<tr><td>${item.number}/${installments.length}</td><td>${currency.format(item.amount)}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td>${item.status === "Pago" ? `<button class="small-button danger-mini" type="button" data-unpay-installment="${config.id}:${item.number}">Excluir pagamento</button>` : `<button class="small-button pay" type="button" data-pay-installment="${config.id}:${item.number}">Pagar</button>`}</td></tr>`).join("") || `<tr><td colspan="4" class="muted-cell">Nenhuma parcela nesta aba.</td></tr>`}</tbody>
+          <thead><tr><th>Parcela</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
+          <tbody>${visible.map((item) => `<tr><td>${item.number}/${installments.length}</td><td>${formatDate(item.dueDate)}</td><td>${currency.format(item.amount)}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td>${item.status === "Pago" ? `<button class="small-button danger-mini" type="button" data-unpay-installment="${config.id}:${item.number}">Excluir pagamento</button>` : `<button class="small-button pay" type="button" data-pay-installment="${config.id}:${item.number}">Pagar</button>`}</td></tr>`).join("") || `<tr><td colspan="5" class="muted-cell">Nenhuma parcela nesta aba.</td></tr>`}</tbody>
         </table>
       </div>
     </details>
@@ -1760,6 +1774,14 @@ function nextAnnualDate() {
 function addYearsToDate(value, years) {
   const [year, month, day] = String(value || nextAnnualDate()).split("-").map(Number);
   const date = new Date(year + years, (month || 1) - 1, day || 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function installmentDueDate(value, monthOffset) {
+  if (!value) return "";
+  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
+  if (!year || !month || !day) return "";
+  const date = new Date(year, month - 1 + monthOffset, day);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
