@@ -607,3 +607,31 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Fazer commit e push desta rodada.
+
+## Atualizacao - 2026-05-24 19:28:10
+
+### Decisoes tomadas
+
+- O reset da base precisa zerar tambem os totais manuais do FGTS (`saldo`, `bloqueado` e `liberado`), nao apenas contratos.
+
+### Mudancas feitas
+
+- Corrigido `createDefaultData()` para iniciar `fgts.balance`, `fgts.blocked` e `fgts.available` com `0`.
+- Mantido `fgts.contracts` vazio.
+
+### Backups criados
+
+- `backups/20260524-192810`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `rg -n "fgts|balance|blocked|available|58647|46495|12152" app.js CONTEXTO.md`
+
+### Pendencias
+
+- Validar em producao se FGTS aparece totalmente zerado apos reload/login.
+
+### Proximos passos
+
+- Validar, commitar e fazer push da correcao.

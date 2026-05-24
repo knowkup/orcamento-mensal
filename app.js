@@ -1324,11 +1324,10 @@ function createDefaultData() {
       payments: []
     },
     fgts: {
-      balance: 58647.21,
-      blocked: 46495.03,
-      available: 12152.18,
-      contracts: [
-      ]
+      balance: 0,
+      blocked: 0,
+      available: 0,
+      contracts: []
     }
   };
 }
