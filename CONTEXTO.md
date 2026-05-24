@@ -29,6 +29,9 @@ Data inicial: 2026-05-24
 - MVP recomendado, quando autorizado: dashboard mensal, custos fixos, compras parceladas, dividas/contratos e linha do tempo automatica.
 - A aba `Divida Cronologia` deve virar uma tela gerada automaticamente, nao um cadastro manual.
 - Manter Excel/CSV como possibilidade de importacao/exportacao para nao perder flexibilidade.
+- O sistema precisa usar Firebase desde o inicio, porque o usuario usa mais de um computador e iPhone.
+- Firebase deve ser usado para sincronizacao entre dispositivos, com regras seguras antes de qualquer publicacao.
+- O primeiro MVP deve continuar simples; Firebase nao deve transformar o produto em algo complexo.
 
 ## Analise recebida da planilha
 
@@ -70,6 +73,7 @@ Data inicial: 2026-05-24
 - Verificado que ainda nao existe remoto Git configurado; push nao executado.
 - Registrada analise previa da planilha como insumo de produto, sem iniciar desenvolvimento.
 - Lidos os JSONs auxiliares de analise apenas para registrar seu conteudo e utilidade no contexto; nenhum desenvolvimento iniciado.
+- Registrada decisao conceitual de usar Firebase por necessidade de sincronizacao entre computador e iPhone.
 
 ## Backups criados
 
@@ -99,9 +103,9 @@ Data inicial: 2026-05-24
 - Fazer push para `origin/main` quando o remoto estiver configurado.
 - Decidir posteriormente se a planilha existente deve ser versionada, migrada, importada ou mantida apenas como dado local.
 - Decidir posteriormente se os JSONs auxiliares devem ser versionados como documentacao tecnica ou mantidos apenas como referencia local.
-- Antes de prototipar, decidir se o uso sera local/pessoal ou acessivel pela internet/celular.
 - Antes de prototipar, decidir se a planilha sera fonte recorrente de importacao ou migracao unica.
 - Antes de prototipar, decidir se o sistema controlara pagamento real mes a mes ou apenas projecao.
+- Antes de prototipar, definir projeto Firebase, autenticacao e estrutura inicial de colecoes/documentos.
 - Futuramente avaliar notificacoes de vencimento por email ou WhatsApp.
 
 ## Proximos passos
