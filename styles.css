@@ -337,6 +337,34 @@ svg {
   grid-template-columns: 1fr;
 }
 
+.vertical-stack,
+.preferences-stack {
+  display: grid;
+  gap: 15px;
+}
+
+.preference-block {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.block-marker {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(53, 184, 121, 0.12);
+  color: var(--green);
+  font-weight: 700;
+}
+
+.preference-content {
+  min-width: 0;
+}
+
 .panel {
   padding: 17px;
 }
@@ -779,6 +807,24 @@ select {
   padding: 0 11px;
   background: #ffffff;
   color: var(--ink);
+}
+
+.money-label {
+  position: relative;
+}
+
+.money-label::after {
+  content: "R$";
+  position: absolute;
+  left: 12px;
+  bottom: 11px;
+  color: var(--muted);
+  font-weight: 650;
+  pointer-events: none;
+}
+
+.money-label input {
+  padding-left: 40px;
 }
 
 .form-row {

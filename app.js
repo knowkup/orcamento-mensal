@@ -766,9 +766,9 @@ function renderCar() {
   const car = state.data.car;
   el.carTitle.textContent = car.name || "Carro";
   el.carForm.elements.name.value = car.name || "";
-  el.carForm.elements.financed.value = car.financed || "";
-  el.carForm.elements.purchase.value = car.purchase || "";
-  el.carForm.elements.monthly.value = car.monthly || "";
+  el.carForm.elements.financed.value = car.financed ? Number(car.financed).toFixed(2) : "";
+  el.carForm.elements.purchase.value = car.purchase ? Number(car.purchase).toFixed(2) : "";
+  el.carForm.elements.monthly.value = car.monthly ? Number(car.monthly).toFixed(2) : "";
   el.carForm.elements.totalInstallments.value = car.totalInstallments || "";
 
   const paid = car.payments.filter((item) => item.status === "Pago");
@@ -1363,7 +1363,7 @@ function normalizeData(data) {
     paymentForms: creditor.paymentForms || [creditor.type].filter(Boolean)
   }));
   const creditorByName = new Map(creditors.map((creditor) => [creditor.name, creditor.id]));
-  return {
+  const normalized = {
     ...defaults,
     ...data,
     creditors,
@@ -1380,8 +1380,14 @@ function normalizeData(data) {
     paidOccurrences: data.paidOccurrences || [],
     receivedOccurrences: data.receivedOccurrences || [],
     car: { ...defaults.car, ...(data.car || {}) },
-    fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditorByName.get("Santander") || creditors[0]?.id })) }
+    fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) }
   };
+  if (!normalized.fgts.contracts.length) {
+    normalized.fgts.balance = 0;
+    normalized.fgts.blocked = 0;
+    normalized.fgts.available = 0;
+  }
+  return normalized;
 }
 
 function createDefaultData() {

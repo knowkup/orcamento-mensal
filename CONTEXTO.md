@@ -712,3 +712,39 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Fazer commit e push.
+
+## Atualizacao - 2026-05-24 19:40:50
+
+### Decisoes tomadas
+
+- A aba `Ajustes` deve se chamar `Preferências`.
+- Preferências deve usar blocos verticais, inspirado no print do outro sistema, e nao layout lado a lado pesado.
+- A aba `Carro` deve ser vertical: painel de cadastro/resumo em cima e parcelas abaixo.
+- Campos monetarios do carro devem mostrar prefixo visual `R$`.
+- FGTS deve zerar tambem quando o documento salvo no Firebase ja esta em schema novo, mas sem contratos e com totais antigos.
+
+### Mudancas feitas
+
+- Renomeada a navegacao/titulo de `Ajustes` para `Preferências`.
+- Reorganizada Preferências em blocos verticais numerados.
+- Reorganizada tela Carro em pilha vertical.
+- Adicionado prefixo visual `R$` para valor financiado, valor de compra e parcela padrão.
+- `normalizeData()` agora zera `fgts.balance`, `fgts.blocked` e `fgts.available` sempre que nao houver contratos FGTS.
+- Removida dependência antiga de credor Santander no normalize do FGTS.
+
+### Backups criados
+
+- `backups/20260524-194050`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `rg -n "Ajustes|ajustes|Prefer|settings|fgts|renderFgts|normalizeData|carroView|carForm|Valor financiado|Valor compra|Parcela padrão|content-grid" index.html app.js styles.css`
+
+### Pendencias
+
+- Validar em producao o carregamento do documento Firebase antigo para confirmar que FGTS ficou totalmente zerado.
+
+### Proximos passos
+
+- Validar, commitar e fazer push.

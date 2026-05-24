@@ -47,7 +47,7 @@
           </button>
           <button class="nav-tab" type="button" data-view="ajustes">
             <i data-lucide="settings"></i>
-            <span>Ajustes</span>
+            <span>Preferências</span>
           </button>
         </nav>
 
@@ -188,7 +188,7 @@
         </section>
 
         <section class="view" id="carroView" data-title="Carro">
-          <div class="content-grid">
+          <div class="vertical-stack">
             <section class="panel">
               <div class="panel-heading">
                 <div>
@@ -200,11 +200,11 @@
               <form class="stack-form" id="carForm">
                 <label>Nome do carro<input name="name" required></label>
                 <div class="form-row">
-                  <label>Valor financiado<input name="financed" type="number" step="0.01" min="0"></label>
-                  <label>Valor compra<input name="purchase" type="number" step="0.01" min="0"></label>
+                  <label class="money-label">Valor financiado<input name="financed" type="number" step="0.01" min="0"></label>
+                  <label class="money-label">Valor compra<input name="purchase" type="number" step="0.01" min="0"></label>
                 </div>
                 <div class="form-row">
-                  <label>Parcela padrão<input name="monthly" type="number" step="0.01" min="0"></label>
+                  <label class="money-label">Parcela padrão<input name="monthly" type="number" step="0.01" min="0"></label>
                   <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
                 </div>
                 <button class="ghost-button full" type="submit">
@@ -218,7 +218,7 @@
               </form>
             </section>
 
-            <section class="panel wide">
+            <section class="panel">
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">Parcelas do contrato</p>
@@ -275,9 +275,11 @@
           </div>
         </section>
 
-        <section class="view" id="ajustesView" data-title="Ajustes">
-          <div class="content-grid">
-            <section class="panel wide">
+        <section class="view" id="ajustesView" data-title="Preferências">
+          <div class="preferences-stack">
+            <section class="panel preference-block">
+              <div class="block-marker">1</div>
+              <div class="preference-content">
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">Credores</p>
@@ -291,8 +293,11 @@
               <div class="table-wrap">
                 <table class="data-table clean-table" id="creditorList"></table>
               </div>
+              </div>
             </section>
-            <section class="panel">
+            <section class="panel preference-block">
+              <div class="block-marker">2</div>
+              <div class="preference-content">
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">Planejamento</p>
@@ -307,6 +312,7 @@
                   <span>Salvar ajustes</span>
                 </button>
               </form>
+              </div>
             </section>
           </div>
         </section>
