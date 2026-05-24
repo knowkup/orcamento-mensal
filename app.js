@@ -63,6 +63,8 @@ const el = {
   closeCreditorButton: document.querySelector("#closeCreditorButton"),
   plannedDialog: document.querySelector("#plannedDialog"),
   plannedForm: document.querySelector("#plannedForm"),
+  plannedCredorField: document.querySelector("#plannedCredorField"),
+  plannedFonteField: document.querySelector("#plannedFonteField"),
   addPlanButton: document.querySelector("#addPlanButton"),
   closePlanButton: document.querySelector("#closePlanButton"),
   toast: document.querySelector("#toast")
@@ -97,6 +99,7 @@ function bindEvents() {
   el.addPlanButton.addEventListener("click", openPlannedDialog);
   el.closePlanButton.addEventListener("click", () => el.plannedDialog.close());
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
+  el.plannedForm.elements.kind.addEventListener("change", updatePlannedFields);
   el.projectionTopScroll.addEventListener("scroll", () => {
     el.projectionScroll.scrollLeft = el.projectionTopScroll.scrollLeft;
   });
@@ -1168,7 +1171,16 @@ function renderCreditorLogoPreview(src) {
 
 function openPlannedDialog() {
   hydrateForms();
+  updatePlannedFields();
   el.plannedDialog.showModal();
+}
+
+function updatePlannedFields() {
+  const isIncome = el.plannedForm.elements.kind.value === "income";
+  el.plannedCredorField.hidden = isIncome;
+  el.plannedFonteField.hidden = !isIncome;
+  el.plannedForm.elements.creditorId.required = !isIncome;
+  el.plannedForm.elements.source.required = isIncome;
 }
 
 async function addPlannedPurchase(event) {
@@ -1181,7 +1193,7 @@ async function addPlannedPurchase(event) {
     state.data.incomeLines.push({
       id: crypto.randomUUID(),
       label: String(form.get("description")).trim(),
-      origin: getCreditorName(String(form.get("creditorId"))),
+      origin: String(form.get("source") || "").trim(),
       owner: String(form.get("owner") || "Felipe"),
       values: { [month]: amount }
     });

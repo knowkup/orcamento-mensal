@@ -635,3 +635,33 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Validar, commitar e fazer push da correcao.
+
+## Atualizacao - 2026-05-24 19:29:36
+
+### Decisoes tomadas
+
+- Entrada nao deve exigir credor; entrada tem `Fonte`.
+- Saida continua usando `Credor`.
+
+### Mudancas feitas
+
+- No modal de lançamento planejado, ao escolher `Entrada`, o campo `Credor` e ocultado e aparece `Fonte`.
+- Ao salvar entrada planejada, `incomeLines.origin` passa a receber a fonte digitada, nao um credor.
+- Ao escolher `Saida`, o campo `Credor` permanece ativo.
+
+### Backups criados
+
+- `backups/20260524-192936`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `rg -n "plannedDialog|plannedForm|addPlannedPurchase|creditorId|Fonte|Credor|kind|incomeLines" index.html app.js`
+
+### Pendencias
+
+- Validar em producao se a troca dinamica Fonte/Credor esta clara.
+
+### Proximos passos
+
+- Validar, commitar e fazer push.

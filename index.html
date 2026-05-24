@@ -394,7 +394,8 @@
           <option value="income">Entrada</option>
         </select></label>
         <div class="form-row">
-          <label>Credor<select name="creditorId" data-creditor-select></select></label>
+          <label id="plannedCredorField">Credor<select name="creditorId" data-creditor-select></select></label>
+          <label id="plannedFonteField" hidden>Fonte<input name="source" placeholder="Ex.: Salário, aluguel, 13º"></label>
           <label>Mês<input name="month" type="month" required></label>
         </div>
         <label>Dono<select name="owner" data-owner-select></select></label>
