@@ -25,6 +25,26 @@ Data inicial: 2026-05-24
 - Estrutura inicial sera simples, com HTML, CSS e JavaScript puro quando a aplicacao for criada.
 - Branch principal esperada: `main`.
 - Backups ficarao em `backups/` e serao ignorados pelo Git.
+- Ainda nao iniciar desenvolvimento; primeiro consolidar entendimento da planilha e do produto.
+- MVP recomendado, quando autorizado: dashboard mensal, custos fixos, compras parceladas, dividas/contratos e linha do tempo automatica.
+- A aba `Divida Cronologia` deve virar uma tela gerada automaticamente, nao um cadastro manual.
+- Manter Excel/CSV como possibilidade de importacao/exportacao para nao perder flexibilidade.
+
+## Analise recebida da planilha
+
+- Arquivo na raiz: `Orçamento mensal.xlsx`.
+- Analise previa considerou somente abas nao ocultas.
+- Abas visiveis mapeadas: `Dívida Cronologia`, `Parcelas`, `Custo Fixo`, `Jeep Compass` e `Ant.FGTS`.
+- `Dívida Cronologia`: projecao mensal de entradas, custos fixos, parcelas e saldo; depende principalmente de `Parcelas` e `Custo Fixo`.
+- `Parcelas`: compras parceladas com origem, prazo, data, valor, parcelas pagas/faltantes, total pago, diferenca e progresso.
+- Totais em `Parcelas`: divida total R$ 19.269,45; valor pago R$ 13.358,96; falta pagar R$ 5.910,49; curto prazo R$ 3.974,64; medio prazo R$ 1.935,85; longo prazo R$ 0,00.
+- Erro conhecido: `Parcelas!V10` com `#DIV/0!` porque o bloco de longo prazo divide por divida total igual a zero.
+- `Custo Fixo`: cadastro recorrente de despesas por custo, forma de pagamento, grupo, vencimento e valor; custo total atual R$ 10.288,39.
+- `Jeep Compass`: financiamento do carro, parcelas pagas, pendentes e economia por parcela.
+- Totais em `Jeep Compass`: financiado R$ 107.981,00; compra R$ 133.900,00; financiamento projetado R$ 217.267,20; pago R$ 42.846,84; falta pagar R$ 173.813,76; economia R$ 606,60; 48 parcelas pendentes de 60.
+- `Ant.FGTS`: antecipacoes de FGTS, contratos, valores recebidos/pagos, parcelas futuras e saldo bloqueado/liberado.
+- Totais em `Ant.FGTS`: bloco 1 recebido R$ 5.740,98, pago R$ 3.601,89, economia/ajuste R$ 304,97; bloco 2 recebido R$ 15.046,51, valor a pagar R$ 32.175,39; saldo R$ 58.647,21, bloqueado R$ 46.495,03, liberado R$ 12.152,18.
+- Riscos mapeados: formulas com faixas fixas, valores digitados direto em formulas, erro `#DIV/0!`, logica espalhada entre abas e validacoes de lista limitadas.
 
 ## Mudancas feitas
 
@@ -35,12 +55,15 @@ Data inicial: 2026-05-24
 - Inicializado Git local na branch `main`.
 - Configurado usuario Git local como `Codex <codex@local>`.
 - Observado arquivo nao versionado `Orcamento mensal.xlsx`/`Orçamento mensal.xlsx`; ele nao foi alterado nem incluido no commit inicial.
+- Observada pasta nao versionada `files-mentioned-by-the-user-or/` com arquivos JSON de analise; ela nao foi alterada nem incluida em commit.
 - Criado commit inicial da estrutura do projeto.
 - Verificado que ainda nao existe remoto Git configurado; push nao executado.
+- Registrada analise previa da planilha como insumo de produto, sem iniciar desenvolvimento.
 
 ## Backups criados
 
 - Nenhum backup ainda; a pasta inicial estava vazia.
+- Nenhum backup criado nesta atualizacao; apenas documentacao de contexto foi alterada.
 
 ## Comandos relevantes
 
@@ -55,14 +78,21 @@ Data inicial: 2026-05-24
 - `git commit -m "chore: estrutura inicial do projeto"`
 - `git remote -v`
 - `git log --oneline -1`
+- `Get-Content -Raw CONTEXTO.md`
+- `Get-ChildItem -Force "files-mentioned-by-the-user-or"`
 
 ## Pendencias
 
 - Configurar remoto GitHub quando existir.
 - Fazer push para `origin/main` quando o remoto estiver configurado.
 - Decidir posteriormente se a planilha existente deve ser versionada, migrada, importada ou mantida apenas como dado local.
+- Antes de prototipar, decidir se o uso sera local/pessoal ou acessivel pela internet/celular.
+- Antes de prototipar, decidir se a planilha sera fonte recorrente de importacao ou migracao unica.
+- Antes de prototipar, decidir se o sistema controlara pagamento real mes a mes ou apenas projecao.
+- Futuramente avaliar notificacoes de vencimento por email ou WhatsApp.
 
 ## Proximos passos
 
 - Configurar o remoto GitHub `origin` quando o repositorio existir.
 - Fazer push para `origin/main` apos configurar o remoto.
+- Aguardar autorizacao explicita antes de iniciar qualquer desenvolvimento.
