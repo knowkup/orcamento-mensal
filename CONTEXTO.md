@@ -12,6 +12,8 @@ Data inicial: 2026-05-24
 - Validar antes de finalizar sempre que houver validacoes disponiveis.
 - Revisar `git diff` antes de concluir.
 - Ao alterar codigo, fazer commit e push ao final quando houver remoto configurado.
+- Manter Git organizado: trabalhar com commits pequenos, mensagens claras e `git status` limpo ao finalizar cada etapa.
+- Criar subpastas quando isso melhorar a organizacao do projeto, sem trocar stack ou recriar estrutura sem necessidade.
 
 ## Produto
 
@@ -256,3 +258,31 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Publicar branch `main` no GitHub.
+
+## Atualizacao - 2026-05-24 12:04:00
+
+### Decisoes tomadas
+
+- Usuario definiu regra adicional: manter o Git sempre organizado.
+- Quando fizer sentido, o agente pode criar subpastas para melhorar a organizacao do projeto.
+
+### Mudancas feitas
+
+- Atualizadas premissas operacionais no contexto.
+
+### Backups criados
+
+- Nenhum backup criado; apenas documentacao de regra operacional.
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `Get-Content -Raw CONTEXTO.md`
+
+### Pendencias
+
+- Fazer commit e push desta atualizacao de contexto.
+
+### Proximos passos
+
+- Seguir mantendo commits pequenos, Git limpo e estrutura organizada.
