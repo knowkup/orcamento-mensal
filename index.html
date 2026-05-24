@@ -13,7 +13,7 @@
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <div class="brand">
-          <span class="brand-mark">OM</span>
+          <span class="brand-mark"><img src="assets/icon.svg" alt=""></span>
           <div>
             <strong>Orçamento Mensal</strong>
             <span>Controle do futuro</span>
@@ -31,7 +31,7 @@
           </button>
           <button class="nav-tab" type="button" data-view="parcelas">
             <i data-lucide="credit-card"></i>
-            <span>Parcelas</span>
+            <span>Parcelamentos</span>
           </button>
           <button class="nav-tab" type="button" data-view="custos">
             <i data-lucide="repeat-2"></i>
@@ -125,17 +125,17 @@
           </section>
         </section>
 
-        <section class="view" id="parcelasView" data-title="Parcelas">
+        <section class="view" id="parcelasView" data-title="Parcelamentos">
           <div class="content-grid single">
             <section class="panel wide">
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">Contas parceladas</p>
-                  <h2>Parcelas por credor</h2>
+                  <h2>Parcelamentos por credor</h2>
                 </div>
                 <button class="primary-button" type="button" id="newInstallmentButton">
                   <i data-lucide="plus"></i>
-                  <span>Nova conta</span>
+                  <span>Novo parcelamento</span>
                 </button>
               </div>
               <div class="debt-list" id="installmentsTable"></div>
@@ -221,7 +221,7 @@
             <section class="panel wide">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Parcelas</p>
+                  <p class="eyebrow">Parcelas do contrato</p>
                   <h2>Gestão do financiamento</h2>
                 </div>
               </div>
@@ -317,8 +317,8 @@
       <form class="stack-form" id="installmentForm" method="dialog">
         <div class="panel-heading">
           <div>
-            <p class="eyebrow">Conta parcelada</p>
-            <h2>Nova conta</h2>
+            <p class="eyebrow">Parcelamento</p>
+            <h2 id="installmentDialogTitle">Novo parcelamento</h2>
           </div>
           <button class="icon-button" type="button" id="closeInstallmentButton" title="Fechar">
             <i data-lucide="x"></i>
@@ -327,6 +327,7 @@
         <label>Conta<input name="item" required placeholder="Ex.: Amazon"></label>
         <label>Credor<select name="creditorId" data-creditor-select></select></label>
         <label>Dono<select name="owner" data-owner-select></select></label>
+        <label>Forma de pagamento<select name="paymentMethod" data-payment-method-select></select></label>
         <div class="form-row">
           <label>Valor da parcela<input name="amount" type="number" step="0.01" min="0" required></label>
           <label>Total parcelas<input name="total" type="number" step="1" min="1" required></label>
@@ -337,7 +338,7 @@
         </div>
         <button class="primary-button full" type="submit">
           <i data-lucide="plus"></i>
-          <span>Cadastrar conta</span>
+          <span>Salvar parcelamento</span>
         </button>
       </form>
     </dialog>

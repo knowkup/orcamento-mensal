@@ -19,6 +19,8 @@ const state = {
   carFilter: "open",
   fgtsFilters: {},
   installmentFilters: {},
+  expandedInstallments: {},
+  installmentEditingId: null,
   creditorEditingId: null
 };
 
@@ -41,6 +43,7 @@ const el = {
   monthlyBoard: document.querySelector("#monthlyBoard"),
   installmentForm: document.querySelector("#installmentForm"),
   installmentDialog: document.querySelector("#installmentDialog"),
+  installmentDialogTitle: document.querySelector("#installmentDialogTitle"),
   newInstallmentButton: document.querySelector("#newInstallmentButton"),
   closeInstallmentButton: document.querySelector("#closeInstallmentButton"),
   installmentsTable: document.querySelector("#installmentsTable"),
@@ -461,34 +464,71 @@ function valuesFromMonthlyMap(map, months) {
 }
 
 function appendDynamicProjectionRows(rows, months, keepPaidValues) {
+  const installmentGroups = uniqueGroups(state.data.installments, (item) => groupKey(item));
+  installmentGroups.forEach((group) => {
+    const installmentValues = {};
+    months.forEach((month, index) => {
+      installmentValues[month] = installmentTotalForGroup(group, index);
+      const key = `auto-installments-${group.id}:${month}`;
+      if (!keepPaidValues && isOccurrencePaid(key)) installmentValues[month] = 0;
+    });
+    if (Object.values(installmentValues).some(Boolean)) {
+      rows.push({ id: `auto-installments-${group.id}`, kind: "expense", owner: group.owner, label: `Parcelamentos (${group.paymentMethod})`, origin: getCreditorName(group.creditorId), sourceLabel: "", values: installmentValues });
+    }
+  });
+
   const creditors = new Set([
-    ...state.data.installments.map((item) => item.creditorId),
     ...state.data.fixedCosts.filter((item) => item.includeInProjection !== false).map((item) => item.creditorId),
     ...state.data.plannedPurchases.map((item) => item.creditorId)
   ].filter(Boolean));
-
   creditors.forEach((creditorId) => {
-    const installmentValues = {};
     const fixedValues = {};
     const plannedValues = {};
-    months.forEach((month, index) => {
-      installmentValues[month] = installmentTotal(creditorId, index);
+    months.forEach((month) => {
       fixedValues[month] = fixedTotalByOrigin(creditorId);
       plannedValues[month] = plannedTotal(creditorId, month);
-      ["installments", "fixed", "planned"].forEach((kind) => {
+      ["fixed", "planned"].forEach((kind) => {
         const key = `auto-${kind}-${creditorId}:${month}`;
         if (!keepPaidValues && isOccurrencePaid(key)) {
-          if (kind === "installments") installmentValues[month] = 0;
           if (kind === "fixed") fixedValues[month] = 0;
           if (kind === "planned") plannedValues[month] = 0;
         }
       });
     });
     const owner = ownerForCreditor(creditorId);
-    if (Object.values(installmentValues).some(Boolean)) rows.push({ id: `auto-installments-${creditorId}`, kind: "expense", owner, label: `Parcelas (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: installmentValues });
     if (Object.values(fixedValues).some(Boolean)) rows.push({ id: `auto-fixed-${creditorId}`, kind: "expense", owner, label: `Custos fixos (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: fixedValues });
     if (Object.values(plannedValues).some(Boolean)) rows.push({ id: `auto-planned-${creditorId}`, kind: "expense", owner, label: `Compras planejadas (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: plannedValues });
   });
+}
+
+function groupKey(item) {
+  return `${item.creditorId || "sem-credor"}|${item.owner || "Felipe"}|${item.paymentMethod || "Cartão de crédito"}`;
+}
+
+function uniqueGroups(items, keyGetter) {
+  const groups = new Map();
+  items.forEach((item) => {
+    const key = keyGetter(item);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: key.replaceAll("|", "-").replaceAll(/\s+/g, "-"),
+        creditorId: item.creditorId,
+        owner: item.owner || "Felipe",
+        paymentMethod: item.paymentMethod || "Cartão de crédito",
+        key
+      });
+    }
+  });
+  return [...groups.values()];
+}
+
+function installmentTotalForGroup(group, monthIndex) {
+  return state.data.installments
+    .filter((item) => groupKey(item) === group.key && item.active !== false)
+    .reduce((total, item) => {
+      const left = Math.max(0, Number(item.totalInstallments) - Number(item.paidInstallments));
+      return monthIndex < left ? total + Number(item.amount) : total;
+    }, 0);
 }
 
 function appendKahDifferenceRow(rows, months) {
@@ -661,27 +701,37 @@ function renderInstallments() {
     ? state.data.installments.map((item) => genericDebtCard({
       id: item.id,
       title: item.item,
-      subtitle: `${getCreditorName(item.creditorId)} · ${item.owner || "Felipe"}`,
+      subtitle: `${getCreditorName(item.creditorId)} · ${item.owner || "Felipe"} · ${item.paymentMethod || "Cartão de crédito"}`,
       creditorId: item.creditorId,
       total: item.totalInstallments,
       paid: item.paidInstallments,
       amount: item.amount,
       filter: state.installmentFilters[item.id] || "open",
-      prefix: "installment"
+      prefix: "installment",
+      open: state.expandedInstallments[item.id] === true
     })).join("")
     : `<div class="empty-state">Nenhuma conta parcelada cadastrada.</div>`;
 
   el.installmentsTable.querySelectorAll("[data-installment-card-tab]").forEach((button) => {
     button.addEventListener("click", () => {
+      state.expandedInstallments[button.dataset.contractId] = true;
       state.installmentFilters[button.dataset.contractId] = button.dataset.installmentCardTab;
       renderInstallments();
     });
   });
+  el.installmentsTable.querySelectorAll("[data-installment-details]").forEach((detail) => {
+    detail.addEventListener("toggle", () => {
+      state.expandedInstallments[detail.dataset.installmentDetails] = detail.open;
+    });
+  });
+  el.installmentsTable.querySelectorAll("[data-edit-installment]").forEach((button) => {
+    button.addEventListener("click", () => openInstallmentDialog(button.dataset.editInstallment));
+  });
   el.installmentsTable.querySelectorAll("[data-pay-installment]").forEach((button) => {
     button.addEventListener("click", () => payInstallment(button.dataset.payInstallment));
   });
-  el.installmentsTable.querySelectorAll("[data-quit-installment]").forEach((button) => {
-    button.addEventListener("click", () => quitInstallment(button.dataset.quitInstallment));
+  el.installmentsTable.querySelectorAll("[data-unpay-installment]").forEach((button) => {
+    button.addEventListener("click", () => unpayInstallment(button.dataset.unpayInstallment));
   });
   el.installmentsTable.querySelectorAll("[data-delete-installment]").forEach((button) => {
     button.addEventListener("click", () => deleteInstallment(button.dataset.deleteInstallment));
@@ -917,36 +967,60 @@ async function addInstallment(event) {
     paidInstallments: Number(form.get("paid") || 0),
     purchaseDate: String(form.get("date") || ""),
     owner: String(form.get("owner") || "Felipe"),
+    paymentMethod: String(form.get("paymentMethod") || "Cartão de crédito"),
     active: true
   };
-  state.data.installments.push(item);
+  const editing = Boolean(state.installmentEditingId);
+  if (editing) {
+    const current = state.data.installments.find((entry) => entry.id === state.installmentEditingId);
+    if (current) Object.assign(current, item, { id: current.id });
+  } else {
+    state.data.installments.push(item);
+    state.expandedInstallments[item.id] = true;
+  }
   closeInstallmentDialog();
   event.currentTarget.reset();
-  await saveState("Parcela cadastrada.");
+  await saveState(editing ? "Parcelamento atualizado." : "Parcelamento cadastrado.");
 }
 
-function openInstallmentDialog() {
+function openInstallmentDialog(id = null) {
   hydrateForms();
+  state.installmentEditingId = id;
+  const item = id ? state.data.installments.find((entry) => entry.id === id) : null;
+  el.installmentDialogTitle.textContent = item ? "Editar parcelamento" : "Novo parcelamento";
+  el.installmentForm.elements.item.value = item?.item || "";
+  el.installmentForm.elements.creditorId.value = item?.creditorId || el.installmentForm.elements.creditorId.value;
+  el.installmentForm.elements.owner.value = item?.owner || "Felipe";
+  el.installmentForm.elements.paymentMethod.value = item?.paymentMethod || "Cartão de crédito";
+  el.installmentForm.elements.amount.value = item?.amount || "";
+  el.installmentForm.elements.total.value = item?.totalInstallments || "";
+  el.installmentForm.elements.paid.value = item?.paidInstallments || 0;
+  el.installmentForm.elements.date.value = item?.purchaseDate || "";
   el.installmentDialog.showModal();
 }
 
 function closeInstallmentDialog() {
+  state.installmentEditingId = null;
   el.installmentForm.reset();
   el.installmentDialog.close();
 }
 
-async function payInstallment(id) {
+async function payInstallment(key) {
+  const [id, number] = key.split(":");
   const item = state.data.installments.find((entry) => entry.id === id);
   if (!item) return;
-  item.paidInstallments = Math.min(item.totalInstallments, Number(item.paidInstallments) + 1);
+  item.paidInstallments = Math.min(item.totalInstallments, Math.max(Number(item.paidInstallments), Number(number)));
+  state.expandedInstallments[id] = true;
   await saveState("Parcela paga.");
 }
 
-async function quitInstallment(id) {
+async function unpayInstallment(key) {
+  const [id, number] = key.split(":");
   const item = state.data.installments.find((entry) => entry.id === id);
   if (!item) return;
-  item.paidInstallments = item.totalInstallments;
-  await saveState("Parcela quitada.");
+  item.paidInstallments = Math.max(0, Number(number) - 1);
+  state.expandedInstallments[id] = true;
+  await saveState("Pagamento removido.");
 }
 
 async function deleteInstallment(id) {
@@ -1300,7 +1374,7 @@ function normalizeData(data) {
       match: creditorByName.get(line.match) || line.match,
       creditorId: line.creditorId || creditorByName.get(line.origin) || null
     })),
-    installments: (data.installments || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
+    installments: (data.installments || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin, owner: item.owner || "Felipe", paymentMethod: item.paymentMethod || "Cartão de crédito" })),
     fixedCosts: (data.fixedCosts || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.payment) || item.payment, paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" })),
     plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
     paidOccurrences: data.paidOccurrences || [],
@@ -1355,7 +1429,7 @@ function metric(label, value, tone, money = true) {
 
 function sourceLabel(line) {
   const labels = {
-    installments: "vem de Parcelas",
+    installments: "vem de Parcelamentos",
     fixedByName: "vem de Custo Fixo",
     fixedByOrigin: "custos da origem",
     planned: "compras planejadas",
@@ -1446,7 +1520,7 @@ function genericDebtCard(config) {
   const pending = installments.filter((item) => item.status !== "Pago");
   const visible = config.filter === "paid" ? paid : pending;
   return `
-    <details class="debt-card">
+    <details class="debt-card" data-installment-details="${config.id}" ${config.open ? "open" : ""}>
       <summary>
         <div class="entity-cell">
           ${creditorLogoHtml(config.creditorId)}
@@ -1462,8 +1536,7 @@ function genericDebtCard(config) {
         ${metaBox("Valor da parcela", currency.format(config.amount || 0))}
         ${metaBox("Falta pagar", currency.format(pending.length * Number(config.amount || 0)))}
         <div class="debt-action row-actions">
-          <button class="small-button pay" type="button" data-pay-installment="${config.id}" ${pending.length ? "" : "disabled"}>Registrar pagamento</button>
-          <button class="small-button" type="button" data-quit-installment="${config.id}" ${pending.length ? "" : "disabled"}>Quitar</button>
+          <button class="small-button" type="button" data-edit-installment="${config.id}">Editar</button>
           <button class="small-button danger-mini" type="button" data-delete-installment="${config.id}">Excluir</button>
         </div>
       </div>
@@ -1473,8 +1546,8 @@ function genericDebtCard(config) {
       </div>
       <div class="table-wrap inner-table">
         <table class="data-table clean-table">
-          <thead><tr><th>Parcela</th><th>Valor</th><th>Status</th></tr></thead>
-          <tbody>${visible.map((item) => `<tr><td>${item.number}/${installments.length}</td><td>${currency.format(item.amount)}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td></tr>`).join("") || `<tr><td colspan="3" class="muted-cell">Nenhuma parcela nesta aba.</td></tr>`}</tbody>
+          <thead><tr><th>Parcela</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
+          <tbody>${visible.map((item) => `<tr><td>${item.number}/${installments.length}</td><td>${currency.format(item.amount)}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td>${item.status === "Pago" ? `<button class="small-button danger-mini" type="button" data-unpay-installment="${config.id}:${item.number}">Excluir pagamento</button>` : `<button class="small-button pay" type="button" data-pay-installment="${config.id}:${item.number}">Pagar</button>`}</td></tr>`).join("") || `<tr><td colspan="4" class="muted-cell">Nenhuma parcela nesta aba.</td></tr>`}</tbody>
         </table>
       </div>
     </details>

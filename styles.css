@@ -70,9 +70,14 @@ button:disabled {
   width: 46px;
   height: 46px;
   border-radius: 8px;
-  background: var(--gold);
-  color: var(--sidebar);
-  font-weight: 900;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.brand-mark img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .brand strong,

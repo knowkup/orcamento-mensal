@@ -665,3 +665,50 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Validar, commitar e fazer push.
+
+## Atualizacao - 2026-05-24 19:36:04
+
+### Decisoes tomadas
+
+- A aba `Parcelas` passa a se chamar `Parcelamentos`.
+- Cadastro passa a ser `Novo parcelamento`.
+- Parcelamento precisa ter `forma de pagamento`, além de credor e dono.
+- Controle/projecao de parcelamentos deve considerar credor + dono + forma de pagamento, pois Felipe e Kah podem ter cartões diferentes no mesmo banco.
+- Pagamento de parcelamento nao deve ser um botao generico de "pagar proxima"; cada parcela pendente deve ter seu proprio botao `Pagar`.
+- Na aba `Pagas`, cada parcela deve ter botao para excluir/desfazer pagamento e voltar para pendente.
+- Ao trocar entre pendentes/pagas dentro de um parcelamento expandido, o card deve permanecer aberto.
+- Parcelamento precisa ter botao de editar.
+- Logo lateral deve usar a mesma marca criada para favicon.
+
+### Mudancas feitas
+
+- Renomeada a navegacao e titulo da tela para `Parcelamentos`.
+- Botao mudou para `Novo parcelamento`.
+- Modal de parcelamento agora tem campo `Forma de pagamento`.
+- Adicionado estado de edicao para parcelamentos.
+- Adicionado botao `Editar` no card de cada parcelamento.
+- Abas pendentes/pagas ficam dentro de cada parcelamento e mantem o card expandido ao alternar.
+- Removido o fluxo de `Registrar pagamento` generico do parcelamento.
+- Parcelas pendentes agora exibem botao `Pagar` por linha.
+- Parcelas pagas agora exibem botao `Excluir pagamento`, revertendo o pagamento e voltando para pendentes.
+- Planejamento agrupa parcelamentos por credor + dono + forma de pagamento.
+- Marca lateral substituida pelo icone em `assets/icon.svg`.
+
+### Backups criados
+
+- `backups/20260524-193604`
+
+### Comandos relevantes
+
+- `git status --short --branch`
+- `rg -n "Parcelas|parcelas|installment|genericDebtCard|newInstallment|installmentDialog|installmentForm|payInstallment|quitInstallment|deleteInstallment|paymentMethod|brand-mark" index.html app.js styles.css`
+- `node --check app.js` usando runtime empacotado do Codex.
+- `git diff --check`
+
+### Pendencias
+
+- Validar em producao o fluxo real de editar/pagar/desfazer parcelamento.
+
+### Proximos passos
+
+- Fazer commit e push.
