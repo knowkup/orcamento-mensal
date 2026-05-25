@@ -983,3 +983,31 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Commitar e publicar a correcao.
+
+## Atualizacao - 2026-05-25 10:40:00
+
+### Decisoes tomadas
+
+- Contratos/emprestimos FGTS ja lancados precisam ser editaveis e excluiveis.
+- O card fechado do FGTS deve mostrar dados principais sem exigir expansao.
+
+### Mudancas feitas
+
+- Adicionado estado de edicao do contrato FGTS e reaproveitado o modal `Novo contrato FGTS` como `Editar contrato FGTS`.
+- Adicionadas acoes `Editar` e `Excluir` dentro do card expandido do FGTS.
+- Edicao preserva parcelas ja pagas quando recalcula valores/vencimentos do contrato.
+- Card fechado do FGTS agora mostra recebido, a pagar, parcelas pagas/total e proximo vencimento.
+- Cards FGTS passam a iniciar fechados, mantendo resumo operacional visivel no cabecalho.
+
+### Comandos relevantes
+
+- `node --check app.js`
+- `git diff --check`
+
+### Pendencias
+
+- Validar com dados reais no Firebase se a edicao de contratos antigos preserva exatamente o historico esperado.
+
+### Proximos passos
+
+- Commitar e publicar a correcao.

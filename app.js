@@ -18,6 +18,7 @@ const state = {
   installmentFilter: "open",
   carFilter: "open",
   fgtsFilters: {},
+  fgtsEditingId: null,
   installmentFilters: {},
   expandedInstallments: {},
   installmentEditingId: null,
@@ -68,6 +69,7 @@ const el = {
   closeCarPaymentButton: document.querySelector("#closeCarPaymentButton"),
   fgtsForm: document.querySelector("#fgtsForm"),
   fgtsDialog: document.querySelector("#fgtsDialog"),
+  fgtsDialogTitle: document.querySelector("#fgtsDialogTitle"),
   newFgtsButton: document.querySelector("#newFgtsButton"),
   closeFgtsButton: document.querySelector("#closeFgtsButton"),
   fgtsKpis: document.querySelector("#fgtsKpis"),
@@ -1017,6 +1019,12 @@ function renderFgtsV2() {
   el.fgtsTable.querySelectorAll("[data-pay-fgts-installment]").forEach((button) => {
     button.addEventListener("click", () => payFgtsInstallment(button.dataset.payFgtsInstallment));
   });
+  el.fgtsTable.querySelectorAll("[data-edit-fgts]").forEach((button) => {
+    button.addEventListener("click", () => openFgtsDialog(button.dataset.editFgts));
+  });
+  el.fgtsTable.querySelectorAll("[data-delete-fgts]").forEach((button) => {
+    button.addEventListener("click", () => deleteFgtsContract(button.dataset.deleteFgts));
+  });
   el.fgtsTable.querySelectorAll("[data-fgts-quit]").forEach((form) => {
     form.addEventListener("submit", quitFgtsContract);
   });
@@ -1352,15 +1360,39 @@ async function unpayCarInstallment(id) {
   await saveState("Pagamento do carro removido.");
 }
 
-function openFgtsDialog() {
+function openFgtsDialog(id = null) {
   hydrateForms();
+  state.fgtsEditingId = id;
   el.fgtsForm.reset();
+  const contract = id ? state.data.fgts.contracts.find((item) => item.id === id) : null;
+  if (contract) {
+    normalizeFgtsContract(contract);
+    el.fgtsDialogTitle.textContent = "Editar contrato FGTS";
+    el.fgtsForm.elements.description.value = contract.description || "";
+    el.fgtsForm.elements.creditorId.value = contract.creditorId || el.fgtsForm.elements.creditorId.value;
+    el.fgtsForm.elements.contract.value = contract.contract || "";
+    el.fgtsForm.elements.received.value = formatCurrencyInput(contract.received || "");
+    el.fgtsForm.elements.installmentAmount.value = formatCurrencyInput(contract.installmentAmount || "");
+    el.fgtsForm.elements.totalInstallments.value = contract.totalInstallments || contract.installments.length || "";
+    el.fgtsForm.elements.paidInstallments.value = contract.paidInstallments || 0;
+    el.fgtsForm.elements.firstDueDate.value = contract.firstDueDate || contract.installments[0]?.dueDate || "";
+    el.fgtsForm.elements.settlementAmount.value = formatCurrencyInput(contract.settlementAmount || "");
+  } else {
+    el.fgtsDialogTitle.textContent = "Novo contrato FGTS";
+  }
   renderFgtsInstallmentValueFields();
+  if (contract) {
+    contract.installments.forEach((installment) => {
+      const field = el.fgtsForm.elements[`installmentValue${installment.number}`];
+      if (field) field.value = formatCurrencyInput(installment.amount || "");
+    });
+  }
   el.fgtsDialog.showModal();
   refreshIcons();
 }
 
 function closeFgtsDialog() {
+  state.fgtsEditingId = null;
   el.fgtsForm.reset();
   renderFgtsInstallmentValueFields();
   el.fgtsDialog.close();
@@ -1415,12 +1447,15 @@ async function addFgtsContract(event) {
   const installmentAmount = installmentValues[0] || parseCurrencyInput(form.get("installmentAmount"));
   const paidInstallments = Math.min(Number(form.get("paidInstallments") || 0), totalInstallments);
   const firstDueDate = String(form.get("firstDueDate") || "");
-  state.data.fgts.contracts.push({
-    id: crypto.randomUUID(),
+  const existing = state.fgtsEditingId
+    ? state.data.fgts.contracts.find((item) => item.id === state.fgtsEditingId)
+    : null;
+  const next = {
+    id: existing?.id || crypto.randomUUID(),
     description: String(form.get("description")).trim(),
     creditorId: String(form.get("creditorId")),
     contract: String(form.get("contract") || "").trim(),
-    createdAt: todayIsoDate(),
+    createdAt: existing?.createdAt || todayIsoDate(),
     received: parseCurrencyInput(form.get("received")),
     toPay: installmentValues.slice(paidInstallments).reduce((total, value) => total + value, 0),
     installmentAmount,
@@ -1428,14 +1463,22 @@ async function addFgtsContract(event) {
     paidInstallments,
     firstDueDate,
     settlementAmount: parseCurrencyInput(form.get("settlementAmount")),
-    status: "Ativo",
-    annualPayments: [],
-    installments: createFgtsInstallments(totalInstallments, installmentValues, paidInstallments, firstDueDate)
-  });
+    status: existing?.status || "Ativo",
+    annualPayments: existing?.annualPayments || [],
+    installments: mergeFgtsInstallments(existing?.installments || [], totalInstallments, installmentValues, paidInstallments, firstDueDate)
+  };
+  next.paidInstallments = next.installments.filter((item) => item.status === "Pago").length;
+  next.toPay = fgtsPendingTotal(next);
+  if (existing) {
+    Object.assign(existing, next);
+  } else {
+    state.data.fgts.contracts.push(next);
+  }
   event.currentTarget.reset();
   renderFgtsInstallmentValueFields();
+  state.fgtsEditingId = null;
   el.fgtsDialog.close();
-  await saveState("Empréstimo FGTS cadastrado.");
+  await saveState(existing ? "Empréstimo FGTS atualizado." : "Empréstimo FGTS cadastrado.");
 }
 
 async function addFgtsAnnualPayment(event) {
@@ -1476,6 +1519,11 @@ async function payFgtsInstallment(key) {
   contract.paidInstallments = contract.installments.filter((item) => item.status === "Pago").length;
   contract.toPay = fgtsPendingTotal(contract);
   await saveState("Parcela FGTS paga.");
+}
+
+async function deleteFgtsContract(id) {
+  state.data.fgts.contracts = state.data.fgts.contracts.filter((item) => item.id !== id);
+  await saveState("Empréstimo FGTS excluído.");
 }
 
 async function addCreditor(event) {
@@ -1963,9 +2011,10 @@ function fgtsContractCard(contract) {
   const activeTab = state.fgtsFilters[contract.id] || "open";
   const visible = activeTab === "paid" ? paid : pending.slice(0, 5);
   const nextDue = pending[0]?.dueDate || "";
+  const pendingTotal = fgtsPendingTotal(contract);
   return `
-    <details class="debt-card" open>
-      <summary>
+    <details class="debt-card">
+      <summary class="fgts-summary">
         <div class="entity-cell">
           ${creditorLogoHtml(contract.creditorId)}
           <div>
@@ -1973,6 +2022,10 @@ function fgtsContractCard(contract) {
             <span>${escapeHtml(getCreditorName(contract.creditorId))} · ${escapeHtml(contract.contract || "sem contrato")}</span>
           </div>
         </div>
+        <div class="summary-stat"><span>Recebido</span><strong>${currency.format(contract.received || 0)}</strong></div>
+        <div class="summary-stat"><span>A pagar</span><strong>${currency.format(pendingTotal)}</strong></div>
+        <div class="summary-stat"><span>Parcelas</span><strong>${paid.length}/${contract.installments.length}</strong></div>
+        <div class="summary-stat"><span>Próximo venc.</span><strong>${nextDue ? formatDate(nextDue) : "-"}</strong></div>
         <span class="status ${contract.status === "Quitado" ? "ok" : "warn"}">${escapeHtml(contract.status || "Ativo")}</span>
       </summary>
       <div class="debt-meta-grid">
@@ -1980,6 +2033,10 @@ function fgtsContractCard(contract) {
         ${metaBox("Tipo", "Empréstimo")}
         ${metaBox("Parcelas pagas", `${paid.length} de ${contract.installments.length}`)}
         ${metaBox("Próximo vencimento", nextDue ? formatDate(nextDue) : "-")}
+        <div class="debt-action row-actions">
+          <button class="small-button" type="button" data-edit-fgts="${contract.id}">Editar</button>
+          <button class="small-button danger-mini" type="button" data-delete-fgts="${contract.id}">Excluir</button>
+        </div>
         <form class="inline-form debt-action" data-fgts-quit="${contract.id}">
           <input name="amount" type="text" inputmode="decimal" data-money-input placeholder="Valor quitação" value="${formatCurrencyInput(contract.settlementAmount || "")}" required>
           <button class="small-button" type="submit">Quitar</button>
@@ -2148,6 +2205,27 @@ function createFgtsInstallments(total, amountOrValues, paid, firstDueDate) {
       dueDate: addYearsToDate(start, index),
       amount,
       paidAmount: status === "Pago" ? amount : 0,
+      status
+    };
+  });
+}
+
+function mergeFgtsInstallments(existing, total, amountOrValues, paid, firstDueDate) {
+  const start = firstDueDate || nextAnnualDate();
+  const values = Array.isArray(amountOrValues)
+    ? amountOrValues
+    : Array.from({ length: total }, () => Number(amountOrValues || 0));
+  return Array.from({ length: total }, (_, index) => {
+    const number = index + 1;
+    const current = existing.find((item) => Number(item.number) === number);
+    const amount = Number(values[index] || 0);
+    const status = current?.status === "Pago" || index < paid ? "Pago" : "Pendente";
+    return {
+      id: current?.id || crypto.randomUUID(),
+      number,
+      dueDate: addYearsToDate(start, index),
+      amount,
+      paidAmount: status === "Pago" ? Number(current?.paidAmount || amount) : 0,
       status
     };
   });

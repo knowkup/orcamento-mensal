@@ -1102,6 +1102,12 @@ select {
   align-items: center;
 }
 
+.debt-card > summary.fgts-summary {
+  display: grid;
+  grid-template-columns: minmax(250px, 1.6fr) repeat(4, minmax(116px, 0.8fr)) auto;
+  align-items: center;
+}
+
 .debt-card > summary::-webkit-details-marker {
   display: none;
 }
@@ -1327,7 +1333,8 @@ select {
   }
 
   .debt-card > summary,
-  .debt-card > summary.installment-summary {
+  .debt-card > summary.installment-summary,
+  .debt-card > summary.fgts-summary {
     display: flex;
     flex-direction: column;
     align-items: stretch;
