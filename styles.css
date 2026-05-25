@@ -272,6 +272,11 @@ svg {
   height: 18px;
 }
 
+[hidden],
+.is-hidden {
+  display: none !important;
+}
+
 .view {
   display: none;
 }

@@ -615,6 +615,7 @@ function upsertIncomeChange(changes, month, amount) {
 }
 
 function appendDynamicProjectionRows(rows, months, keepPaidValues) {
+  ensureCarPayments();
   const installmentGroups = uniqueGroups(state.data.installments, (item) => groupKey(item));
   installmentGroups.forEach((group) => {
     const installmentValues = {};
@@ -782,8 +783,10 @@ function plannedTotal(origin, month) {
 }
 
 function carValueForMonth(month) {
-  const payment = state.data.car.payments.find((item) => carPaymentMonth(item) === month && item.status !== "Pago");
-  return payment ? Number(payment.value) : 0;
+  ensureCarPayments();
+  return state.data.car.payments
+    .filter((item) => carPaymentMonth(item) === month && item.status !== "Pago")
+    .reduce((total, item) => total + Number(item.value || 0), 0);
 }
 
 function plannedMonth(item) {
@@ -1089,6 +1092,7 @@ function renderFixedCosts() {
 }
 
 function renderCar() {
+  ensureCarPayments();
   const car = state.data.car;
   el.carTitle.textContent = car.name || "Carro";
 
@@ -1462,6 +1466,7 @@ function openFixedCostDialog(id = null) {
 function closeFixedCostDialog() {
   state.fixedCostEditingId = null;
   el.fixedCostForm.reset();
+  [el.fixedCardField, el.fixedCreditorField, el.fixedOwnerField].forEach((field) => setFixedCostFieldVisible(field, true));
   el.fixedCostDialog.close();
 }
 
@@ -1470,12 +1475,20 @@ function updateFixedCostFields() {
   if (!methodField.options.length) hydrateForms();
   if (!methodField.value) methodField.value = defaultPaymentMethod();
   const isCard = methodField.value === "Cartão de crédito";
-  el.fixedCardField.hidden = !isCard;
-  el.fixedCreditorField.hidden = isCard;
-  el.fixedOwnerField.hidden = isCard;
+  setFixedCostFieldVisible(el.fixedCardField, isCard);
+  setFixedCostFieldVisible(el.fixedCreditorField, !isCard);
+  setFixedCostFieldVisible(el.fixedOwnerField, !isCard);
   el.fixedCostForm.elements.cardId.required = isCard;
   el.fixedCostForm.elements.creditorId.required = !isCard;
   el.fixedCostForm.elements.owner.required = !isCard;
+}
+
+function setFixedCostFieldVisible(field, visible) {
+  field.hidden = !visible;
+  field.classList.toggle("is-hidden", !visible);
+  field.querySelectorAll("input, select, textarea").forEach((input) => {
+    input.disabled = !visible;
+  });
 }
 
 async function payInstallment(key) {
@@ -1504,7 +1517,7 @@ async function deleteInstallment(id) {
 async function addFixedCost(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const paymentMethod = String(form.get("paymentMethod"));
+  const paymentMethod = String(form.get("paymentMethod") || defaultPaymentMethod());
   const card = paymentMethod === "Cartão de crédito" ? getCreditCard(String(form.get("cardId"))) : null;
   const creditorId = card?.creditorId || String(form.get("creditorId") || "");
   if (!creditorId) {
@@ -1591,6 +1604,18 @@ function syncCarPayments() {
       status: "Pendente"
     };
   });
+}
+
+function ensureCarPayments() {
+  const car = state.data.car || {};
+  const total = Number(car.totalInstallments || 0);
+  const monthly = Number(car.monthly || 0);
+  if (!total || !monthly) return;
+  const shouldSync = !Array.isArray(car.payments)
+    || car.payments.length !== total
+    || car.payments.some((payment) => !payment.dueDate && !payment.month)
+    || car.payments.some((payment) => !Number(payment.value || 0));
+  if (shouldSync) syncCarPayments();
 }
 
 async function updateSettings(event) {
@@ -2016,7 +2041,8 @@ function openPlannedDialog(id = null, kind = null) {
   const income = kind === "income" && id ? state.data.incomeLines.find((item) => item.id === id) : null;
   const expense = kind === "expense" && id ? state.data.plannedPurchases.find((item) => item.id === id) : null;
   const item = income || expense;
-  el.plannedForm.querySelector("button[type='submit']").textContent = item ? "Salvar lançamento" : "Adicionar ao planejamento";
+  const submitLabel = el.plannedForm.querySelector("button[type='submit'] span");
+  if (submitLabel) submitLabel.textContent = item ? "Salvar lançamento" : "Adicionar ao planejamento";
   el.plannedForm.elements.kind.value = income ? "income" : "expense";
   el.plannedForm.elements.description.value = income?.label || expense?.description || "";
   el.plannedForm.elements.creditorId.value = expense?.creditorId || el.plannedForm.elements.creditorId.value;
