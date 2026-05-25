@@ -253,6 +253,12 @@ h2 {
   color: var(--red);
 }
 
+.small-button.danger-mini {
+  border-color: rgba(182, 61, 56, 0.34);
+  color: var(--red);
+  background: #fff4f3;
+}
+
 .row-actions {
   display: flex;
   flex-wrap: wrap;

@@ -432,7 +432,7 @@ function renderMonthlyControl() {
   const received = entries.reduce((total, item) => total + (isIncomeReceived(`${item.row.id}:${month}`) ? receivedAmount(`${item.row.id}:${month}`, item.value) : 0), 0);
   const paid = exits.reduce((total, item) => total + rowPaidAmount(item.row, month, item.value), 0);
   const expectedIncome = entries.reduce((total, item) => total + item.value, 0);
-  const expectedExpense = exits.reduce((total, item) => total + item.value, 0);
+  const expectedExpense = exits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
   const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
   const hasPending = entries.some((item) => !isIncomeReceived(`${item.row.id}:${month}`))
     || exits.some((item) => rowOutstanding(item.row, month, item.value) > 0);
@@ -485,11 +485,11 @@ function renderMonthlyControl() {
 function monthlyItems(items, month, kind) {
   if (!items.length) return `<div class="empty-state compact">Nada previsto para este mês.</div>`;
   return items
-    .sort((a, b) => compareMonthlyEntries(a, b, month))
+    .sort((a, b) => compareMonthlyEntries(a, b, month, kind))
     .map(({ row, value }) => {
     const key = `${row.id}:${month}`;
     const done = kind === "income" ? isIncomeReceived(key) : isOccurrencePaid(key);
-    const displayValue = kind === "income" && done ? receivedAmount(key, value) : kind === "expense" && done ? paidAmount(key, value) : value;
+    const displayValue = kind === "income" && done ? receivedAmount(key, value) : kind === "expense" ? (done ? paidAmount(key, value) : rowOutstanding(row, month, value)) : value;
     const attr = kind === "income"
       ? (done ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
       : (done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
@@ -568,7 +568,12 @@ function monthlyBreakdown(row, month) {
   `;
 }
 
-function compareMonthlyEntries(a, b, month) {
+function compareMonthlyEntries(a, b, month, kind) {
+  if (kind === "expense") {
+    const aDone = rowOutstanding(a.row, month, a.value) <= 0 ? 1 : 0;
+    const bDone = rowOutstanding(b.row, month, b.value) <= 0 ? 1 : 0;
+    if (aDone !== bDone) return aDone - bDone;
+  }
   return compareRowsByDueDate(a.row, b.row, month)
     || String(a.row.label || "").localeCompare(String(b.row.label || ""), "pt-BR");
 }
@@ -1029,7 +1034,7 @@ function buildTotals(rows, months) {
   let accumulated = Number(state.data.accountBalance || state.data.initialBalance || 0);
   return months.map((month) => {
     const income = rows.filter((row) => row.kind === "income").reduce((total, row) => total + (row.values[month] || 0), 0);
-    const expense = rows.filter((row) => row.kind === "expense").reduce((total, row) => total + (row.values[month] || 0), 0);
+    const expense = rows.filter((row) => row.kind === "expense").reduce((total, row) => total + rowOutstanding(row, month, row.values[month] || 0), 0);
     const balance = income - expense;
     accumulated += balance;
     return { month, income, expense, balance, accumulated };
@@ -1069,11 +1074,12 @@ function projectionCell(row, month) {
   const value = row.values[month] || 0;
   const key = `${row.id}:${month}`;
   const paid = isOccurrencePaid(key);
-  if (!value && !paid) return `<td class="muted-cell">-</td>`;
+  const displayValue = row.kind === "expense" ? rowOutstanding(row, month, value) : value;
+  if (!displayValue && !paid) return `<td class="muted-cell">-</td>`;
   const sign = row.kind === "income" ? "" : "-";
   const className = row.kind === "income" ? "positive" : "negative";
   const status = paid && row.kind === "expense" ? `<small class="cell-status">pago no controle</small>` : "";
-  return `<td><span class="${className}">${sign}${currency.format(value)}</span>${status}</td>`;
+  return `<td><span class="${className}">${sign}${currency.format(displayValue)}</span>${status}</td>`;
 }
 
 function groupRow(label, monthsCount) {
