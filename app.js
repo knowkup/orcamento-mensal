@@ -500,24 +500,39 @@ function monthlyItems(items, month, kind) {
       ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
       : "";
     const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
+    const dueDate = rowDueDate(row, month);
+    const accountCount = monthlyAccountCount(row, month);
+    const statusLabel = done ? (kind === "income" ? "Recebido" : "Pago") : "Pendente";
     return `
-      <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""}">
-        <div class="entity-cell">
-          ${marker}
-          <div>
-            <strong>${escapeHtml(row.label)}</strong>
-            <span>${escapeHtml(row.origin || "-")}</span>
+      <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""} ${kind === "income" ? "income-item" : "expense-item"}">
+        <div class="monthly-item-main">
+          <div class="entity-cell">
+            ${marker}
+            <div>
+              <strong>${escapeHtml(row.label)}</strong>
+              <span>${escapeHtml(row.origin || "-")}</span>
+            </div>
+          </div>
+          <div class="monthly-item-action">
+            <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
+            <button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>
+            ${deleteButton}
           </div>
         </div>
-        <div class="monthly-item-action">
-          <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
-          <button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>
-          ${deleteButton}
+        <div class="monthly-item-meta">
+          <span><small>Vencimento</small><strong>${dueDate ? formatDate(dueDate) : "-"}</strong></span>
+          <span><small>Contas</small><strong>${accountCount}</strong></span>
+          <span><small>Status</small><strong>${statusLabel}</strong></span>
         </div>
         ${breakdown}
       </article>
     `;
   }).join("");
+}
+
+function monthlyAccountCount(row, month) {
+  const children = (row.children?.[month] || []).filter((item) => Number(item.value || 0) > 0 || isOccurrencePaid(item.key));
+  return children.length || 1;
 }
 
 function monthlyBreakdown(row, month) {
