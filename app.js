@@ -1604,8 +1604,11 @@ function hydrateForms() {
   document.querySelectorAll("[data-payment-method-select]").forEach((select) => {
     const current = select.value;
     const methods = availablePaymentMethods();
-    select.innerHTML = methods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
-    select.value = current && methods.includes(current) ? current : defaultPaymentMethod();
+    select.innerHTML = [
+      `<option value="">Selecione</option>`,
+      ...methods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`)
+    ].join("");
+    select.value = current && methods.includes(current) ? current : "";
   });
   document.querySelectorAll("[data-owner-select]").forEach((select) => {
     const current = select.value;
@@ -1694,7 +1697,7 @@ function openFixedCostDialog(id = null) {
   hydrateForms();
   state.fixedCostEditingId = id;
   el.fixedCostForm.reset();
-  el.fixedCostForm.elements.paymentMethod.value = defaultPaymentMethod();
+  el.fixedCostForm.elements.paymentMethod.value = "";
   const item = id ? state.data.fixedCosts.find((entry) => entry.id === id) : null;
   el.fixedCostDialogTitle.textContent = item ? "Editar custo fixo" : "Novo custo fixo";
   if (item) {
@@ -1721,14 +1724,15 @@ function closeFixedCostDialog() {
 function updateFixedCostFields() {
   const methodField = el.fixedCostForm.elements.paymentMethod;
   if (!methodField.options.length) hydrateForms();
-  if (!methodField.value) methodField.value = defaultPaymentMethod();
+  methodField.required = true;
+  const hasMethod = Boolean(methodField.value);
   const isCard = methodField.value === "Cartão de crédito";
-  setFixedCostFieldVisible(el.fixedCardField, isCard);
-  setFixedCostFieldVisible(el.fixedCreditorField, !isCard);
-  setFixedCostFieldVisible(el.fixedOwnerField, !isCard);
-  el.fixedCostForm.elements.cardId.required = isCard;
-  el.fixedCostForm.elements.creditorId.required = !isCard;
-  el.fixedCostForm.elements.owner.required = !isCard;
+  setFixedCostFieldVisible(el.fixedCardField, hasMethod && isCard);
+  setFixedCostFieldVisible(el.fixedCreditorField, hasMethod && !isCard);
+  setFixedCostFieldVisible(el.fixedOwnerField, hasMethod && !isCard);
+  el.fixedCostForm.elements.cardId.required = hasMethod && isCard;
+  el.fixedCostForm.elements.creditorId.required = hasMethod && !isCard;
+  el.fixedCostForm.elements.owner.required = hasMethod && !isCard;
 }
 
 function setFixedCostFieldVisible(field, visible) {
@@ -1764,10 +1768,15 @@ async function deleteInstallment(id) {
 
 async function addFixedCost(event) {
   event.preventDefault();
+  updateFixedCostFields();
   const form = new FormData(event.currentTarget);
-  const paymentMethod = String(form.get("paymentMethod") || defaultPaymentMethod());
+  const paymentMethod = String(el.fixedCostForm.elements.paymentMethod.value || "");
   const card = paymentMethod === "Cartão de crédito" ? getCreditCard(String(form.get("cardId"))) : null;
   const creditorId = card?.creditorId || String(form.get("creditorId") || "");
+  if (!paymentMethod) {
+    showToast("Selecione o metodo de pagamento.");
+    return;
+  }
   if (!creditorId) {
     showToast("Cadastre e selecione um credor.");
     return;
