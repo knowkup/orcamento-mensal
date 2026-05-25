@@ -493,7 +493,8 @@ function monthlyItems(items, month, kind) {
     const attr = kind === "income"
       ? (done ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
       : (done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
-    const buttonLabel = kind === "income" ? (done ? "Cancelar Recebimento" : "Receber") : (done ? "Cancelar Pagamento" : "Pagar");
+    const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
+    const buttonLabel = kind === "income" ? (done ? "Cancelar Recebimento" : "Receber") : (done ? "Excluir pagamento" : "Pagar");
     const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : `<span class="creditor-logo">${escapeHtml(initials(row.origin || row.label))}</span>`;
     const deleteButton = isManualPlannedRow(row)
       ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
@@ -510,7 +511,7 @@ function monthlyItems(items, month, kind) {
         </div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
-          <button class="small-button ${kind === "expense" ? "pay" : ""}" type="button" ${attr}>${buttonLabel}</button>
+          <button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>
           ${deleteButton}
         </div>
         ${breakdown}
@@ -542,7 +543,7 @@ function monthlyBreakdown(row, month) {
                 </div>
                 <div class="monthly-item-action">
                   <strong class="negative">-${currency.format(displayValue)}</strong>
-                  <button class="small-button pay" type="button" ${attr}>${done ? "Cancelar Pagamento" : "Pagar"}</button>
+                  <button class="small-button pay ${done ? "danger-mini" : ""}" type="button" ${attr}>${done ? "Excluir pagamento" : "Pagar"}</button>
                 </div>
               </div>
             `;
@@ -766,8 +767,10 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
 
   state.data.plannedPurchases.forEach((item) => {
     const plannedValues = {};
+    const plannedDueDates = {};
     months.forEach((month) => {
-      plannedValues[month] = plannedMonth(item) === month ? Number(item.amount || 0) : 0;
+      plannedValues[month] = plannedValueForMonth(item, month);
+      plannedDueDates[month] = plannedDueDateForMonth(item, month);
       const key = `${item.id}:${month}`;
       if (!keepPaidValues && isOccurrencePaid(key)) plannedValues[month] = 0;
     });
@@ -782,7 +785,7 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
         origin: getCreditorName(item.creditorId),
         sourceLabel: "",
         values: plannedValues,
-        dueDates: { [plannedMonth(item)]: item.date || `${plannedMonth(item)}-01` }
+        dueDates: plannedDueDates
       });
     }
   });
@@ -899,8 +902,8 @@ function fixedTotalByOrigin(origin) {
 
 function plannedTotal(origin, month) {
   return state.data.plannedPurchases
-    .filter((item) => item.creditorId === origin && plannedMonth(item) === month)
-    .reduce((total, item) => total + Number(item.amount), 0);
+    .filter((item) => item.creditorId === origin)
+    .reduce((total, item) => total + plannedValueForMonth(item, month), 0);
 }
 
 function carValueForMonth(month) {
@@ -912,6 +915,23 @@ function carValueForMonth(month) {
 
 function plannedMonth(item) {
   return item.date ? String(item.date).slice(0, 7) : item.month;
+}
+
+function plannedValueForMonth(item, month) {
+  const months = plannedInstallmentMonths(item);
+  return months.includes(month) ? Number(item.amount || 0) : 0;
+}
+
+function plannedDueDateForMonth(item, month) {
+  const index = plannedInstallmentMonths(item).indexOf(month);
+  if (index < 0) return "";
+  return addMonthsToDate(item.date || `${plannedMonth(item)}-01`, index);
+}
+
+function plannedInstallmentMonths(item) {
+  const total = Math.max(1, Number(item.installments || 1));
+  const startDate = item.date || `${plannedMonth(item)}-01`;
+  return Array.from({ length: total }, (_, index) => addMonthsToDate(startDate, index).slice(0, 7));
 }
 
 function carPaymentMonth(item) {
@@ -938,6 +958,8 @@ function fixedCostGroupInfo(key, item) {
   const card = item.cardId ? getCreditCard(item.cardId) : null;
   const creditorId = card?.creditorId || item.creditorId;
   const owner = card?.owner || item.owner || "Felipe";
+  const fixedItems = state.data.fixedCosts.filter((entry) => fixedCostGroupKey(entry) === key);
+  const fallbackLabel = fixedItems.length === 1 ? fixedItems[0].name : item.name;
   return {
     key,
     id: key.replaceAll("|", "-").replaceAll(/\s+/g, "-"),
@@ -945,7 +967,7 @@ function fixedCostGroupInfo(key, item) {
     creditorId,
     owner,
     paymentMethod: item.paymentMethod || "",
-    label: card ? `Custo Fixo ${card.name}` : `Custos fixos (${getCreditorName(creditorId)})`,
+    label: card ? card.name : fallbackLabel || getCreditorName(creditorId),
     origin: card ? getCreditorName(card.creditorId) : getCreditorName(creditorId)
   };
 }
@@ -1787,6 +1809,7 @@ async function payCarInstallment(event) {
   payment.status = "Pago";
   payment.paidAmount = parseCurrencyInput(form.get("paidAmount")) || Number(payment.value || 0);
   payment.paymentDate = String(form.get("paymentDate") || todayIsoDate());
+  markCarOccurrencePaid(payment);
   el.carPaymentDialog.close();
   await saveState("Parcela do carro paga.");
 }
@@ -1797,7 +1820,30 @@ async function unpayCarInstallment(id) {
   payment.status = "Pendente";
   payment.paidAmount = 0;
   payment.paymentDate = "";
+  clearCarOccurrencePayment(payment);
   await saveState("Pagamento do carro removido.");
+}
+
+function markCarOccurrencePaid(payment) {
+  const month = carPaymentMonth(payment);
+  const keys = [`auto-car:${month}`, `child-car|${payment.id}:${month}`];
+  state.data.paidOccurrences = [...new Set([...(state.data.paidOccurrences || []), ...keys])];
+  state.data.paidAmounts = { ...(state.data.paidAmounts || {}) };
+  state.data.paidDates = { ...(state.data.paidDates || {}) };
+  keys.forEach((key) => {
+    state.data.paidAmounts[key] = Number(payment.paidAmount || payment.value || 0);
+    state.data.paidDates[key] = payment.paymentDate || todayIsoDate();
+  });
+}
+
+function clearCarOccurrencePayment(payment) {
+  const month = carPaymentMonth(payment);
+  const keys = [`auto-car:${month}`, `child-car|${payment.id}:${month}`];
+  state.data.paidOccurrences = (state.data.paidOccurrences || []).filter((key) => !keys.includes(key));
+  keys.forEach((key) => {
+    if (state.data.paidAmounts) delete state.data.paidAmounts[key];
+    if (state.data.paidDates) delete state.data.paidDates[key];
+  });
 }
 
 function openFgtsDialog(id = null) {
