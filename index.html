@@ -193,44 +193,17 @@
         </section>
 
         <section class="view" id="fgtsView" data-title="FGTS">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Antecipações</p>
-                  <h2>Novo contrato</h2>
-                </div>
-              </div>
-              <form class="stack-form" id="fgtsForm">
-                <label>Empréstimo<input name="description" required placeholder="Ex.: FGTS 06"></label>
-                <label>Credor<select name="creditorId" data-creditor-select></select></label>
-                <label>Contrato<input name="contract" placeholder="Número ou banco"></label>
-                <div class="form-row">
-                  <label class="money-label">Recebido<input name="received" type="text" inputmode="decimal" data-money-input></label>
-                  <label class="money-label">Valor padrão da parcela<input name="installmentAmount" type="text" inputmode="decimal" data-money-input></label>
-                </div>
-                <div class="form-row">
-                  <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
-                  <label>Pagas<input name="paidInstallments" type="number" min="0" step="1" value="0"></label>
-                </div>
-                <div class="form-row">
-                  <label>Primeiro vencimento<input name="firstDueDate" type="date"></label>
-                  <label class="money-label">Valor quitação<input name="settlementAmount" type="text" inputmode="decimal" data-money-input></label>
-                </div>
-                <div class="installment-values" id="fgtsInstallmentValues"></div>
-                <button class="primary-button full" type="submit">
-                  <i data-lucide="plus"></i>
-                  <span>Cadastrar empréstimo</span>
-                </button>
-              </form>
-            </section>
-
+          <div class="content-grid single">
             <section class="panel wide">
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">Resumo</p>
                   <h2>FGTS bloqueado e contratos</h2>
                 </div>
+                <button class="primary-button" type="button" id="newFgtsButton">
+                  <i data-lucide="plus"></i>
+                  <span>Novo contrato</span>
+                </button>
               </div>
               <div class="finance-kpis" id="fgtsKpis"></div>
               <div class="debt-list" id="fgtsTable"></div>
@@ -388,6 +361,40 @@
         <button class="primary-button full" type="submit">
           <i data-lucide="save"></i>
           <span>Salvar credor</span>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="dialog" id="fgtsDialog">
+      <form class="stack-form" id="fgtsForm">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Antecipações</p>
+            <h2>Novo contrato FGTS</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeFgtsButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Empréstimo<input name="description" required placeholder="Ex.: FGTS 06"></label>
+        <label>Credor<select name="creditorId" data-creditor-select></select></label>
+        <label>Contrato<input name="contract" placeholder="Número ou banco"></label>
+        <div class="form-row">
+          <label class="money-label">Recebido<input name="received" type="text" inputmode="decimal" data-money-input></label>
+          <label class="money-label">Valor padrão da parcela<input name="installmentAmount" type="text" inputmode="decimal" data-money-input></label>
+        </div>
+        <div class="form-row">
+          <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
+          <label>Pagas<input name="paidInstallments" type="number" min="0" step="1" value="0"></label>
+        </div>
+        <div class="form-row">
+          <label>Primeiro vencimento<input name="firstDueDate" type="date"></label>
+          <label class="money-label">Valor quitação<input name="settlementAmount" type="text" inputmode="decimal" data-money-input></label>
+        </div>
+        <div class="installment-values" id="fgtsInstallmentValues"></div>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="plus"></i>
+          <span>Cadastrar empréstimo</span>
         </button>
       </form>
     </dialog>

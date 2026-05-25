@@ -930,3 +930,27 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Commitar e publicar a rodada.
+
+## Atualizacao - 2026-05-25 10:05:00
+
+### Decisoes tomadas
+
+- Cadastro de novo emprestimo FGTS nao deve ficar fixo na tela.
+- A tela FGTS deve priorizar resumo e contratos; novo contrato abre por botao/modal.
+
+### Mudancas feitas
+
+- Removido formulario fixo de novo contrato da tela FGTS.
+- Adicionado botao `Novo contrato` no cabecalho do resumo FGTS.
+- Criado modal `Novo contrato FGTS` reaproveitando os campos existentes e os campos individuais de parcelas.
+- Ao salvar ou fechar, o modal limpa o formulario e recalcula/limpa os campos individuais.
+
+### Comandos relevantes
+
+- `node --check app.js`
+- `git diff --check`
+- Teste visual no navegador interno confirmando que `#fgtsView #fgtsForm` nao aparece fixo, que o botao `Novo contrato` existe e que o modal abre sem erros de console.
+
+### Proximos passos
+
+- Commitar e publicar a correcao.

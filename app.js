@@ -66,6 +66,9 @@ const el = {
   carPaymentTitle: document.querySelector("#carPaymentTitle"),
   closeCarPaymentButton: document.querySelector("#closeCarPaymentButton"),
   fgtsForm: document.querySelector("#fgtsForm"),
+  fgtsDialog: document.querySelector("#fgtsDialog"),
+  newFgtsButton: document.querySelector("#newFgtsButton"),
+  closeFgtsButton: document.querySelector("#closeFgtsButton"),
   fgtsKpis: document.querySelector("#fgtsKpis"),
   fgtsTable: document.querySelector("#fgtsTable"),
   creditorForm: document.querySelector("#creditorForm"),
@@ -120,6 +123,8 @@ function bindEvents() {
   el.closeCarPaymentButton.addEventListener("click", () => el.carPaymentDialog.close());
   bindMoneyInputs();
   el.fgtsForm.addEventListener("submit", addFgtsContract);
+  el.newFgtsButton.addEventListener("click", openFgtsDialog);
+  el.closeFgtsButton.addEventListener("click", closeFgtsDialog);
   ["totalInstallments", "installmentAmount", "paidInstallments", "firstDueDate"].forEach((name) => {
     el.fgtsForm.elements[name].addEventListener("input", renderFgtsInstallmentValueFields);
     el.fgtsForm.elements[name].addEventListener("change", renderFgtsInstallmentValueFields);
@@ -1286,6 +1291,20 @@ async function unpayCarInstallment(id) {
   await saveState("Pagamento do carro removido.");
 }
 
+function openFgtsDialog() {
+  hydrateForms();
+  el.fgtsForm.reset();
+  renderFgtsInstallmentValueFields();
+  el.fgtsDialog.showModal();
+  refreshIcons();
+}
+
+function closeFgtsDialog() {
+  el.fgtsForm.reset();
+  renderFgtsInstallmentValueFields();
+  el.fgtsDialog.close();
+}
+
 function renderFgtsInstallmentValueFields() {
   const total = Math.min(60, Number(el.fgtsForm.elements.totalInstallments.value || 0));
   if (!total) {
@@ -1354,6 +1373,7 @@ async function addFgtsContract(event) {
   });
   event.currentTarget.reset();
   renderFgtsInstallmentValueFields();
+  el.fgtsDialog.close();
   await saveState("Empréstimo FGTS cadastrado.");
 }
 
