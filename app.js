@@ -526,6 +526,7 @@ function monthlyItems(items, month, kind, scope = "pending") {
       : "";
     const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
     const dueDate = rowDueDate(row, month);
+    const dateLabel = kind === "income" ? "Recebimento" : "Vencimento";
     const accountCount = monthlyAccountCount(row, month);
     const hasBreakdown = kind === "expense" && accountCount > 1;
     const statusLabel = kind === "income"
@@ -543,7 +544,7 @@ function monthlyItems(items, month, kind, scope = "pending") {
             <span>${escapeHtml(row.origin || "-")}</span>
           </div>
         </div>
-        <div class="monthly-field"><span>Vencimento</span><strong>${dueDate ? formatDate(dueDate) : "-"}</strong></div>
+        <div class="monthly-field"><span>${dateLabel}</span><strong>${dueDate ? formatDate(dueDate) : "-"}</strong></div>
         <div class="monthly-field compact"><span>Status</span><strong>${statusLabel}</strong></div>
         <div class="monthly-field compact"><span>Contas</span><strong>${accountCount}</strong></div>
         <div class="monthly-item-action">
@@ -708,7 +709,7 @@ function buildProjectionRows(months, keepPaidValues = false) {
       origin: income.origin,
       sourceLabel: "",
       values: recurringIncomeValues(income, months),
-      dueDates: Object.fromEntries(months.map((month) => [month, `${month}-01`]))
+      dueDates: Object.fromEntries(months.map((month) => [month, monthDayDate(month, income.receiveDay || 1)]))
     });
   });
 
@@ -795,7 +796,7 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
     months.forEach((month, index) => {
       installmentValues[month] = installmentTotalForGroup(group, index);
       installmentChildren[month] = installmentChildrenForGroup(group, index, month);
-      installmentDueDates[month] = firstDueDate(installmentChildren[month]);
+      installmentDueDates[month] = group.cardId ? cardDueDateForMonth(group.cardId, month) : firstDueDate(installmentChildren[month]);
       const key = `auto-installments-${group.id}:${month}`;
       if (!keepPaidValues && isOccurrencePaid(key)) installmentValues[month] = 0;
     });
@@ -824,7 +825,7 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
     months.forEach((month) => {
       fixedValues[month] = fixedTotalForGroup(group.key);
       fixedChildren[month] = fixedChildrenForGroup(group.key, month);
-      fixedDueDates[month] = firstDueDate(fixedChildren[month]);
+      fixedDueDates[month] = group.cardId ? cardDueDateForMonth(group.cardId, month) : firstDueDate(fixedChildren[month]);
       const key = `auto-fixed-${group.id}:${month}`;
       if (!keepPaidValues && isOccurrencePaid(key)) fixedValues[month] = 0;
     });
@@ -1019,6 +1020,11 @@ function carPaymentMonth(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
 }
 
+function cardDueDateForMonth(cardId, month) {
+  const card = getCreditCard(cardId);
+  return monthDayDate(month, card?.dueDay || 1);
+}
+
 function uniqueFixedCostGroups() {
   const groups = new Map();
   state.data.fixedCosts
@@ -1066,7 +1072,7 @@ function fixedChildrenForGroup(key, month) {
       key: `child-fixed|${item.id}:${month}`,
       label: item.name || "Custo fixo",
       value: Number(item.amount || 0),
-      dueDate: `${month}-${String(item.dueDay || 1).padStart(2, "0")}`
+      dueDate: monthDayDate(month, item.dueDay || 1)
     }));
 }
 
@@ -1526,7 +1532,7 @@ function renderOriginsV2() {
 
 function renderCreditCards() {
   el.cardList.innerHTML = `
-    <thead><tr><th>Cartão/Crediário</th><th>Credor</th><th>Dono</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Cartao/Crediario</th><th>Credor</th><th>Dono</th><th>Venc.</th><th>Saldo previsto</th><th>Acoes</th></tr></thead>
     <tbody>
       ${sortedCreditCards().map((card) => {
         const inUse = isCreditCardInUse(card.id);
@@ -1540,6 +1546,7 @@ function renderCreditCards() {
             </td>
             <td>${escapeHtml(getCreditorName(card.creditorId))}</td>
             <td>${escapeHtml(card.owner || "Felipe")}</td>
+            <td>${card.dueDay || "-"}</td>
             <td>${currency.format(cardOpenBalance(card.id))}</td>
             <td class="row-actions">
               <button class="icon-button mini-icon" type="button" title="Editar" data-edit-card="${card.id}">${icon("pencil")}</button>
@@ -1547,7 +1554,7 @@ function renderCreditCards() {
             </td>
           </tr>
         `;
-      }).join("") || `<tr><td colspan="5" class="muted-cell">Nenhum cartão ou crediário cadastrado.</td></tr>`}
+      }).join("") || `<tr><td colspan="6" class="muted-cell">Nenhum cartão ou crediário cadastrado.</td></tr>`}
     </tbody>
   `;
 
@@ -1561,7 +1568,7 @@ function renderCreditCards() {
 
 function renderRecurringIncomes() {
   el.incomeList.innerHTML = `
-    <thead><tr><th>Renda</th><th>Fonte</th><th>Dono</th><th>Valor atual</th><th>Vale desde</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Renda</th><th>Fonte</th><th>Dono</th><th>Receb.</th><th>Valor atual</th><th>Vale desde</th><th>Acoes</th></tr></thead>
     <tbody>
       ${state.data.recurringIncomes.map((income) => {
         const current = latestIncomeChange(income);
@@ -1570,6 +1577,7 @@ function renderRecurringIncomes() {
             <td>${escapeHtml(income.label)}</td>
             <td>${escapeHtml(income.origin || "-")}</td>
             <td>${escapeHtml(income.owner || "Felipe")}</td>
+            <td>${income.receiveDay || 1}</td>
             <td>${currency.format(current.amount || 0)}</td>
             <td>${current.month ? formatMonth(current.month) : "-"}</td>
             <td class="row-actions">
@@ -1578,7 +1586,7 @@ function renderRecurringIncomes() {
             </td>
           </tr>
         `;
-      }).join("") || `<tr><td colspan="6" class="muted-cell">Nenhuma renda recorrente cadastrada.</td></tr>`}
+      }).join("") || `<tr><td colspan="7" class="muted-cell">Nenhuma renda recorrente cadastrada.</td></tr>`}
     </tbody>
   `;
 
@@ -2173,6 +2181,7 @@ function openCardDialog(id = null) {
   el.cardForm.elements.name.value = card?.name || "";
   el.cardForm.elements.creditorId.value = card?.creditorId || el.cardForm.elements.creditorId.value;
   el.cardForm.elements.owner.value = card?.owner || "Felipe";
+  el.cardForm.elements.dueDay.value = card?.dueDay || "";
   updateCardLogoPreview();
   el.cardDialog.showModal();
   refreshIcons();
@@ -2202,7 +2211,8 @@ async function saveCreditCard(event) {
     id: existing?.id || crypto.randomUUID(),
     name,
     creditorId,
-    owner: String(form.get("owner") || "Felipe")
+    owner: String(form.get("owner") || "Felipe"),
+    dueDay: Number(form.get("dueDay") || 1)
   };
   if (existing) {
     Object.assign(existing, payload);
@@ -2243,6 +2253,7 @@ function openIncomeDialog(id = null) {
   el.incomeForm.elements.label.value = income?.label || "";
   el.incomeForm.elements.origin.value = income?.origin || "";
   el.incomeForm.elements.owner.value = income?.owner || "Felipe";
+  el.incomeForm.elements.receiveDay.value = income?.receiveDay || 1;
   el.incomeForm.elements.month.value = current.month || nextMonths(1)[0];
   el.incomeForm.elements.amount.value = current.amount ? formatCurrencyInput(current.amount) : "";
   el.incomeDialog.showModal();
@@ -2267,6 +2278,7 @@ async function saveRecurringIncome(event) {
     existing.label = String(form.get("label")).trim();
     existing.origin = String(form.get("origin")).trim();
     existing.owner = String(form.get("owner") || "Felipe");
+    existing.receiveDay = Number(form.get("receiveDay") || 1);
     existing.changes = upsertIncomeChange(existing.changes || [], month, amount);
   } else {
     state.data.recurringIncomes.push({
@@ -2274,6 +2286,7 @@ async function saveRecurringIncome(event) {
       label: String(form.get("label")).trim(),
       origin: String(form.get("origin")).trim(),
       owner: String(form.get("owner") || "Felipe"),
+      receiveDay: Number(form.get("receiveDay") || 1),
       changes: [{ month, amount }]
     });
   }
@@ -2650,7 +2663,8 @@ function buildCardsFromInstallments(installments, creditors, creditorByName) {
       name: `${getCreditorNameFromList(creditorId, creditors)} ${owner}`.trim(),
       creditorId,
       owner,
-      paymentMethod
+      paymentMethod,
+      dueDay: 1
     });
   });
   return [...cards.values()];
@@ -2674,7 +2688,8 @@ function normalizeData(data) {
       ...card,
       name: card.name || getCreditorNameFromList(card.creditorId, creditors),
       creditorId: card.creditorId || creditorByName.get(card.creditor) || card.creditor || "",
-      owner: card.owner || "Felipe"
+      owner: card.owner || "Felipe",
+      dueDay: Number(card.dueDay || 1)
     }));
   const cardByLegacyKey = new Map(creditCards.map((card) => [`${card.creditorId}|${card.owner || "Felipe"}|${card.paymentMethod || "Cartão de crédito"}`, card.id]));
   const normalized = {
@@ -2687,6 +2702,7 @@ function normalizeData(data) {
     recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => ({
       ...income,
       owner: income.owner || "Felipe",
+      receiveDay: Number(income.receiveDay || 1),
       changes: normalizedIncomeChanges(income)
     })),
     projectionLines: (data.projectionLines || defaults.projectionLines).map((line) => ({
@@ -3203,6 +3219,14 @@ function addMonthsToDate(value, months) {
   const [year, month, day] = String(value || todayIsoDate()).slice(0, 10).split("-").map(Number);
   const date = new Date(year, (month || 1) - 1 + months, day || 1);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function monthDayDate(month, day) {
+  const [year, monthNumber] = String(month).split("-").map(Number);
+  if (!year || !monthNumber) return "";
+  const lastDay = new Date(year, monthNumber, 0).getDate();
+  const safeDay = Math.min(Math.max(1, Number(day || 1)), lastDay);
+  return `${year}-${String(monthNumber).padStart(2, "0")}-${String(safeDay).padStart(2, "0")}`;
 }
 
 function installmentDueDate(value, monthOffset) {
