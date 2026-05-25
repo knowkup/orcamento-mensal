@@ -925,6 +925,12 @@ svg {
   justify-content: flex-end;
 }
 
+.monthly-item-action .mini-icon {
+  min-height: 34px;
+  width: 34px;
+  padding: 0;
+}
+
 .occurrence-list,
 .stack-form,
 .pill-list {

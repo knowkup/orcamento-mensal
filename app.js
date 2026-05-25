@@ -375,6 +375,9 @@ function renderProjection() {
   el.projectionTable.querySelectorAll("[data-edit-income-line]").forEach((button) => {
     button.addEventListener("click", () => openPlannedDialog(button.dataset.editIncomeLine, "income"));
   });
+  el.projectionTable.querySelectorAll("[data-delete-manual-plan]").forEach((button) => {
+    button.addEventListener("click", () => deleteManualPlanned(button.dataset.deleteManualPlan));
+  });
   requestAnimationFrame(syncProjectionTopScroll);
 }
 
@@ -461,6 +464,9 @@ function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
     button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
   });
+  el.monthlyBoard.querySelectorAll("[data-delete-manual-plan]").forEach((button) => {
+    button.addEventListener("click", () => deleteManualPlanned(button.dataset.deleteManualPlan));
+  });
   el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
 
@@ -475,6 +481,9 @@ function monthlyItems(items, month, kind) {
     const attr = kind === "income" ? `data-receive-income="${key}" data-expected="${value}"` : `data-pay-occurrence="${key}"`;
     const buttonLabel = kind === "income" ? (done ? "Recebido" : "Receber") : (done ? "Pago" : "Pagar");
     const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : `<span class="creditor-logo">${escapeHtml(initials(row.origin || row.label))}</span>`;
+    const deleteButton = isManualPlannedRow(row)
+      ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
+      : "";
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""}">
         <div class="entity-cell">
@@ -487,6 +496,7 @@ function monthlyItems(items, month, kind) {
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
           <button class="small-button ${kind === "expense" ? "pay" : ""}" type="button" ${attr}>${buttonLabel}</button>
+          ${deleteButton}
         </div>
       </article>
     `;
@@ -512,6 +522,7 @@ function buildProjectionRows(months, keepPaidValues = false) {
       kind: "income",
       owner: line.owner || "Felipe",
       creditorId: line.creditorId || "",
+      manualType: "planned-income",
       label: line.label,
       origin: line.origin,
       sourceLabel: "",
@@ -651,18 +662,26 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
     }
   });
 
-  const creditors = new Set([
-    ...state.data.plannedPurchases.map((item) => item.creditorId)
-  ].filter(Boolean));
-  creditors.forEach((creditorId) => {
+  state.data.plannedPurchases.forEach((item) => {
     const plannedValues = {};
     months.forEach((month) => {
-      plannedValues[month] = plannedTotal(creditorId, month);
-      const key = `auto-planned-${creditorId}:${month}`;
+      plannedValues[month] = plannedMonth(item) === month ? Number(item.amount || 0) : 0;
+      const key = `${item.id}:${month}`;
       if (!keepPaidValues && isOccurrencePaid(key)) plannedValues[month] = 0;
     });
-    const owner = ownerForCreditor(creditorId);
-    if (Object.values(plannedValues).some(Boolean)) rows.push({ id: `auto-planned-${creditorId}`, kind: "expense", owner, label: `Compras planejadas (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: plannedValues });
+    if (Object.values(plannedValues).some(Boolean)) {
+      rows.push({
+        id: item.id,
+        kind: "expense",
+        owner: item.owner || "Felipe",
+        creditorId: item.creditorId,
+        manualType: "planned-expense",
+        label: item.description || "Lançamento planejado",
+        origin: getCreditorName(item.creditorId),
+        sourceLabel: "",
+        values: plannedValues
+      });
+    }
   });
 
   const carValues = {};
@@ -838,11 +857,15 @@ function projectionRow(row, months) {
   const editAction = row.kind === "income" && isPlannedIncome(row.id)
     ? `<button class="icon-button mini-icon row-edit" type="button" title="Editar entrada" data-edit-income-line="${row.id}">${icon("pencil")}</button>`
     : "";
+  const deleteAction = isManualPlannedRow(row)
+    ? `<button class="icon-button mini-icon danger-mini row-edit" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
+    : "";
   return `
     <tr class="${sectionClass}">
       <th class="sticky-col">
         <span>${escapeHtml(row.label)}</span>
         ${editAction}
+        ${deleteAction}
       </th>
       <td>${escapeHtml(row.origin || "-")}</td>
       ${months.map((month) => projectionCell(row, month)).join("")}
@@ -852,6 +875,10 @@ function projectionRow(row, months) {
 
 function isPlannedIncome(id) {
   return state.data.incomeLines.some((line) => line.id === id);
+}
+
+function isManualPlannedRow(row) {
+  return row.manualType === "planned-income" || row.manualType === "planned-expense";
 }
 
 function projectionCell(row, month) {
@@ -1325,7 +1352,7 @@ function hydrateForms() {
   document.querySelectorAll("[data-payment-method-select]").forEach((select) => {
     const current = select.value;
     select.innerHTML = state.data.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
-    if (current) select.value = current;
+    select.value = current && state.data.paymentMethods.includes(current) ? current : defaultPaymentMethod();
   });
   document.querySelectorAll("[data-owner-select]").forEach((select) => {
     const current = select.value;
@@ -1336,6 +1363,10 @@ function hydrateForms() {
   if (el.plannedForm.elements.month) el.plannedForm.elements.month.value = start;
   if (el.plannedForm.elements.date && !el.plannedForm.elements.date.value) el.plannedForm.elements.date.value = `${start}-01`;
   if (el.incomeForm.elements.month && !el.incomeForm.elements.month.value) el.incomeForm.elements.month.value = start;
+}
+
+function defaultPaymentMethod() {
+  return state.data.paymentMethods.find((method) => method !== "Cartão de crédito") || state.data.paymentMethods[0] || "PIX";
 }
 
 async function addInstallment(event) {
@@ -1401,6 +1432,7 @@ function openFixedCostDialog(id = null) {
   hydrateForms();
   state.fixedCostEditingId = id;
   el.fixedCostForm.reset();
+  el.fixedCostForm.elements.paymentMethod.value = defaultPaymentMethod();
   const item = id ? state.data.fixedCosts.find((entry) => entry.id === id) : null;
   el.fixedCostDialogTitle.textContent = item ? "Editar custo fixo" : "Novo custo fixo";
   if (item) {
@@ -1424,12 +1456,15 @@ function closeFixedCostDialog() {
 }
 
 function updateFixedCostFields() {
-  const isCard = el.fixedCostForm.elements.paymentMethod.value === "Cartão de crédito";
+  const methodField = el.fixedCostForm.elements.paymentMethod;
+  if (!methodField.value) methodField.value = defaultPaymentMethod();
+  const isCard = methodField.value === "Cartão de crédito";
   el.fixedCardField.hidden = !isCard;
   el.fixedCreditorField.hidden = isCard;
   el.fixedOwnerField.hidden = isCard;
   el.fixedCostForm.elements.cardId.required = isCard;
   el.fixedCostForm.elements.creditorId.required = !isCard;
+  el.fixedCostForm.elements.owner.required = !isCard;
 }
 
 async function payInstallment(key) {
@@ -2045,6 +2080,19 @@ async function addPlannedPurchase(event) {
   const editing = Boolean(state.plannedEditingId);
   closePlannedDialog();
   await saveState(editing ? "Lançamento planejado atualizado." : "Lançamento planejado adicionado.");
+}
+
+async function deleteManualPlanned(id) {
+  state.data.incomeLines = state.data.incomeLines.filter((item) => item.id !== id);
+  state.data.plannedPurchases = state.data.plannedPurchases.filter((item) => item.id !== id);
+  state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((key) => !key.startsWith(`${id}:`));
+  state.data.paidOccurrences = (state.data.paidOccurrences || []).filter((key) => !key.startsWith(`${id}:`));
+  if (state.data.receivedAmounts) {
+    Object.keys(state.data.receivedAmounts).forEach((key) => {
+      if (key.startsWith(`${id}:`)) delete state.data.receivedAmounts[key];
+    });
+  }
+  await saveState("Lançamento planejado excluído.");
 }
 
 async function togglePaidOccurrence(key) {
