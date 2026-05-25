@@ -955,6 +955,21 @@ Data inicial: 2026-05-24
 
 - Commitar e publicar a correcao.
 
+## Atualizacao - 2026-05-25 11:40:00
+
+### Mudancas feitas
+
+- Parcelamentos ganharam resumo por prazo, filtro por credor e novo cadastro sem abrir card automaticamente.
+- Carro passou a usar data exata das parcelas, data de pagamento, economia por parcela e economia total considerando juros pagos.
+- Custos fixos passaram a diferenciar cartao/crediario de PIX/Boleto/Debito, com edicao, ordenacao e agregacao por Credor + Metodo + Dono.
+- Controle Mensal ganhou mes de referencia, lancamento planejado, modal para confirmar recebimento com valor real e botao de fechamento do mes.
+- Preferencias removeu saldo em conta, manteve credores/cartoes em ordem alfabetica e removeu saldo previsto da lista de credores.
+- README recebeu os itens de roadmap pendentes para FGTS.
+
+### Comandos relevantes
+
+- `node --check app.js`
+
 ## Atualizacao - 2026-05-25 10:25:00
 
 ### Decisoes tomadas

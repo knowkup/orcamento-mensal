@@ -292,6 +292,17 @@ svg {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.installments-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric small {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 #carKpis {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -532,6 +543,35 @@ svg {
   border-radius: 8px;
   background: var(--surface-soft);
   padding: 4px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.filter-chip {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.filter-chip.active {
+  border-color: #0f766e;
+  background: #e7f7f4;
+  color: #0f5f59;
+}
+
+.filter-chip span {
+  margin-left: 6px;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .segment {

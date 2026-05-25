@@ -32,6 +32,8 @@ Publique `firestore.rules` antes de usar dados reais.
 - Melhorar a gestão completa do financiamento do carro.
 - Adicionar fluxo futuro de concluir financiamento e preparar um novo.
 - Importar e reconciliar os dados reais da planilha.
+- FGTS: painel resumo com total recebido, total devido, total pago e total a pagar.
+- FGTS: melhorar layout, editar/excluir empréstimos e manter resumo fechado com recebido, a pagar, parcelas e próximo vencimento.
 
 ## Validação local
 

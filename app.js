@@ -16,6 +16,7 @@ const state = {
   firebaseReady: false,
   saving: false,
   installmentFilter: "open",
+  installmentCreditorFilter: "all",
   carFilter: "open",
   fgtsFilters: {},
   fgtsEditingId: null,
@@ -24,6 +25,7 @@ const state = {
   installmentEditingId: null,
   creditorEditingId: null,
   cardEditingId: null,
+  fixedCostEditingId: null,
   incomeEditingId: null
 };
 
@@ -44,14 +46,23 @@ const el = {
   projectionTopScroll: document.querySelector("#projectionTopScroll"),
   projectionScroll: document.querySelector(".projection-scroll"),
   monthlyBoard: document.querySelector("#monthlyBoard"),
+  monthlyReference: document.querySelector("#monthlyReference"),
+  addMonthlyPlanButton: document.querySelector("#addMonthlyPlanButton"),
+  closeMonthButton: document.querySelector("#closeMonthButton"),
   installmentForm: document.querySelector("#installmentForm"),
   installmentDialog: document.querySelector("#installmentDialog"),
   installmentDialogTitle: document.querySelector("#installmentDialogTitle"),
   newInstallmentButton: document.querySelector("#newInstallmentButton"),
   closeInstallmentButton: document.querySelector("#closeInstallmentButton"),
+  installmentSummary: document.querySelector("#installmentSummary"),
+  installmentFilters: document.querySelector("#installmentFilters"),
   installmentsTable: document.querySelector("#installmentsTable"),
   fixedCostForm: document.querySelector("#fixedCostForm"),
   fixedCostDialog: document.querySelector("#fixedCostDialog"),
+  fixedCostDialogTitle: document.querySelector("#fixedCostDialogTitle"),
+  fixedCardField: document.querySelector("#fixedCardField"),
+  fixedCreditorField: document.querySelector("#fixedCreditorField"),
+  fixedOwnerField: document.querySelector("#fixedOwnerField"),
   newFixedCostButton: document.querySelector("#newFixedCostButton"),
   closeFixedCostButton: document.querySelector("#closeFixedCostButton"),
   fixedCostsTable: document.querySelector("#fixedCostsTable"),
@@ -67,6 +78,10 @@ const el = {
   carPaymentForm: document.querySelector("#carPaymentForm"),
   carPaymentTitle: document.querySelector("#carPaymentTitle"),
   closeCarPaymentButton: document.querySelector("#closeCarPaymentButton"),
+  receiveDialog: document.querySelector("#receiveDialog"),
+  receiveForm: document.querySelector("#receiveForm"),
+  receiveTitle: document.querySelector("#receiveTitle"),
+  closeReceiveButton: document.querySelector("#closeReceiveButton"),
   fgtsForm: document.querySelector("#fgtsForm"),
   fgtsDialog: document.querySelector("#fgtsDialog"),
   fgtsDialogTitle: document.querySelector("#fgtsDialogTitle"),
@@ -124,13 +139,16 @@ function bindEvents() {
   el.closeInstallmentButton.addEventListener("click", closeInstallmentDialog);
   el.fixedCostForm.addEventListener("submit", addFixedCost);
   el.newFixedCostButton.addEventListener("click", openFixedCostDialog);
-  el.closeFixedCostButton.addEventListener("click", () => el.fixedCostDialog.close());
+  el.closeFixedCostButton.addEventListener("click", closeFixedCostDialog);
+  el.fixedCostForm.elements.paymentMethod.addEventListener("change", updateFixedCostFields);
   el.settingsForm.addEventListener("submit", updateSettings);
   el.carForm.addEventListener("submit", updateCar);
   el.editCarButton.addEventListener("click", openCarContractDialog);
   el.closeCarContractButton.addEventListener("click", () => el.carContractDialog.close());
   el.carPaymentForm.addEventListener("submit", payCarInstallment);
   el.closeCarPaymentButton.addEventListener("click", () => el.carPaymentDialog.close());
+  el.receiveForm.addEventListener("submit", confirmReceivedOccurrence);
+  el.closeReceiveButton.addEventListener("click", () => el.receiveDialog.close());
   bindMoneyInputs();
   el.fgtsForm.addEventListener("submit", addFgtsContract);
   el.newFgtsButton.addEventListener("click", openFgtsDialog);
@@ -151,6 +169,8 @@ function bindEvents() {
   el.newIncomeButton.addEventListener("click", () => openIncomeDialog());
   el.closeIncomeButton.addEventListener("click", closeIncomeDialog);
   el.addPlanButton.addEventListener("click", openPlannedDialog);
+  el.addMonthlyPlanButton.addEventListener("click", openPlannedDialog);
+  el.closeMonthButton.addEventListener("click", closeMonth);
   el.closePlanButton.addEventListener("click", () => el.plannedDialog.close());
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
   el.plannedForm.elements.kind.addEventListener("change", updatePlannedFields);
@@ -348,7 +368,6 @@ function renderProjection() {
 }
 
 function renderSettings() {
-  el.settingsForm.elements.accountBalance.value = formatCurrencyInput(state.data.accountBalance || "");
   el.settingsForm.elements.kahLimit.value = formatCurrencyInput(state.data.kahLimit || "");
 }
 
@@ -390,12 +409,18 @@ function renderMonthlyControl() {
     .filter((row) => row.kind === "expense")
     .map((row) => ({ row, value: row.values[month] || 0 }))
     .filter((item) => item.value > 0 || isOccurrencePaid(`${item.row.id}:${month}`));
-  const received = entries.reduce((total, item) => total + (isIncomeReceived(`${item.row.id}:${month}`) ? item.value : 0), 0);
+  const received = entries.reduce((total, item) => total + (isIncomeReceived(`${item.row.id}:${month}`) ? receivedAmount(`${item.row.id}:${month}`, item.value) : 0), 0);
   const paid = exits.reduce((total, item) => total + (isOccurrencePaid(`${item.row.id}:${month}`) ? item.value : 0), 0);
   const expectedIncome = entries.reduce((total, item) => total + item.value, 0);
   const expectedExpense = exits.reduce((total, item) => total + item.value, 0);
+  const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
+  const hasPending = entries.some((item) => !isIncomeReceived(`${item.row.id}:${month}`))
+    || exits.some((item) => !isOccurrencePaid(`${item.row.id}:${month}`));
 
+  el.monthlyReference.textContent = formatMonth(month);
+  el.closeMonthButton.disabled = hasPending;
   el.monthlySummary.innerHTML = [
+    metric("Saldo em conta", accountBalance, accountBalance >= 0 ? "positive" : "negative"),
     metric("Previsto entrar", expectedIncome, "positive"),
     metric("Já recebido", received, "positive"),
     metric("Previsto sair", -expectedExpense, "negative"),
@@ -419,8 +444,8 @@ function renderMonthlyControl() {
     </section>
   `;
 
-  el.monthlyBoard.querySelectorAll("[data-toggle-income]").forEach((button) => {
-    button.addEventListener("click", () => toggleReceivedOccurrence(button.dataset.toggleIncome));
+  el.monthlyBoard.querySelectorAll("[data-receive-income]").forEach((button) => {
+    button.addEventListener("click", () => openReceiveDialog(button.dataset.receiveIncome, button.dataset.expected));
   });
   el.monthlyBoard.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
     button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
@@ -434,7 +459,8 @@ function monthlyItems(items, month, kind) {
     .map(({ row, value }) => {
     const key = `${row.id}:${month}`;
     const done = kind === "income" ? isIncomeReceived(key) : isOccurrencePaid(key);
-    const attr = kind === "income" ? `data-toggle-income="${key}"` : `data-pay-occurrence="${key}"`;
+    const displayValue = kind === "income" && done ? receivedAmount(key, value) : value;
+    const attr = kind === "income" ? `data-receive-income="${key}" data-expected="${value}"` : `data-pay-occurrence="${key}"`;
     const buttonLabel = kind === "income" ? (done ? "Recebido" : "Receber") : (done ? "Pago" : "Pagar");
     const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : `<span class="creditor-logo">${escapeHtml(initials(row.origin || row.label))}</span>`;
     return `
@@ -447,7 +473,7 @@ function monthlyItems(items, month, kind) {
           </div>
         </div>
         <div class="monthly-item-action">
-          <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(value)}</strong>
+          <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
           <button class="small-button ${kind === "expense" ? "pay" : ""}" type="button" ${attr}>${buttonLabel}</button>
         </div>
       </article>
@@ -457,22 +483,12 @@ function monthlyItems(items, month, kind) {
 
 function buildProjectionRows(months, keepPaidValues = false) {
   const rows = [];
-  if (Number(state.data.accountBalance || 0)) {
-    rows.push({
-      id: "account-balance",
-      kind: "income",
-      owner: "Felipe",
-      label: "Saldo em Conta",
-      origin: "manual",
-      sourceLabel: "",
-      values: { [months[0]]: Number(state.data.accountBalance || 0) }
-    });
-  }
   state.data.incomeLines.forEach((line) => {
     rows.push({
       id: line.id,
       kind: "income",
       owner: line.owner || "Felipe",
+      creditorId: line.creditorId || "",
       label: line.label,
       origin: line.origin,
       sourceLabel: "",
@@ -589,28 +605,50 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
     }
   });
 
+  uniqueFixedCostGroups().forEach((group) => {
+    const fixedValues = {};
+    months.forEach((month) => {
+      fixedValues[month] = fixedTotalForGroup(group.key);
+      const key = `auto-fixed-${group.id}:${month}`;
+      if (!keepPaidValues && isOccurrencePaid(key)) fixedValues[month] = 0;
+    });
+    if (Object.values(fixedValues).some(Boolean)) {
+      rows.push({
+        id: `auto-fixed-${group.id}`,
+        kind: "expense",
+        owner: group.owner,
+        creditorId: group.creditorId,
+        cardId: group.cardId,
+        paymentMethod: group.paymentMethod,
+        label: group.label,
+        origin: group.origin,
+        sourceLabel: "",
+        values: fixedValues
+      });
+    }
+  });
+
   const creditors = new Set([
-    ...state.data.fixedCosts.filter((item) => item.includeInProjection !== false).map((item) => item.creditorId),
     ...state.data.plannedPurchases.map((item) => item.creditorId)
   ].filter(Boolean));
   creditors.forEach((creditorId) => {
-    const fixedValues = {};
     const plannedValues = {};
     months.forEach((month) => {
-      fixedValues[month] = fixedTotalByOrigin(creditorId);
       plannedValues[month] = plannedTotal(creditorId, month);
-      ["fixed", "planned"].forEach((kind) => {
-        const key = `auto-${kind}-${creditorId}:${month}`;
-        if (!keepPaidValues && isOccurrencePaid(key)) {
-          if (kind === "fixed") fixedValues[month] = 0;
-          if (kind === "planned") plannedValues[month] = 0;
-        }
-      });
+      const key = `auto-planned-${creditorId}:${month}`;
+      if (!keepPaidValues && isOccurrencePaid(key)) plannedValues[month] = 0;
     });
     const owner = ownerForCreditor(creditorId);
-    if (Object.values(fixedValues).some(Boolean)) rows.push({ id: `auto-fixed-${creditorId}`, kind: "expense", owner, label: `Custos fixos (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: fixedValues });
     if (Object.values(plannedValues).some(Boolean)) rows.push({ id: `auto-planned-${creditorId}`, kind: "expense", owner, label: `Compras planejadas (${getCreditorName(creditorId)})`, origin: getCreditorName(creditorId), sourceLabel: "", values: plannedValues });
   });
+
+  const carValues = {};
+  months.forEach((month) => {
+    carValues[month] = carValueForMonth(month);
+    const key = `auto-car:${month}`;
+    if (!keepPaidValues && isOccurrencePaid(key)) carValues[month] = 0;
+  });
+  if (Object.values(carValues).some(Boolean)) rows.push({ id: "auto-car", kind: "expense", owner: "Felipe", creditorId: state.data.car.creditorId, label: state.data.car.name || "Carro", origin: state.data.car.creditorId ? getCreditorName(state.data.car.creditorId) : "Financiamento", sourceLabel: "", values: carValues });
 }
 
 function groupKey(item) {
@@ -697,13 +735,59 @@ function fixedTotalByOrigin(origin) {
 
 function plannedTotal(origin, month) {
   return state.data.plannedPurchases
-    .filter((item) => item.creditorId === origin && item.month === month)
+    .filter((item) => item.creditorId === origin && plannedMonth(item) === month)
     .reduce((total, item) => total + Number(item.amount), 0);
 }
 
 function carValueForMonth(month) {
-  const payment = state.data.car.payments.find((item) => item.month === month && item.status !== "Pago");
+  const payment = state.data.car.payments.find((item) => carPaymentMonth(item) === month && item.status !== "Pago");
   return payment ? Number(payment.value) : 0;
+}
+
+function plannedMonth(item) {
+  return item.date ? String(item.date).slice(0, 7) : item.month;
+}
+
+function carPaymentMonth(item) {
+  return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
+}
+
+function uniqueFixedCostGroups() {
+  const groups = new Map();
+  state.data.fixedCosts
+    .filter((item) => item.includeInProjection !== false)
+    .forEach((item) => {
+      const key = fixedCostGroupKey(item);
+      if (!groups.has(key)) groups.set(key, fixedCostGroupInfo(key, item));
+    });
+  return [...groups.values()].sort((a, b) => a.origin.localeCompare(b.origin, "pt-BR") || a.label.localeCompare(b.label, "pt-BR"));
+}
+
+function fixedCostGroupKey(item) {
+  if (item.paymentMethod === "Cartão de crédito" && item.cardId) return `card|${item.cardId}`;
+  return [item.creditorId || "", item.paymentMethod || "", item.owner || "Felipe"].join("|");
+}
+
+function fixedCostGroupInfo(key, item) {
+  const card = item.cardId ? getCreditCard(item.cardId) : null;
+  const creditorId = card?.creditorId || item.creditorId;
+  const owner = card?.owner || item.owner || "Felipe";
+  return {
+    key,
+    id: key.replaceAll("|", "-").replaceAll(/\s+/g, "-"),
+    cardId: card?.id || "",
+    creditorId,
+    owner,
+    paymentMethod: item.paymentMethod || "",
+    label: card ? `Custo Fixo ${card.name}` : `Custos fixos (${getCreditorName(creditorId)})`,
+    origin: card ? getCreditorName(card.creditorId) : getCreditorName(creditorId)
+  };
+}
+
+function fixedTotalForGroup(key) {
+  return state.data.fixedCosts
+    .filter((item) => item.includeInProjection !== false && fixedCostGroupKey(item) === key)
+    .reduce((total, item) => total + Number(item.amount || 0), 0);
 }
 
 function differenceValue(line, months, month, index) {
@@ -716,7 +800,7 @@ function differenceValue(line, months, month, index) {
 }
 
 function buildTotals(rows, months) {
-  let accumulated = Number(state.data.initialBalance || 0);
+  let accumulated = Number(state.data.accountBalance || state.data.initialBalance || 0);
   return months.map((month) => {
     const income = rows.filter((row) => row.kind === "income").reduce((total, row) => total + (row.values[month] || 0), 0);
     const expense = rows.filter((row) => row.kind === "expense").reduce((total, row) => total + (row.values[month] || 0), 0);
@@ -812,8 +896,13 @@ function renderPlanningChart(totals, months) {
 }
 
 function renderInstallments() {
-  el.installmentsTable.innerHTML = state.data.installments.length
-    ? state.data.installments.map((item) => {
+  renderInstallmentSummary();
+  renderInstallmentChips();
+  const filtered = state.installmentCreditorFilter === "all"
+    ? state.data.installments
+    : state.data.installments.filter((item) => getInstallmentCard(item).creditorId === state.installmentCreditorFilter);
+  el.installmentsTable.innerHTML = filtered.length
+    ? filtered.map((item) => {
       const card = getInstallmentCard(item);
       return genericDebtCard({
         id: item.id,
@@ -829,7 +918,7 @@ function renderInstallments() {
         open: state.expandedInstallments[item.id] === true
       });
     }).join("")
-    : `<div class="empty-state">Nenhuma conta parcelada cadastrada.</div>`;
+    : `<div class="empty-state">Nenhuma conta parcelada encontrada para este filtro.</div>`;
 
   el.installmentsTable.querySelectorAll("[data-installment-card-tab]").forEach((button) => {
     button.addEventListener("click", () => {
@@ -857,11 +946,63 @@ function renderInstallments() {
   });
 }
 
+function renderInstallmentSummary() {
+  const groups = [
+    { label: "Curto prazo", test: (left) => left <= 3 },
+    { label: "Médio prazo", test: (left) => left > 3 && left <= 6 },
+    { label: "Longo prazo", test: (left) => left > 6 }
+  ];
+  el.installmentSummary.innerHTML = groups.map((group) => {
+    const items = state.data.installments.filter((item) => {
+      const left = Math.max(0, Number(item.totalInstallments || 0) - Number(item.paidInstallments || 0));
+      return left > 0 && group.test(left);
+    });
+    const total = items.reduce((sum, item) => sum + Number(item.amount || 0) * Math.max(0, Number(item.totalInstallments || 0) - Number(item.paidInstallments || 0)), 0);
+    return `
+      <article class="metric">
+        <span>${group.label}</span>
+        <strong>${currency.format(total)}</strong>
+        <small>${items.length} parcelamento${items.length === 1 ? "" : "s"}</small>
+      </article>
+    `;
+  }).join("");
+}
+
+function renderInstallmentChips() {
+  const counts = new Map();
+  state.data.installments.forEach((item) => {
+    const creditorId = getInstallmentCard(item).creditorId;
+    if (creditorId) counts.set(creditorId, (counts.get(creditorId) || 0) + 1);
+  });
+  const chips = [
+    { id: "all", label: "Todos", count: state.data.installments.length },
+    ...[...counts.entries()]
+      .sort((a, b) => getCreditorName(a[0]).localeCompare(getCreditorName(b[0]), "pt-BR"))
+      .map(([id, count]) => ({ id, label: getCreditorName(id), count }))
+  ];
+  el.installmentFilters.innerHTML = chips.map((chip) => `
+    <button class="filter-chip ${state.installmentCreditorFilter === chip.id ? "active" : ""}" type="button" data-installment-creditor="${chip.id}">
+      ${escapeHtml(chip.label)} <span>${chip.count}</span>
+    </button>
+  `).join("");
+  el.installmentFilters.querySelectorAll("[data-installment-creditor]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.installmentCreditorFilter = button.dataset.installmentCreditor;
+      renderInstallments();
+      refreshIcons();
+    });
+  });
+}
+
 function renderFixedCosts() {
+  const fixedCosts = [...state.data.fixedCosts].sort((a, b) => {
+    const creditorSort = getCreditorName(a.creditorId).localeCompare(getCreditorName(b.creditorId), "pt-BR");
+    return creditorSort || Number(a.dueDay || 0) - Number(b.dueDay || 0);
+  });
   el.fixedCostsTable.innerHTML = `
     <thead><tr><th>Custo</th><th>Credor</th><th>Método</th><th>Grupo</th><th>Venc.</th><th>Valor</th><th>Ações</th></tr></thead>
     <tbody>
-      ${state.data.fixedCosts.map((item) => `
+      ${fixedCosts.map((item) => `
         <tr>
           <td>${escapeHtml(item.name)}</td>
           <td>${creditorLogoHtml(item.creditorId)}${escapeHtml(getCreditorName(item.creditorId))}</td>
@@ -869,12 +1010,18 @@ function renderFixedCosts() {
           <td>${escapeHtml(item.group || "-")}</td>
           <td>${item.dueDay}</td>
           <td>${currency.format(item.amount)}</td>
-          <td><button class="small-button danger-mini" type="button" data-delete-fixed="${item.id}">Excluir</button></td>
+          <td class="row-actions">
+            <button class="icon-button mini-icon" type="button" title="Editar" data-edit-fixed="${item.id}">${icon("pencil")}</button>
+            <button class="icon-button mini-icon danger-mini" type="button" title="Excluir" data-delete-fixed="${item.id}">${icon("trash-2")}</button>
+          </td>
         </tr>
       `).join("") || `<tr><td colspan="7" class="muted-cell">Nenhum custo fixo cadastrado.</td></tr>`}
     </tbody>
   `;
 
+  el.fixedCostsTable.querySelectorAll("[data-edit-fixed]").forEach((button) => {
+    button.addEventListener("click", () => openFixedCostDialog(button.dataset.editFixed));
+  });
   el.fixedCostsTable.querySelectorAll("[data-delete-fixed]").forEach((button) => {
     button.addEventListener("click", () => deleteFixedCost(button.dataset.deleteFixed));
   });
@@ -889,7 +1036,7 @@ function renderCar() {
   const financing = Number(car.monthly || 0) * Number(car.totalInstallments || 0);
   const paidValue = paid.reduce((total, item) => total + Number(item.paidAmount || 0), 0);
   const pendingValue = pending.reduce((total, item) => total + Number(item.value), 0);
-  const economy = paid.reduce((total, item) => total + Math.max(0, Number(item.value) - Number(item.paidAmount || item.value)), 0);
+  const economy = paid.reduce((total, item) => total + carInstallmentEconomy(item), 0);
   const realProjected = paidValue + pendingValue;
   const creditor = car.creditorId ? getCreditorName(car.creditorId) : "sem credor";
 
@@ -902,7 +1049,7 @@ function renderCar() {
     metric("Valor pago", paidValue, "positive"),
     metric("Faltam", `${pending.length} parcelas`, "negative", false),
     metric("Falta pagar", -pendingValue, "negative"),
-    metric("Economia", economy, "positive")
+    metric("Economia", economy, economy > 0 ? "positive" : economy < 0 ? "negative" : "neutral")
   ].join("");
   el.carKpis.insertAdjacentHTML("beforeend", carProgress(paid.length, car.payments.length));
 
@@ -979,7 +1126,7 @@ function renderFgts() {
 function renderOrigins() {
   renderOriginsV2();
   return;
-  el.creditorList.innerHTML = state.data.creditors.map((creditor) => `
+  el.creditorList.innerHTML = sortedCreditors().map((creditor) => `
     <div class="creditor-card">
       ${creditorLogoHtml(creditor.id)}
       <div>
@@ -1032,9 +1179,9 @@ function renderFgtsV2() {
 
 function renderOriginsV2() {
   el.creditorList.innerHTML = `
-    <thead><tr><th>Credor</th><th>Formas</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Credor</th><th>Formas</th><th>Vínculos</th><th>Ações</th></tr></thead>
     <tbody>
-      ${state.data.creditors.map((creditor) => {
+      ${sortedCreditors().map((creditor) => {
         const inUse = isCreditorInUse(creditor.id);
         return `
           <tr>
@@ -1046,7 +1193,6 @@ function renderOriginsV2() {
             </td>
             <td>${escapeHtml((creditor.paymentForms || [creditor.type]).filter(Boolean).join(", ") || "-")}</td>
             <td>${creditorUsageCount(creditor.id)}</td>
-            <td>${currency.format(creditorOpenBalance(creditor.id))}</td>
             <td class="row-actions">
               <button class="icon-button mini-icon" type="button" title="Editar" data-edit-creditor="${creditor.id}">${icon("pencil")}</button>
               <button class="icon-button mini-icon danger-mini" type="button" title="${inUse ? "Credor vinculado" : "Excluir"}" data-delete-creditor="${creditor.id}">${icon(inUse ? "ban" : "trash-2")}</button>
@@ -1069,7 +1215,7 @@ function renderCreditCards() {
   el.cardList.innerHTML = `
     <thead><tr><th>Cartão/Crediário</th><th>Credor</th><th>Dono</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
     <tbody>
-      ${state.data.creditCards.map((card) => {
+      ${sortedCreditCards().map((card) => {
         const inUse = isCreditCardInUse(card.id);
         return `
           <tr>
@@ -1134,12 +1280,12 @@ function renderRecurringIncomes() {
 function hydrateForms() {
   document.querySelectorAll("[data-creditor-select]").forEach((select) => {
     const current = select.value;
-    select.innerHTML = state.data.creditors.map((creditor) => `<option value="${creditor.id}">${escapeHtml(creditor.name)}</option>`).join("");
+    select.innerHTML = sortedCreditors().map((creditor) => `<option value="${creditor.id}">${escapeHtml(creditor.name)}</option>`).join("");
     if (current) select.value = current;
   });
   document.querySelectorAll("[data-card-select]").forEach((select) => {
     const current = select.value;
-    select.innerHTML = state.data.creditCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)} · ${escapeHtml(getCreditorName(card.creditorId))} · ${escapeHtml(card.owner || "Felipe")}</option>`).join("");
+    select.innerHTML = sortedCreditCards().map((card) => `<option value="${card.id}">${escapeHtml(card.name)} · ${escapeHtml(getCreditorName(card.creditorId))} · ${escapeHtml(card.owner || "Felipe")}</option>`).join("");
     if (current) select.value = current;
   });
   document.querySelectorAll("[data-payment-method-select]").forEach((select) => {
@@ -1154,6 +1300,7 @@ function hydrateForms() {
   });
   const start = nextMonths(1)[0];
   if (el.plannedForm.elements.month) el.plannedForm.elements.month.value = start;
+  if (el.plannedForm.elements.date && !el.plannedForm.elements.date.value) el.plannedForm.elements.date.value = `${start}-01`;
   if (el.incomeForm.elements.month && !el.incomeForm.elements.month.value) el.incomeForm.elements.month.value = start;
 }
 
@@ -1185,11 +1332,9 @@ async function addInstallment(event) {
       Object.assign(current, item, { id: current.id });
     } else {
       state.data.installments.push(item);
-      state.expandedInstallments[item.id] = true;
     }
   } else {
     state.data.installments.push(item);
-    state.expandedInstallments[item.id] = true;
   }
   closeInstallmentDialog();
   event.currentTarget.reset();
@@ -1200,7 +1345,7 @@ function openInstallmentDialog(id = null) {
   hydrateForms();
   state.installmentEditingId = id;
   const item = id ? state.data.installments.find((entry) => entry.id === id) : null;
-  if (item) item.item = item.item || item.name || item.description || "";
+  if (item) item.item = item.item || item.name || item.description || "Parcelamento";
   const card = item ? getInstallmentCard(item) : null;
   el.installmentDialogTitle.textContent = item ? "Editar parcelamento" : "Novo parcelamento";
   el.installmentForm.elements.item.value = item?.item || "";
@@ -1218,10 +1363,39 @@ function closeInstallmentDialog() {
   el.installmentDialog.close();
 }
 
-function openFixedCostDialog() {
+function openFixedCostDialog(id = null) {
   hydrateForms();
+  state.fixedCostEditingId = id;
   el.fixedCostForm.reset();
+  const item = id ? state.data.fixedCosts.find((entry) => entry.id === id) : null;
+  el.fixedCostDialogTitle.textContent = item ? "Editar custo fixo" : "Novo custo fixo";
+  if (item) {
+    el.fixedCostForm.elements.name.value = item.name || "";
+    el.fixedCostForm.elements.paymentMethod.value = item.paymentMethod || "PIX";
+    el.fixedCostForm.elements.cardId.value = item.cardId || "";
+    el.fixedCostForm.elements.creditorId.value = item.creditorId || "";
+    el.fixedCostForm.elements.owner.value = item.owner || "Felipe";
+    el.fixedCostForm.elements.group.value = item.group || "";
+    el.fixedCostForm.elements.dueDay.value = item.dueDay || "";
+    el.fixedCostForm.elements.amount.value = item.amount ? formatCurrencyInput(item.amount) : "";
+  }
+  updateFixedCostFields();
   el.fixedCostDialog.showModal();
+}
+
+function closeFixedCostDialog() {
+  state.fixedCostEditingId = null;
+  el.fixedCostForm.reset();
+  el.fixedCostDialog.close();
+}
+
+function updateFixedCostFields() {
+  const isCard = el.fixedCostForm.elements.paymentMethod.value === "Cartão de crédito";
+  el.fixedCardField.hidden = !isCard;
+  el.fixedCreditorField.hidden = isCard;
+  el.fixedOwnerField.hidden = isCard;
+  el.fixedCostForm.elements.cardId.required = isCard;
+  el.fixedCostForm.elements.creditorId.required = !isCard;
 }
 
 async function payInstallment(key) {
@@ -1250,24 +1424,34 @@ async function deleteInstallment(id) {
 async function addFixedCost(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  if (!form.get("creditorId")) {
+  const paymentMethod = String(form.get("paymentMethod"));
+  const card = paymentMethod === "Cartão de crédito" ? getCreditCard(String(form.get("cardId"))) : null;
+  const creditorId = card?.creditorId || String(form.get("creditorId") || "");
+  if (!creditorId) {
     showToast("Cadastre e selecione um credor.");
     return;
   }
-  state.data.fixedCosts.push({
-    id: crypto.randomUUID(),
+  const item = {
+    id: state.fixedCostEditingId || crypto.randomUUID(),
     name: String(form.get("name")).trim(),
-    creditorId: String(form.get("creditorId")),
-    paymentMethod: String(form.get("paymentMethod")),
-    owner: String(form.get("owner") || "Felipe"),
+    creditorId,
+    cardId: card?.id || "",
+    paymentMethod,
+    owner: card?.owner || String(form.get("owner") || "Felipe"),
     group: String(form.get("group") || "").trim(),
     dueDay: Number(form.get("dueDay")),
     amount: parseCurrencyInput(form.get("amount")),
     includeInProjection: true
-  });
-  event.currentTarget.reset();
-  el.fixedCostDialog.close();
-  await saveState("Custo fixo cadastrado.");
+  };
+  const editing = Boolean(state.fixedCostEditingId);
+  if (editing) {
+    const current = state.data.fixedCosts.find((entry) => entry.id === state.fixedCostEditingId);
+    if (current) Object.assign(current, item, { id: current.id });
+  } else {
+    state.data.fixedCosts.push(item);
+  }
+  closeFixedCostDialog();
+  await saveState(editing ? "Custo fixo atualizado." : "Custo fixo cadastrado.");
 }
 
 async function deleteFixedCost(id) {
@@ -1284,6 +1468,7 @@ async function updateCar(event) {
   state.data.car.purchase = parseCurrencyInput(form.get("purchase"));
   state.data.car.monthly = parseCurrencyInput(form.get("monthly"));
   state.data.car.totalInstallments = Number(form.get("totalInstallments") || state.data.car.totalInstallments);
+  state.data.car.firstDueDate = String(form.get("firstDueDate") || "");
   syncCarPayments();
   el.carContractDialog.close();
   await saveState("Cadastro do carro atualizado.");
@@ -1297,6 +1482,7 @@ function openCarContractDialog() {
   el.carForm.elements.purchase.value = formatCurrencyInput(car.purchase || "");
   el.carForm.elements.monthly.value = formatCurrencyInput(car.monthly || "");
   el.carForm.elements.totalInstallments.value = car.totalInstallments || "";
+  el.carForm.elements.firstDueDate.value = car.firstDueDate || car.payments?.[0]?.dueDate || "";
   el.carContractDialog.showModal();
 }
 
@@ -1308,13 +1494,17 @@ function syncCarPayments() {
     return;
   }
   const existing = new Map((car.payments || []).map((payment) => [Number(payment.number), payment]));
-  car.payments = nextMonths(total).map((month, index) => {
+  const firstDueDate = car.firstDueDate || `${nextMonths(1)[0]}-01`;
+  car.payments = Array.from({ length: total }, (_, index) => {
     const number = index + 1;
     const current = existing.get(number);
-    if (current?.status === "Pago") return { ...current, number, month };
+    const dueDate = addMonthsToDate(firstDueDate, index);
+    const month = dueDate.slice(0, 7);
+    if (current?.status === "Pago") return { ...current, number, dueDate, month };
     return {
       id: current?.id || crypto.randomUUID(),
       number,
+      dueDate,
       month,
       value: car.monthly,
       paidAmount: 0,
@@ -1326,8 +1516,6 @@ function syncCarPayments() {
 async function updateSettings(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  state.data.accountBalance = parseCurrencyInput(form.get("accountBalance"));
-  state.data.initialBalance = state.data.accountBalance;
   state.data.kahLimit = parseCurrencyInput(form.get("kahLimit"));
   await saveState("Preferências salvas.");
 }
@@ -1337,7 +1525,8 @@ function openCarPaymentDialog(id) {
   if (!payment) return;
   el.carPaymentTitle.textContent = `Parcela ${payment.number}/${state.data.car.payments.length}`;
   el.carPaymentForm.elements.paymentId.value = payment.id;
-  el.carPaymentForm.elements.paidAmount.value = Number(payment.value || 0).toFixed(2);
+  el.carPaymentForm.elements.paidAmount.value = formatCurrencyInput(payment.paidAmount || payment.value || "");
+  el.carPaymentForm.elements.paymentDate.value = payment.paymentDate || todayIsoDate();
   el.carPaymentDialog.showModal();
 }
 
@@ -1348,6 +1537,7 @@ async function payCarInstallment(event) {
   if (!payment) return;
   payment.status = "Pago";
   payment.paidAmount = parseCurrencyInput(form.get("paidAmount")) || Number(payment.value || 0);
+  payment.paymentDate = String(form.get("paymentDate") || todayIsoDate());
   el.carPaymentDialog.close();
   await saveState("Parcela do carro paga.");
 }
@@ -1357,6 +1547,7 @@ async function unpayCarInstallment(id) {
   if (!payment) return;
   payment.status = "Pendente";
   payment.paidAmount = 0;
+  payment.paymentDate = "";
   await saveState("Pagamento do carro removido.");
 }
 
@@ -1739,6 +1930,8 @@ function renderCreditorLogoPreview(src) {
 
 function openPlannedDialog() {
   hydrateForms();
+  el.plannedForm.elements.date.value = todayIsoDate();
+  el.plannedForm.elements.installments.value = 1;
   updatePlannedFields();
   el.plannedDialog.showModal();
 }
@@ -1748,21 +1941,26 @@ function updatePlannedFields() {
   el.plannedCredorField.hidden = isIncome;
   el.plannedFonteField.hidden = !isIncome;
   el.plannedForm.elements.creditorId.required = !isIncome;
-  el.plannedForm.elements.source.required = isIncome;
+  el.plannedForm.elements.sourceCreditorId.required = isIncome;
 }
 
 async function addPlannedPurchase(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const kind = String(form.get("kind") || "expense");
-  const month = String(form.get("month"));
+  const date = String(form.get("date"));
+  const month = date.slice(0, 7);
   const amount = parseCurrencyInput(form.get("amount"));
+  const installments = Math.max(1, Number(form.get("installments") || 1));
   if (kind === "income") {
+    const creditorId = String(form.get("sourceCreditorId") || "");
     state.data.incomeLines.push({
       id: crypto.randomUUID(),
       label: String(form.get("description")).trim(),
-      origin: String(form.get("source") || "").trim(),
+      origin: getCreditorName(creditorId),
+      creditorId,
       owner: String(form.get("owner") || "Felipe"),
+      date,
       values: { [month]: amount }
     });
   } else {
@@ -1771,6 +1969,8 @@ async function addPlannedPurchase(event) {
       description: String(form.get("description")).trim(),
       creditorId: String(form.get("creditorId")),
       month,
+      date,
+      installments,
       amount,
       owner: String(form.get("owner") || "Felipe")
     });
@@ -1784,9 +1984,11 @@ async function togglePaidOccurrence(key) {
   const paid = state.data.paidOccurrences || [];
   if (paid.includes(key)) {
     state.data.paidOccurrences = paid.filter((item) => item !== key);
+    syncExpenseSource(key, false);
     await saveState("Ocorrência reaberta.");
   } else {
     state.data.paidOccurrences = [...paid, key];
+    syncExpenseSource(key, true);
     await saveState("Ocorrência baixada.");
   }
 }
@@ -1806,8 +2008,77 @@ async function toggleReceivedOccurrence(key) {
   }
 }
 
+function syncExpenseSource(key, paid) {
+  const [rowId, month] = key.split(":");
+  if (rowId === "auto-car") {
+    const payment = state.data.car.payments.find((item) => carPaymentMonth(item) === month);
+    if (payment) {
+      payment.status = paid ? "Pago" : "Pendente";
+      payment.paidAmount = paid ? Number(payment.value || 0) : 0;
+      payment.paymentDate = paid ? todayIsoDate() : "";
+    }
+  }
+  if (rowId.startsWith("auto-installments-")) {
+    const groupId = rowId.replace("auto-installments-", "");
+    const group = uniqueGroups(state.data.installments, (item) => groupKey(item)).find((item) => item.id === groupId);
+    if (group) {
+      state.data.installments
+        .filter((item) => groupKey(item) === group.key)
+        .forEach((item) => {
+          const nextPaid = paid
+            ? Math.min(Number(item.totalInstallments || 0), Number(item.paidInstallments || 0) + 1)
+            : Math.max(0, Number(item.paidInstallments || 0) - 1);
+          item.paidInstallments = nextPaid;
+        });
+    }
+  }
+}
+
+async function closeMonth() {
+  const month = nextMonths(1)[0];
+  const rows = buildProjectionRows([month], true);
+  const entries = rows.filter((row) => row.kind === "income" && (row.values[month] || 0) > 0);
+  const exits = rows.filter((row) => row.kind === "expense" && ((row.values[month] || 0) > 0 || isOccurrencePaid(`${row.id}:${month}`)));
+  const hasPending = entries.some((row) => !isIncomeReceived(`${row.id}:${month}`))
+    || exits.some((row) => !isOccurrencePaid(`${row.id}:${month}`));
+  if (hasPending) {
+    showToast("Baixe todas as entradas e saídas antes de fechar.");
+    return;
+  }
+  if (!window.confirm(`Fechar ${formatMonth(month)} e levar o saldo atual para o próximo mês?`)) return;
+  const received = entries.reduce((total, row) => total + receivedAmount(`${row.id}:${month}`, row.values[month] || 0), 0);
+  const paid = exits.reduce((total, row) => total + Number(row.values[month] || 0), 0);
+  state.data.accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0) + received - paid;
+  state.data.initialBalance = state.data.accountBalance;
+  state.data.closedMonths = [...new Set([...(state.data.closedMonths || []), month])];
+  await saveState("Mês fechado e saldo levado para o próximo cálculo.");
+}
+
 function isIncomeReceived(key) {
   return (state.data.receivedOccurrences || []).includes(key);
+}
+
+function receivedAmount(key, fallback) {
+  return Number(state.data.receivedAmounts?.[key] ?? fallback ?? 0);
+}
+
+function openReceiveDialog(key, expected) {
+  const [rowId] = key.split(":");
+  const row = buildProjectionRows(nextMonths(1), true).find((item) => item.id === rowId);
+  el.receiveTitle.textContent = row?.label || "Confirmar entrada";
+  el.receiveForm.elements.key.value = key;
+  el.receiveForm.elements.amount.value = formatCurrencyInput(receivedAmount(key, Number(expected || 0)));
+  el.receiveDialog.showModal();
+}
+
+async function confirmReceivedOccurrence(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const key = String(form.get("key"));
+  state.data.receivedOccurrences = [...new Set([...(state.data.receivedOccurrences || []), key])];
+  state.data.receivedAmounts = { ...(state.data.receivedAmounts || {}), [key]: parseCurrencyInput(form.get("amount")) };
+  el.receiveDialog.close();
+  await saveState("Entrada recebida.");
 }
 
 function exportState() {
@@ -1913,10 +2184,14 @@ function normalizeData(data) {
       const paymentMethod = item.paymentMethod || "Cartão de crédito";
       return { ...item, item: item.item || item.name || item.description || "Parcelamento", creditorId, owner, paymentMethod, cardId: item.cardId || cardByLegacyKey.get(`${creditorId}|${owner}|${paymentMethod}`) || "" };
     }),
-    fixedCosts: (data.fixedCosts || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.payment) || item.payment, paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" })),
-    plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
+    fixedCosts: (data.fixedCosts || []).map((item) => {
+      const card = creditCards.find((entry) => entry.id === item.cardId);
+      return { ...item, cardId: item.cardId || "", creditorId: card?.creditorId || item.creditorId || creditorByName.get(item.payment) || item.payment, owner: card?.owner || item.owner || "Felipe", paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" };
+    }),
+    plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin, date: item.date || (item.month ? `${item.month}-01` : ""), installments: item.installments || 1 })),
     paidOccurrences: data.paidOccurrences || [],
     receivedOccurrences: data.receivedOccurrences || [],
+    receivedAmounts: data.receivedAmounts || {},
     car: { ...defaults.car, ...(data.car || {}) },
     fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) }
   };
@@ -1925,6 +2200,11 @@ function normalizeData(data) {
     normalized.fgts.blocked = 0;
     normalized.fgts.available = 0;
   }
+  normalized.car.payments = (normalized.car.payments || []).map((payment) => ({
+    ...payment,
+    dueDate: payment.dueDate || (payment.month ? `${payment.month}-01` : "")
+  }));
+  normalized.car.firstDueDate = normalized.car.firstDueDate || normalized.car.payments[0]?.dueDate || "";
   return normalized;
 }
 
@@ -2140,18 +2420,32 @@ function carDebtCard(car) {
       </summary>
       <div class="debt-meta-grid">
         ${metaBox("Parcelas pagas", `${paid.length} de ${car.payments.length}`)}
-        ${metaBox("Próxima parcela", pending[0] ? formatMonth(pending[0].month) : "-")}
+        ${metaBox("Próxima parcela", pending[0] ? formatDate(pending[0].dueDate || `${pending[0].month}-01`) : "-")}
         ${metaBox("Falta pagar", currency.format(pending.reduce((total, item) => total + Number(item.value || 0), 0)))}
       </div>
       ${tabButtons("car", state.carFilter)}
       <div class="table-wrap inner-table">
         <table class="data-table clean-table">
-          <thead><tr><th>Parcela</th><th>Mês</th><th>Valor</th><th>Pago</th><th>Status</th><th>Ação</th></tr></thead>
-          <tbody>${visible.map((item) => `<tr><td>${item.number}/${car.payments.length}</td><td>${formatMonth(item.month)}</td><td>${currency.format(item.value)}</td><td>${item.paidAmount ? currency.format(item.paidAmount) : "-"}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td>${item.status === "Pago" ? `<button class="small-button danger-mini" type="button" data-unpay-car="${item.id}">Excluir pagamento</button>` : `<button class="small-button pay" type="button" data-pay-car="${item.id}">Registrar pagamento</button>`}</td></tr>`).join("")}</tbody>
+          <thead><tr><th>Parcela</th><th>Data</th><th>Valor</th><th>Pago</th><th>Economia</th><th>Status</th><th>Ação</th></tr></thead>
+          <tbody>${visible.map((item) => {
+            const economy = carInstallmentEconomy(item);
+            return `<tr><td>${item.number}/${car.payments.length}</td><td>${formatDate(item.dueDate || `${item.month}-01`)}</td><td>${currency.format(item.value)}</td><td>${item.paidAmount ? currency.format(item.paidAmount) : "-"}</td><td>${item.status === "Pago" ? `<span class="${economyClass(economy)}">${currency.format(economy)}</span>` : "-"}</td><td><span class="status ${item.status === "Pago" ? "ok" : "warn"}">${item.status}</span></td><td>${item.status === "Pago" ? `<button class="small-button danger-mini" type="button" data-unpay-car="${item.id}">Excluir pagamento</button>` : `<button class="small-button pay" type="button" data-pay-car="${item.id}">Registrar pagamento</button>`}</td></tr>`;
+          }).join("")}</tbody>
         </table>
       </div>
     </details>
   `;
+}
+
+function carInstallmentEconomy(item) {
+  if (item.status !== "Pago") return 0;
+  return Number(item.value || 0) - Number(item.paidAmount || item.value || 0);
+}
+
+function economyClass(value) {
+  if (value > 0) return "positive";
+  if (value < 0) return "negative";
+  return "neutral";
 }
 
 function carProgress(paid, total) {
@@ -2287,6 +2581,14 @@ function getCreditorName(id) {
   return state.data.creditors.find((creditor) => creditor.id === id)?.name || id || "Credor";
 }
 
+function sortedCreditors() {
+  return [...state.data.creditors].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt-BR"));
+}
+
+function sortedCreditCards() {
+  return [...state.data.creditCards].sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "pt-BR"));
+}
+
 function getCreditor(id) {
   return state.data.creditors.find((creditor) => creditor.id === id) || null;
 }
@@ -2353,6 +2655,12 @@ function nextAnnualDate() {
 function addYearsToDate(value, years) {
   const [year, month, day] = String(value || nextAnnualDate()).split("-").map(Number);
   const date = new Date(year + years, (month || 1) - 1, day || 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function addMonthsToDate(value, months) {
+  const [year, month, day] = String(value || todayIsoDate()).slice(0, 10).split("-").map(Number);
+  const date = new Date(year, (month || 1) - 1 + months, day || 1);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
