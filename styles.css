@@ -917,7 +917,7 @@ svg {
 
 .monthly-item {
   display: grid;
-  grid-template-columns: minmax(260px, 1.8fr) minmax(118px, 0.7fr) minmax(70px, 0.42fr) minmax(92px, 0.52fr) minmax(190px, 0.9fr);
+  grid-template-columns: minmax(260px, 1.8fr) minmax(118px, 0.7fr) minmax(92px, 0.52fr) minmax(70px, 0.42fr) minmax(190px, 0.9fr) 34px;
   align-items: center;
   gap: 14px;
   padding: 14px 16px;
@@ -1004,6 +1004,31 @@ svg {
   padding: 0;
 }
 
+.monthly-chevron {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--ink);
+  transition: transform 0.18s ease;
+}
+
+.monthly-chevron.placeholder {
+  visibility: hidden;
+}
+
+.monthly-chevron svg {
+  width: 15px;
+  height: 15px;
+}
+
+.monthly-chevron.is-open {
+  transform: rotate(180deg);
+}
+
 .monthly-breakdown {
   grid-column: 1 / -1;
   border-top: 1px dashed var(--line);
@@ -1011,6 +1036,7 @@ svg {
 }
 
 .monthly-breakdown summary {
+  display: none;
   cursor: pointer;
   color: var(--muted);
   font-size: 12px;

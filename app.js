@@ -489,6 +489,14 @@ function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-delete-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => deleteManualPlanned(button.dataset.deleteManualPlan));
   });
+  el.monthlyBoard.querySelectorAll("[data-toggle-monthly-details]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const details = button.closest(".monthly-item")?.querySelector(".monthly-breakdown");
+      if (!details) return;
+      details.open = !details.open;
+      button.classList.toggle("is-open", details.open);
+    });
+  });
   el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
 
@@ -519,9 +527,13 @@ function monthlyItems(items, month, kind, scope = "pending") {
     const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
     const dueDate = rowDueDate(row, month);
     const accountCount = monthlyAccountCount(row, month);
+    const hasBreakdown = kind === "expense" && accountCount > 1;
     const statusLabel = kind === "income"
       ? (done ? "Recebido" : "Pendente")
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
+    const chevron = hasBreakdown
+      ? `<button class="monthly-chevron" type="button" title="Expandir contas" data-toggle-monthly-details>${icon("chevron-down")}</button>`
+      : `<span class="monthly-chevron placeholder"></span>`;
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""} ${kind === "income" ? "income-item" : "expense-item"}">
         <div class="entity-cell monthly-entity">
@@ -532,13 +544,14 @@ function monthlyItems(items, month, kind, scope = "pending") {
           </div>
         </div>
         <div class="monthly-field"><span>Vencimento</span><strong>${dueDate ? formatDate(dueDate) : "-"}</strong></div>
-        <div class="monthly-field compact"><span>Contas</span><strong>${accountCount}</strong></div>
         <div class="monthly-field compact"><span>Status</span><strong>${statusLabel}</strong></div>
+        <div class="monthly-field compact"><span>Contas</span><strong>${accountCount}</strong></div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
           ${actionButton}
           ${deleteButton}
         </div>
+        ${chevron}
         ${breakdown}
       </article>
     `;
@@ -566,7 +579,7 @@ function monthlyBreakdown(row, month) {
   if (!children.length) return "";
   return `
     <details class="monthly-breakdown">
-      <summary>${children.length} conta(s) neste valor</summary>
+      <summary>Detalhes do valor</summary>
       <div class="monthly-breakdown-list">
         ${children
           .sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")) || a.label.localeCompare(b.label, "pt-BR"))
