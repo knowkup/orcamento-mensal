@@ -2,6 +2,7 @@ import { firebaseConfig, isFirebaseConfigured } from "./firebase-config.js";
 
 const currency = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const monthLabel = new Intl.DateTimeFormat("pt-BR", { month: "short", year: "2-digit" });
+const monthLabelLong = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
 
 const STORAGE_KEY = "orcamento-mensal-state-v2";
 
@@ -26,7 +27,9 @@ const state = {
   creditorEditingId: null,
   cardEditingId: null,
   fixedCostEditingId: null,
-  incomeEditingId: null
+  incomeEditingId: null,
+  plannedEditingId: null,
+  plannedEditingKind: null
 };
 
 const el = {
@@ -82,6 +85,9 @@ const el = {
   receiveForm: document.querySelector("#receiveForm"),
   receiveTitle: document.querySelector("#receiveTitle"),
   closeReceiveButton: document.querySelector("#closeReceiveButton"),
+  accountBalanceDialog: document.querySelector("#accountBalanceDialog"),
+  accountBalanceForm: document.querySelector("#accountBalanceForm"),
+  closeAccountBalanceButton: document.querySelector("#closeAccountBalanceButton"),
   fgtsForm: document.querySelector("#fgtsForm"),
   fgtsDialog: document.querySelector("#fgtsDialog"),
   fgtsDialogTitle: document.querySelector("#fgtsDialogTitle"),
@@ -149,6 +155,8 @@ function bindEvents() {
   el.closeCarPaymentButton.addEventListener("click", () => el.carPaymentDialog.close());
   el.receiveForm.addEventListener("submit", confirmReceivedOccurrence);
   el.closeReceiveButton.addEventListener("click", () => el.receiveDialog.close());
+  el.accountBalanceForm.addEventListener("submit", saveAccountBalance);
+  el.closeAccountBalanceButton.addEventListener("click", () => el.accountBalanceDialog.close());
   bindMoneyInputs();
   el.fgtsForm.addEventListener("submit", addFgtsContract);
   el.newFgtsButton.addEventListener("click", openFgtsDialog);
@@ -168,10 +176,10 @@ function bindEvents() {
   el.incomeForm.addEventListener("submit", saveRecurringIncome);
   el.newIncomeButton.addEventListener("click", () => openIncomeDialog());
   el.closeIncomeButton.addEventListener("click", closeIncomeDialog);
-  el.addPlanButton.addEventListener("click", openPlannedDialog);
-  el.addMonthlyPlanButton.addEventListener("click", openPlannedDialog);
+  el.addPlanButton.addEventListener("click", () => openPlannedDialog());
+  el.addMonthlyPlanButton.addEventListener("click", () => openPlannedDialog());
   el.closeMonthButton.addEventListener("click", closeMonth);
-  el.closePlanButton.addEventListener("click", () => el.plannedDialog.close());
+  el.closePlanButton.addEventListener("click", closePlannedDialog);
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
   el.plannedForm.elements.kind.addEventListener("change", updatePlannedFields);
   el.projectionTopScroll.addEventListener("scroll", () => {
@@ -364,6 +372,9 @@ function renderProjection() {
     </thead>
     <tbody>${body}</tbody>
   `;
+  el.projectionTable.querySelectorAll("[data-edit-income-line]").forEach((button) => {
+    button.addEventListener("click", () => openPlannedDialog(button.dataset.editIncomeLine, "income"));
+  });
   requestAnimationFrame(syncProjectionTopScroll);
 }
 
@@ -417,10 +428,10 @@ function renderMonthlyControl() {
   const hasPending = entries.some((item) => !isIncomeReceived(`${item.row.id}:${month}`))
     || exits.some((item) => !isOccurrencePaid(`${item.row.id}:${month}`));
 
-  el.monthlyReference.textContent = formatMonth(month);
+  el.monthlyReference.textContent = formatMonthLong(month);
   el.closeMonthButton.disabled = hasPending;
   el.monthlySummary.innerHTML = [
-    metric("Saldo em conta", accountBalance, accountBalance >= 0 ? "positive" : "negative"),
+    accountBalanceCard(accountBalance),
     metric("Previsto entrar", expectedIncome, "positive"),
     metric("Já recebido", received, "positive"),
     metric("Previsto sair", -expectedExpense, "negative"),
@@ -450,6 +461,7 @@ function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
     button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
   });
+  el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
 
 function monthlyItems(items, month, kind) {
@@ -479,6 +491,17 @@ function monthlyItems(items, month, kind) {
       </article>
     `;
   }).join("");
+}
+
+function accountBalanceCard(value) {
+  const tone = value >= 0 ? "positive" : "negative";
+  return `
+    <button class="metric editable-metric" type="button" data-edit-account-balance>
+      <span>Saldo em conta</span>
+      <strong class="${tone}">${currency.format(value)}</strong>
+      <small>Editar saldo atual</small>
+    </button>
+  `;
 }
 
 function buildProjectionRows(months, keepPaidValues = false) {
@@ -812,15 +835,23 @@ function buildTotals(rows, months) {
 
 function projectionRow(row, months) {
   const sectionClass = `${row.kind === "income" ? "income-row" : "expense-row"} ${row.owner === "Kah" ? "owner-kah" : ""}`;
+  const editAction = row.kind === "income" && isPlannedIncome(row.id)
+    ? `<button class="icon-button mini-icon row-edit" type="button" title="Editar entrada" data-edit-income-line="${row.id}">${icon("pencil")}</button>`
+    : "";
   return `
     <tr class="${sectionClass}">
       <th class="sticky-col">
         <span>${escapeHtml(row.label)}</span>
+        ${editAction}
       </th>
       <td>${escapeHtml(row.origin || "-")}</td>
       ${months.map((month) => projectionCell(row, month)).join("")}
     </tr>
   `;
+}
+
+function isPlannedIncome(id) {
+  return state.data.incomeLines.some((line) => line.id === id);
 }
 
 function projectionCell(row, month) {
@@ -948,9 +979,9 @@ function renderInstallments() {
 
 function renderInstallmentSummary() {
   const groups = [
-    { label: "Curto prazo", test: (left) => left <= 3 },
-    { label: "Médio prazo", test: (left) => left > 3 && left <= 6 },
-    { label: "Longo prazo", test: (left) => left > 6 }
+    { label: "Curto prazo", helper: "Até 3 meses", tone: "short", test: (left) => left <= 3 },
+    { label: "Médio prazo", helper: "De 4 a 6 meses", tone: "medium", test: (left) => left > 3 && left <= 6 },
+    { label: "Longo prazo", helper: "Acima de 6 meses", tone: "long", test: (left) => left > 6 }
   ];
   el.installmentSummary.innerHTML = groups.map((group) => {
     const items = state.data.installments.filter((item) => {
@@ -959,10 +990,11 @@ function renderInstallmentSummary() {
     });
     const total = items.reduce((sum, item) => sum + Number(item.amount || 0) * Math.max(0, Number(item.totalInstallments || 0) - Number(item.paidInstallments || 0)), 0);
     return `
-      <article class="metric">
-        <span>${group.label}</span>
+      <article class="installment-range-card ${group.tone}">
+        <h3>${group.label}</h3>
+        <span>${group.helper}</span>
         <strong>${currency.format(total)}</strong>
-        <small>${items.length} parcelamento${items.length === 1 ? "" : "s"}</small>
+        <small>${items.length} dívida${items.length === 1 ? "" : "s"}</small>
       </article>
     `;
   }).join("");
@@ -982,7 +1014,9 @@ function renderInstallmentChips() {
   ];
   el.installmentFilters.innerHTML = chips.map((chip) => `
     <button class="filter-chip ${state.installmentCreditorFilter === chip.id ? "active" : ""}" type="button" data-installment-creditor="${chip.id}">
-      ${escapeHtml(chip.label)} <span>${chip.count}</span>
+      ${chip.id === "all" ? `<i class="all-chip-dot"></i>` : creditorLogoHtml(chip.id)}
+      <strong>${escapeHtml(chip.label)}</strong>
+      <span>${chip.count}</span>
     </button>
   `).join("");
   el.installmentFilters.querySelectorAll("[data-installment-creditor]").forEach((button) => {
@@ -1928,12 +1962,34 @@ function renderCreditorLogoPreview(src) {
   el.creditorLogoPreview.innerHTML = src ? `<img alt="Logo" src="${escapeHtml(src)}">` : "CR";
 }
 
-function openPlannedDialog() {
+function openPlannedDialog(id = null, kind = null) {
   hydrateForms();
-  el.plannedForm.elements.date.value = todayIsoDate();
-  el.plannedForm.elements.installments.value = 1;
+  state.plannedEditingId = id;
+  state.plannedEditingKind = kind;
+  el.plannedForm.reset();
+  const income = kind === "income" && id ? state.data.incomeLines.find((item) => item.id === id) : null;
+  const expense = kind === "expense" && id ? state.data.plannedPurchases.find((item) => item.id === id) : null;
+  const item = income || expense;
+  el.plannedForm.querySelector("button[type='submit']").textContent = item ? "Salvar lançamento" : "Adicionar ao planejamento";
+  el.plannedForm.elements.kind.value = income ? "income" : "expense";
+  el.plannedForm.elements.description.value = income?.label || expense?.description || "";
+  el.plannedForm.elements.creditorId.value = expense?.creditorId || el.plannedForm.elements.creditorId.value;
+  el.plannedForm.elements.sourceCreditorId.value = income?.creditorId || el.plannedForm.elements.sourceCreditorId.value;
+  el.plannedForm.elements.date.value = item?.date || todayIsoDate();
+  el.plannedForm.elements.installments.value = expense?.installments || 1;
+  el.plannedForm.elements.owner.value = item?.owner || "Felipe";
+  const amount = income ? Object.values(income.values || {})[0] : expense?.amount;
+  el.plannedForm.elements.amount.value = amount ? formatCurrencyInput(amount) : "";
   updatePlannedFields();
   el.plannedDialog.showModal();
+}
+
+function closePlannedDialog() {
+  state.plannedEditingId = null;
+  state.plannedEditingKind = null;
+  el.plannedForm.elements.kind.disabled = false;
+  el.plannedForm.reset();
+  el.plannedDialog.close();
 }
 
 function updatePlannedFields() {
@@ -1942,30 +1998,39 @@ function updatePlannedFields() {
   el.plannedFonteField.hidden = !isIncome;
   el.plannedForm.elements.creditorId.required = !isIncome;
   el.plannedForm.elements.sourceCreditorId.required = isIncome;
+  el.plannedForm.elements.kind.disabled = Boolean(state.plannedEditingId);
 }
 
 async function addPlannedPurchase(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const kind = String(form.get("kind") || "expense");
+  const kind = state.plannedEditingKind || String(form.get("kind") || "expense");
   const date = String(form.get("date"));
   const month = date.slice(0, 7);
   const amount = parseCurrencyInput(form.get("amount"));
   const installments = Math.max(1, Number(form.get("installments") || 1));
   if (kind === "income") {
     const creditorId = String(form.get("sourceCreditorId") || "");
-    state.data.incomeLines.push({
-      id: crypto.randomUUID(),
+    const existing = state.plannedEditingKind === "income" && state.plannedEditingId
+      ? state.data.incomeLines.find((item) => item.id === state.plannedEditingId)
+      : null;
+    const item = {
+      id: existing?.id || crypto.randomUUID(),
       label: String(form.get("description")).trim(),
       origin: getCreditorName(creditorId),
       creditorId,
       owner: String(form.get("owner") || "Felipe"),
       date,
       values: { [month]: amount }
-    });
+    };
+    if (existing) Object.assign(existing, item);
+    else state.data.incomeLines.push(item);
   } else {
-    state.data.plannedPurchases.push({
-      id: crypto.randomUUID(),
+    const existing = state.plannedEditingKind === "expense" && state.plannedEditingId
+      ? state.data.plannedPurchases.find((item) => item.id === state.plannedEditingId)
+      : null;
+    const item = {
+      id: existing?.id || crypto.randomUUID(),
       description: String(form.get("description")).trim(),
       creditorId: String(form.get("creditorId")),
       month,
@@ -1973,11 +2038,13 @@ async function addPlannedPurchase(event) {
       installments,
       amount,
       owner: String(form.get("owner") || "Felipe")
-    });
+    };
+    if (existing) Object.assign(existing, item);
+    else state.data.plannedPurchases.push(item);
   }
-  el.plannedDialog.close();
-  event.currentTarget.reset();
-  await saveState("Lançamento planejado adicionado.");
+  const editing = Boolean(state.plannedEditingId);
+  closePlannedDialog();
+  await saveState(editing ? "Lançamento planejado atualizado." : "Lançamento planejado adicionado.");
 }
 
 async function togglePaidOccurrence(key) {
@@ -2045,13 +2112,27 @@ async function closeMonth() {
     showToast("Baixe todas as entradas e saídas antes de fechar.");
     return;
   }
-  if (!window.confirm(`Fechar ${formatMonth(month)} e levar o saldo atual para o próximo mês?`)) return;
+  if (!window.confirm(`Fechar ${formatMonthLong(month)} e levar o saldo atual para o próximo mês?`)) return;
   const received = entries.reduce((total, row) => total + receivedAmount(`${row.id}:${month}`, row.values[month] || 0), 0);
   const paid = exits.reduce((total, row) => total + Number(row.values[month] || 0), 0);
   state.data.accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0) + received - paid;
   state.data.initialBalance = state.data.accountBalance;
   state.data.closedMonths = [...new Set([...(state.data.closedMonths || []), month])];
   await saveState("Mês fechado e saldo levado para o próximo cálculo.");
+}
+
+function openAccountBalanceDialog() {
+  el.accountBalanceForm.elements.accountBalance.value = formatCurrencyInput(state.data.accountBalance || state.data.initialBalance || "");
+  el.accountBalanceDialog.showModal();
+}
+
+async function saveAccountBalance(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  state.data.accountBalance = parseCurrencyInput(form.get("accountBalance"));
+  state.data.initialBalance = state.data.accountBalance;
+  el.accountBalanceDialog.close();
+  await saveState("Saldo em conta atualizado.");
 }
 
 function isIncomeReceived(key) {
@@ -2376,8 +2457,9 @@ function genericDebtCard(config) {
         </div>
         <div class="summary-stat"><span>Parcela</span><strong>${currency.format(config.amount || 0)}</strong></div>
         <div class="summary-stat"><span>Próxima parcela</span><strong>${nextDue ? formatDate(nextDue) : "-"}</strong></div>
-        <div class="summary-stat"><span>Status</span><strong>${paid.length}/${installments.length}</strong></div>
+        <div class="summary-stat compact-status"><span>Status</span><strong>${paid.length}/${installments.length}</strong></div>
         <div class="summary-stat"><span>Saldo</span><strong>${currency.format(balance)}</strong></div>
+        <span class="summary-chevron">${icon("chevron-down")}</span>
       </summary>
       <div class="debt-meta-grid">
         ${metaBox("Parcelas pagas", `${paid.length} de ${installments.length}`)}
@@ -2675,6 +2757,12 @@ function installmentDueDate(value, monthOffset) {
 function formatMonth(month) {
   const [year, value] = month.split("-").map(Number);
   return monthLabel.format(new Date(year, value - 1, 1)).replace(".", "");
+}
+
+function formatMonthLong(month) {
+  const [year, value] = month.split("-").map(Number);
+  const text = monthLabelLong.format(new Date(year, value - 1, 1));
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 function formatDate(value) {

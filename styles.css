@@ -296,6 +296,48 @@ svg {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.installment-range-card {
+  min-height: 128px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+.installment-range-card.short {
+  background: linear-gradient(180deg, #fff0f0, #fffafa);
+  border-color: #f0cccc;
+}
+
+.installment-range-card.medium {
+  background: linear-gradient(180deg, #fff6db, #fffaf0);
+  border-color: #ead6a2;
+}
+
+.installment-range-card.long {
+  background: linear-gradient(180deg, #edf5ff, #f7fbff);
+  border-color: #c9d8ec;
+}
+
+.installment-range-card h3 {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: #001b44;
+}
+
+.installment-range-card span,
+.installment-range-card small {
+  display: block;
+  color: #32506c;
+  font-size: 12px;
+}
+
+.installment-range-card strong {
+  display: block;
+  margin: 10px 0 6px;
+  font-size: 20px;
+  color: #001b44;
+}
+
 .metric small {
   display: block;
   margin-top: 6px;
@@ -317,6 +359,13 @@ svg {
 
 .metric {
   padding: 15px;
+}
+
+.editable-metric {
+  width: 100%;
+  min-height: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 .metric span {
@@ -553,25 +602,50 @@ svg {
 }
 
 .filter-chip {
-  min-height: 34px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  border: 1px solid #cbd6df;
+  border-radius: 10px;
   padding: 0 12px;
-  background: var(--surface);
+  background: #edf3f8;
   color: var(--ink);
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .filter-chip.active {
-  border-color: #0f766e;
-  background: #e7f7f4;
-  color: #0f5f59;
+  border-color: #e6ae38;
+  background: #ffd982;
+  color: #111827;
+}
+
+.filter-chip .creditor-logo,
+.all-chip-dot {
+  width: 24px;
+  height: 24px;
+  font-size: 9px;
+}
+
+.all-chip-dot {
+  display: inline-block;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.filter-chip strong {
+  font-size: 13px;
 }
 
 .filter-chip span {
-  margin-left: 6px;
-  color: var(--muted);
+  min-width: 24px;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: rgba(0, 0, 0, 0.08);
+  color: #334155;
   font-size: 12px;
+  text-align: center;
 }
 
 .segment {
@@ -754,6 +828,26 @@ svg {
   display: grid;
   grid-template-columns: 1fr;
   gap: 14px;
+}
+
+.monthly-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: -4px 0 12px;
+}
+
+.accent-button {
+  border-color: #0f766e;
+  background: #0f766e;
+  color: #ffffff;
+}
+
+.month-reference {
+  margin: -2px 14px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .monthly-column {
@@ -1138,7 +1232,7 @@ select {
 
 .debt-card > summary.installment-summary {
   display: grid;
-  grid-template-columns: minmax(260px, 1.7fr) minmax(120px, 0.8fr) repeat(4, minmax(120px, 0.8fr));
+  grid-template-columns: minmax(250px, 1.7fr) minmax(190px, 1.25fr) minmax(118px, 0.8fr) minmax(130px, 0.85fr) minmax(78px, 0.45fr) minmax(116px, 0.75fr) 30px;
   align-items: center;
 }
 
@@ -1233,6 +1327,10 @@ select {
   color: var(--ink);
 }
 
+.compact-status {
+  max-width: 82px;
+}
+
 .summary-progress span,
 .summary-stat span {
   color: var(--muted);
@@ -1248,11 +1346,27 @@ select {
 }
 
 .mini-progress {
-  width: 54px;
+  width: 140px;
   height: 7px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--surface-soft);
+}
+
+.summary-chevron {
+  display: inline-flex;
+  justify-content: flex-end;
+  color: var(--muted);
+  transition: transform 160ms ease;
+}
+
+.debt-card[open] > summary .summary-chevron {
+  transform: rotate(180deg);
+}
+
+.projection-table .sticky-col .row-edit {
+  margin-left: 8px;
+  vertical-align: middle;
 }
 
 .mini-progress i {
