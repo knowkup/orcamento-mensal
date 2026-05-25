@@ -117,6 +117,7 @@ const el = {
   incomeForm: document.querySelector("#incomeForm"),
   incomeDialog: document.querySelector("#incomeDialog"),
   incomeDialogTitle: document.querySelector("#incomeDialogTitle"),
+  incomeLogoPreview: document.querySelector("#incomeLogoPreview"),
   incomeList: document.querySelector("#incomeList"),
   newIncomeButton: document.querySelector("#newIncomeButton"),
   closeIncomeButton: document.querySelector("#closeIncomeButton"),
@@ -181,6 +182,7 @@ function bindEvents() {
   el.newCardButton.addEventListener("click", () => openCardDialog());
   el.closeCardButton.addEventListener("click", closeCardDialog);
   el.incomeForm.addEventListener("submit", saveRecurringIncome);
+  el.incomeForm.elements.logoFile.addEventListener("change", handleIncomeLogoUpload);
   el.newIncomeButton.addEventListener("click", () => openIncomeDialog());
   el.closeIncomeButton.addEventListener("click", closeIncomeDialog);
   el.addPlanButton.addEventListener("click", () => openPlannedDialog());
@@ -439,17 +441,26 @@ function renderMonthlyControl() {
   const expectedIncome = pendingEntries.reduce((total, item) => total + item.value, 0);
   const expectedExpense = pendingExits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
   const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
+  const projectedBalance = accountBalance + received + expectedIncome - paid - expectedExpense;
   const hasPending = pendingEntries.length > 0 || pendingExits.length > 0;
+  const isClosed = (state.data.closedMonths || []).includes(month);
 
-  el.monthlyReference.textContent = formatMonthLong(month);
+  el.monthlyReference.textContent = "";
   el.closeMonthButton.disabled = hasPending;
-  el.monthlySummary.innerHTML = [
-    accountBalanceCard(accountBalance),
-    metric("Previsto entrar", expectedIncome, "positive"),
-    metric("Já recebido", received, "positive"),
-    metric("Previsto sair", -expectedExpense, "negative"),
-    metric("Já pago", -paid, "negative")
-  ].join("");
+  el.monthlySummary.classList.add("monthly-control-summary");
+  el.monthlySummary.innerHTML = `
+    <div class="monthly-summary-row executive-row">
+      ${accountBalanceCard(accountBalance)}
+      ${projectedBalanceCard(projectedBalance)}
+      ${monthReferenceCard(month, isClosed)}
+    </div>
+    <div class="monthly-summary-row operational-row">
+      ${metric("Previsto entrar", expectedIncome, "positive")}
+      ${metric("Já recebido", received, "positive")}
+      ${metric("Previsto sair", -expectedExpense, "negative")}
+      ${metric("Já pago", -paid, "negative")}
+    </div>
+  `;
 
   el.monthlyBoard.innerHTML = `
     <section class="monthly-column income-column">
@@ -521,7 +532,7 @@ function monthlyItems(items, month, kind, scope = "pending") {
     const actionButton = scope === "realized" && kind === "expense" && !done
       ? ""
       : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
-    const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : `<span class="creditor-logo">${escapeHtml(initials(row.origin || row.label))}</span>`;
+    const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : sourceLogoHtml(row.logoUrl, row.origin || row.label);
     const deleteButton = isManualPlannedRow(row)
       ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
       : "";
@@ -680,8 +691,29 @@ function accountBalanceCard(value) {
     <button class="metric editable-metric" type="button" data-edit-account-balance>
       <span>Saldo em conta</span>
       <strong class="${tone}">${currency.format(value)}</strong>
-      <small>Editar saldo atual</small>
+      <small>Editar saldo</small>
     </button>
+  `;
+}
+
+function projectedBalanceCard(value) {
+  const tone = value >= 0 ? "positive" : "negative";
+  return `
+    <article class="metric projected-balance-card">
+      <span>Saldo projetado do mês</span>
+      <strong class="${tone}">${currency.format(value)}</strong>
+      <small>Conta + entradas - saídas</small>
+    </article>
+  `;
+}
+
+function monthReferenceCard(month, isClosed) {
+  return `
+    <article class="metric month-reference-card">
+      <span>Mês de referência</span>
+      <strong>${formatMonthLong(month)}</strong>
+      <small class="${isClosed ? "negative" : "positive"}">${isClosed ? "Fechado" : "Em andamento"}</small>
+    </article>
   `;
 }
 
@@ -706,6 +738,7 @@ function buildProjectionRows(months, keepPaidValues = false) {
       id: income.id,
       kind: "income",
       owner: income.owner || "Felipe",
+      logoUrl: income.logoUrl || "",
       label: income.label,
       origin: income.origin,
       sourceLabel: "",
@@ -1575,7 +1608,7 @@ function renderRecurringIncomes() {
         const current = latestIncomeChange(income);
         return `
           <tr>
-            <td>${escapeHtml(income.label)}</td>
+            <td><div class="entity-cell">${sourceLogoHtml(income.logoUrl, income.label)}<strong>${escapeHtml(income.label)}</strong></div></td>
             <td>${escapeHtml(income.origin || "-")}</td>
             <td>${escapeHtml(income.owner || "Felipe")}</td>
             <td>${income.receiveDay || 1}</td>
@@ -2271,10 +2304,12 @@ function openIncomeDialog(id = null) {
   el.incomeDialogTitle.textContent = income ? "Editar/Reajustar renda" : "Nova renda";
   el.incomeForm.elements.label.value = income?.label || "";
   el.incomeForm.elements.origin.value = income?.origin || "";
+  el.incomeForm.elements.logoUrl.value = income?.logoUrl || "";
   el.incomeForm.elements.owner.value = income?.owner || "Felipe";
   el.incomeForm.elements.receiveDay.value = income?.receiveDay || 1;
   el.incomeForm.elements.month.value = current.month || nextMonths(1)[0];
   el.incomeForm.elements.amount.value = current.amount ? formatCurrencyInput(current.amount) : "";
+  renderIncomeLogoPreview(income?.logoUrl || "");
   el.incomeDialog.showModal();
   refreshIcons();
 }
@@ -2282,6 +2317,7 @@ function openIncomeDialog(id = null) {
 function closeIncomeDialog() {
   state.incomeEditingId = null;
   el.incomeForm.reset();
+  renderIncomeLogoPreview("");
   el.incomeDialog.close();
 }
 
@@ -2296,6 +2332,7 @@ async function saveRecurringIncome(event) {
   if (existing) {
     existing.label = String(form.get("label")).trim();
     existing.origin = String(form.get("origin")).trim();
+    existing.logoUrl = String(form.get("logoUrl") || "");
     existing.owner = String(form.get("owner") || "Felipe");
     existing.receiveDay = Number(form.get("receiveDay") || 1);
     existing.changes = upsertIncomeChange(existing.changes || [], month, amount);
@@ -2304,6 +2341,7 @@ async function saveRecurringIncome(event) {
       id: crypto.randomUUID(),
       label: String(form.get("label")).trim(),
       origin: String(form.get("origin")).trim(),
+      logoUrl: String(form.get("logoUrl") || ""),
       owner: String(form.get("owner") || "Felipe"),
       receiveDay: Number(form.get("receiveDay") || 1),
       changes: [{ month, amount }]
@@ -2346,6 +2384,26 @@ function handleCreditorLogoUpload(event) {
 
 function renderCreditorLogoPreview(src) {
   el.creditorLogoPreview.innerHTML = src ? `<img alt="Logo" src="${escapeHtml(src)}">` : "CR";
+}
+
+function handleIncomeLogoUpload(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (file.size > 250 * 1024) {
+    showToast("Use uma logo menor, ate 250 KB.");
+    event.target.value = "";
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    el.incomeForm.elements.logoUrl.value = String(reader.result || "");
+    renderIncomeLogoPreview(el.incomeForm.elements.logoUrl.value);
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderIncomeLogoPreview(src) {
+  el.incomeLogoPreview.innerHTML = src ? `<img alt="Logo" src="${escapeHtml(src)}">` : "RD";
 }
 
 function openPlannedDialog(id = null, kind = null) {
@@ -2721,6 +2779,7 @@ function normalizeData(data) {
     recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => ({
       ...income,
       owner: income.owner || "Felipe",
+      logoUrl: income.logoUrl || "",
       receiveDay: Number(income.receiveDay || 1),
       changes: normalizedIncomeChanges(income)
     })),
@@ -3198,6 +3257,14 @@ function creditorLogoHtml(id) {
     return `<span class="creditor-logo"><img alt="${escapeHtml(name)}" src="${escapeHtml(creditor.logoUrl)}"></span>`;
   }
   return `<span class="creditor-logo">${escapeHtml(initials(name))}</span>`;
+}
+
+function sourceLogoHtml(src, name) {
+  const label = name || "?";
+  if (src) {
+    return `<span class="creditor-logo"><img alt="${escapeHtml(label)}" src="${escapeHtml(src)}"></span>`;
+  }
+  return `<span class="creditor-logo">${escapeHtml(initials(label))}</span>`;
 }
 
 function syncProjectionTopScroll() {

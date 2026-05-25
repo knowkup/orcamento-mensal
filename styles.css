@@ -303,6 +303,25 @@ svg {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.monthly-control-summary {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.monthly-summary-row {
+  display: grid;
+  gap: 12px;
+}
+
+.executive-row {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.operational-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .installments-kpis {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -865,6 +884,10 @@ svg {
   color: var(--muted);
   font-size: 13px;
   font-weight: 800;
+}
+
+.month-reference:empty {
+  display: none;
 }
 
 .monthly-column {
@@ -1603,6 +1626,7 @@ select {
   }
 
   .month-summary,
+  .monthly-summary-row,
   .content-grid,
   .finance-kpis,
   #carKpis,
