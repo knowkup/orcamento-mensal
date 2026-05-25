@@ -22,6 +22,7 @@ const state = {
   expandedInstallments: {},
   installmentEditingId: null,
   creditorEditingId: null,
+  cardEditingId: null,
   incomeEditingId: null
 };
 
@@ -78,6 +79,13 @@ const el = {
   creditorDialogTitle: document.querySelector("#creditorDialogTitle"),
   newCreditorButton: document.querySelector("#newCreditorButton"),
   closeCreditorButton: document.querySelector("#closeCreditorButton"),
+  cardForm: document.querySelector("#cardForm"),
+  cardDialog: document.querySelector("#cardDialog"),
+  cardDialogTitle: document.querySelector("#cardDialogTitle"),
+  cardList: document.querySelector("#cardList"),
+  cardLogoPreview: document.querySelector("#cardLogoPreview"),
+  newCardButton: document.querySelector("#newCardButton"),
+  closeCardButton: document.querySelector("#closeCardButton"),
   incomeForm: document.querySelector("#incomeForm"),
   incomeDialog: document.querySelector("#incomeDialog"),
   incomeDialogTitle: document.querySelector("#incomeDialogTitle"),
@@ -133,6 +141,10 @@ function bindEvents() {
   el.creditorForm.elements.logoFile.addEventListener("change", handleCreditorLogoUpload);
   el.newCreditorButton.addEventListener("click", () => openCreditorDialog());
   el.closeCreditorButton.addEventListener("click", closeCreditorDialog);
+  el.cardForm.addEventListener("submit", saveCreditCard);
+  el.cardForm.elements.creditorId.addEventListener("change", updateCardLogoPreview);
+  el.newCardButton.addEventListener("click", () => openCardDialog());
+  el.closeCardButton.addEventListener("click", closeCardDialog);
   el.incomeForm.addEventListener("submit", saveRecurringIncome);
   el.newIncomeButton.addEventListener("click", () => openIncomeDialog());
   el.closeIncomeButton.addEventListener("click", closeIncomeDialog);
@@ -287,6 +299,7 @@ function render() {
   renderCar();
   renderFgts();
   renderOrigins();
+  renderCreditCards();
   renderRecurringIncomes();
   renderSettings();
   bindMoneyInputs();
@@ -564,8 +577,9 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
         kind: "expense",
         owner: group.owner,
         creditorId: group.creditorId,
-        paymentMethod: group.paymentMethod,
-        label: `${group.paymentMethod} - ${group.owner}`,
+        cardId: group.cardId,
+        paymentMethod: "Cartão de crédito",
+        label: group.name,
         origin: getCreditorName(group.creditorId),
         sourceLabel: "",
         values: installmentValues
@@ -598,7 +612,7 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
 }
 
 function groupKey(item) {
-  return `${item.creditorId || "sem-credor"}|${item.owner || "Felipe"}|${item.paymentMethod || "Cartão de crédito"}`;
+  return getInstallmentCard(item).id;
 }
 
 function uniqueGroups(items, keyGetter) {
@@ -606,11 +620,13 @@ function uniqueGroups(items, keyGetter) {
   items.forEach((item) => {
     const key = keyGetter(item);
     if (!groups.has(key)) {
+      const card = getInstallmentCard(item);
       groups.set(key, {
         id: key.replaceAll("|", "-").replaceAll(/\s+/g, "-"),
-        creditorId: item.creditorId,
-        owner: item.owner || "Felipe",
-        paymentMethod: item.paymentMethod || "Cartão de crédito",
+        cardId: card.real ? card.id : "",
+        creditorId: card.creditorId,
+        owner: card.owner,
+        name: card.name,
         key
       });
     }
@@ -645,6 +661,7 @@ function appendKahDifferenceRow(rows, months) {
 function ownerForCreditor(creditorId) {
   const candidates = [
     ...state.data.installments,
+    ...state.data.creditCards,
     ...state.data.fixedCosts,
     ...state.data.plannedPurchases
   ].filter((item) => item.creditorId === creditorId);
@@ -794,19 +811,22 @@ function renderPlanningChart(totals, months) {
 
 function renderInstallments() {
   el.installmentsTable.innerHTML = state.data.installments.length
-    ? state.data.installments.map((item) => genericDebtCard({
-      id: item.id,
-      title: item.item,
-      subtitle: `${getCreditorName(item.creditorId)} · ${item.owner || "Felipe"} · ${item.paymentMethod || "Cartão de crédito"}`,
-      creditorId: item.creditorId,
-      total: item.totalInstallments,
-      paid: item.paidInstallments,
-      amount: item.amount,
-      purchaseDate: item.purchaseDate,
-      filter: state.installmentFilters[item.id] || "open",
-      prefix: "installment",
-      open: state.expandedInstallments[item.id] === true
-    })).join("")
+    ? state.data.installments.map((item) => {
+      const card = getInstallmentCard(item);
+      return genericDebtCard({
+        id: item.id,
+        title: item.item,
+        subtitle: `${card.name} · ${getCreditorName(card.creditorId)} · ${card.owner}`,
+        creditorId: card.creditorId,
+        total: item.totalInstallments,
+        paid: item.paidInstallments,
+        amount: item.amount,
+        purchaseDate: item.purchaseDate,
+        filter: state.installmentFilters[item.id] || "open",
+        prefix: "installment",
+        open: state.expandedInstallments[item.id] === true
+      });
+    }).join("")
     : `<div class="empty-state">Nenhuma conta parcelada cadastrada.</div>`;
 
   el.installmentsTable.querySelectorAll("[data-installment-card-tab]").forEach((button) => {
@@ -1004,7 +1024,7 @@ function renderFgtsV2() {
 
 function renderOriginsV2() {
   el.creditorList.innerHTML = `
-    <thead><tr><th>Cartão/Credor</th><th>Formas de pagamento</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Credor</th><th>Formas</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.creditors.map((creditor) => {
         const inUse = isCreditorInUse(creditor.id);
@@ -1034,6 +1054,41 @@ function renderOriginsV2() {
   });
   el.creditorList.querySelectorAll("[data-delete-creditor]").forEach((button) => {
     button.addEventListener("click", () => deleteCreditor(button.dataset.deleteCreditor));
+  });
+}
+
+function renderCreditCards() {
+  el.cardList.innerHTML = `
+    <thead><tr><th>Cartão/Crediário</th><th>Credor</th><th>Dono</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
+    <tbody>
+      ${state.data.creditCards.map((card) => {
+        const inUse = isCreditCardInUse(card.id);
+        return `
+          <tr>
+            <td>
+              <div class="entity-cell">
+                ${creditorLogoHtml(card.creditorId)}
+                <strong>${escapeHtml(card.name)}</strong>
+              </div>
+            </td>
+            <td>${escapeHtml(getCreditorName(card.creditorId))}</td>
+            <td>${escapeHtml(card.owner || "Felipe")}</td>
+            <td>${currency.format(cardOpenBalance(card.id))}</td>
+            <td class="row-actions">
+              <button class="icon-button mini-icon" type="button" title="Editar" data-edit-card="${card.id}">${icon("pencil")}</button>
+              <button class="icon-button mini-icon danger-mini" type="button" title="${inUse ? "Cartão vinculado" : "Excluir"}" data-delete-card="${card.id}">${icon(inUse ? "ban" : "trash-2")}</button>
+            </td>
+          </tr>
+        `;
+      }).join("") || `<tr><td colspan="5" class="muted-cell">Nenhum cartão ou crediário cadastrado.</td></tr>`}
+    </tbody>
+  `;
+
+  el.cardList.querySelectorAll("[data-edit-card]").forEach((button) => {
+    button.addEventListener("click", () => openCardDialog(button.dataset.editCard));
+  });
+  el.cardList.querySelectorAll("[data-delete-card]").forEach((button) => {
+    button.addEventListener("click", () => deleteCreditCard(button.dataset.deleteCard));
   });
 }
 
@@ -1074,6 +1129,11 @@ function hydrateForms() {
     select.innerHTML = state.data.creditors.map((creditor) => `<option value="${creditor.id}">${escapeHtml(creditor.name)}</option>`).join("");
     if (current) select.value = current;
   });
+  document.querySelectorAll("[data-card-select]").forEach((select) => {
+    const current = select.value;
+    select.innerHTML = state.data.creditCards.map((card) => `<option value="${card.id}">${escapeHtml(card.name)} · ${escapeHtml(getCreditorName(card.creditorId))} · ${escapeHtml(card.owner || "Felipe")}</option>`).join("");
+    if (current) select.value = current;
+  });
   document.querySelectorAll("[data-payment-method-select]").forEach((select) => {
     const current = select.value;
     select.innerHTML = state.data.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
@@ -1092,20 +1152,22 @@ function hydrateForms() {
 async function addInstallment(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  if (!form.get("creditorId")) {
-    showToast("Cadastre e selecione um cartão/credor.");
+  const card = getCreditCard(String(form.get("cardId")));
+  if (!card) {
+    showToast("Cadastre e selecione um cartão/crediário.");
     return;
   }
   const item = {
     id: crypto.randomUUID(),
     item: String(form.get("item")).trim(),
-    creditorId: String(form.get("creditorId")),
+    cardId: card.id,
+    creditorId: card.creditorId,
     amount: parseCurrencyInput(form.get("amount")),
     totalInstallments: Number(form.get("total")),
     paidInstallments: Number(form.get("paid") || 0),
     purchaseDate: String(form.get("date") || ""),
-    owner: String(form.get("owner") || "Felipe"),
-    paymentMethod: String(form.get("paymentMethod") || "Cartão de crédito"),
+    owner: card.owner || "Felipe",
+    paymentMethod: "Cartão de crédito",
     active: true
   };
   const editing = Boolean(state.installmentEditingId);
@@ -1131,11 +1193,10 @@ function openInstallmentDialog(id = null) {
   state.installmentEditingId = id;
   const item = id ? state.data.installments.find((entry) => entry.id === id) : null;
   if (item) item.item = item.item || item.name || item.description || "";
+  const card = item ? getInstallmentCard(item) : null;
   el.installmentDialogTitle.textContent = item ? "Editar parcelamento" : "Novo parcelamento";
   el.installmentForm.elements.item.value = item?.item || "";
-  el.installmentForm.elements.creditorId.value = item?.creditorId || el.installmentForm.elements.creditorId.value;
-  el.installmentForm.elements.owner.value = item?.owner || "Felipe";
-  el.installmentForm.elements.paymentMethod.value = item?.paymentMethod || "Cartão de crédito";
+  if (card?.real) el.installmentForm.elements.cardId.value = card.id;
   el.installmentForm.elements.amount.value = item?.amount ? formatCurrencyInput(item.amount) : "";
   el.installmentForm.elements.total.value = item?.totalInstallments || "";
   el.installmentForm.elements.paid.value = item?.paidInstallments || 0;
@@ -1476,6 +1537,75 @@ async function deleteCreditor(id) {
   await saveState("Credor excluído.");
 }
 
+function openCardDialog(id = null) {
+  hydrateForms();
+  state.cardEditingId = id;
+  el.cardForm.reset();
+  const card = id ? getCreditCard(id) : null;
+  el.cardDialogTitle.textContent = card ? "Editar cartão/crediário" : "Novo cartão/crediário";
+  el.cardForm.elements.name.value = card?.name || "";
+  el.cardForm.elements.creditorId.value = card?.creditorId || el.cardForm.elements.creditorId.value;
+  el.cardForm.elements.owner.value = card?.owner || "Felipe";
+  updateCardLogoPreview();
+  el.cardDialog.showModal();
+  refreshIcons();
+}
+
+function closeCardDialog() {
+  state.cardEditingId = null;
+  el.cardForm.reset();
+  renderCardLogoPreview("");
+  el.cardDialog.close();
+}
+
+async function saveCreditCard(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const creditorId = String(form.get("creditorId") || "");
+  if (!creditorId) {
+    showToast("Cadastre e selecione um credor primeiro.");
+    return;
+  }
+  const name = String(form.get("name")).trim();
+  if (!name) return;
+  const existing = state.cardEditingId
+    ? state.data.creditCards.find((card) => card.id === state.cardEditingId)
+    : null;
+  const payload = {
+    id: existing?.id || crypto.randomUUID(),
+    name,
+    creditorId,
+    owner: String(form.get("owner") || "Felipe")
+  };
+  if (existing) {
+    Object.assign(existing, payload);
+  } else {
+    state.data.creditCards.push(payload);
+  }
+  closeCardDialog();
+  await saveState(existing ? "Cartão/crediário atualizado." : "Cartão/crediário cadastrado.");
+}
+
+async function deleteCreditCard(id) {
+  if (isCreditCardInUse(id)) {
+    showToast("Este cartão/crediário está vinculado a parcelamentos.");
+    return;
+  }
+  state.data.creditCards = state.data.creditCards.filter((card) => card.id !== id);
+  await saveState("Cartão/crediário excluído.");
+}
+
+function updateCardLogoPreview() {
+  renderCardLogoPreview(el.cardForm.elements.creditorId.value);
+}
+
+function renderCardLogoPreview(creditorId) {
+  const creditor = getCreditor(creditorId);
+  el.cardLogoPreview.innerHTML = creditor?.logoUrl
+    ? `<img alt="${escapeHtml(creditor.name)}" src="${escapeHtml(creditor.logoUrl)}">`
+    : escapeHtml(initials(creditor?.name || "CC"));
+}
+
 function openIncomeDialog(id = null) {
   hydrateForms();
   state.incomeEditingId = id;
@@ -1530,7 +1660,8 @@ async function deleteRecurringIncome(id) {
 }
 
 function isCreditorInUse(id) {
-  return state.data.installments.some((item) => item.creditorId === id)
+  return state.data.creditCards.some((card) => card.creditorId === id)
+    || state.data.installments.some((item) => item.creditorId === id)
     || state.data.fixedCosts.some((item) => item.creditorId === id)
     || state.data.plannedPurchases.some((item) => item.creditorId === id)
     || state.data.fgts.contracts.some((item) => item.creditorId === id)
@@ -1670,6 +1801,30 @@ function persistLocalState(write = true) {
   if (write) localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data));
 }
 
+function buildCardsFromInstallments(installments, creditors, creditorByName) {
+  const cards = new Map();
+  installments.forEach((item) => {
+    const creditorId = item.creditorId || creditorByName.get(item.origin) || item.origin || "";
+    if (!creditorId) return;
+    const owner = item.owner || "Felipe";
+    const paymentMethod = item.paymentMethod || "Cartão de crédito";
+    const key = `${creditorId}|${owner}|${paymentMethod}`;
+    if (cards.has(key)) return;
+    cards.set(key, {
+      id: `card-${key.replaceAll("|", "-").replaceAll(/\s+/g, "-")}`,
+      name: `${getCreditorNameFromList(creditorId, creditors)} ${owner}`.trim(),
+      creditorId,
+      owner,
+      paymentMethod
+    });
+  });
+  return [...cards.values()];
+}
+
+function getCreditorNameFromList(id, creditors) {
+  return creditors.find((creditor) => creditor.id === id)?.name || id || "Credor";
+}
+
 function normalizeData(data) {
   const defaults = createDefaultData();
   if (!data || Number(data.schemaVersion || 0) < 3) return defaults;
@@ -1678,10 +1833,20 @@ function normalizeData(data) {
     paymentForms: creditor.paymentForms || [creditor.type].filter(Boolean)
   }));
   const creditorByName = new Map(creditors.map((creditor) => [creditor.name, creditor.id]));
+  const rawInstallments = data.installments || [];
+  const creditCards = (data.creditCards?.length ? data.creditCards : buildCardsFromInstallments(rawInstallments, creditors, creditorByName))
+    .map((card) => ({
+      ...card,
+      name: card.name || getCreditorNameFromList(card.creditorId, creditors),
+      creditorId: card.creditorId || creditorByName.get(card.creditor) || card.creditor || "",
+      owner: card.owner || "Felipe"
+    }));
+  const cardByLegacyKey = new Map(creditCards.map((card) => [`${card.creditorId}|${card.owner || "Felipe"}|${card.paymentMethod || "Cartão de crédito"}`, card.id]));
   const normalized = {
     ...defaults,
     ...data,
     creditors,
+    creditCards,
     paymentMethods: data.paymentMethods || defaults.paymentMethods,
     incomeLines: data.incomeLines || defaults.incomeLines,
     recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => ({
@@ -1694,7 +1859,12 @@ function normalizeData(data) {
       match: creditorByName.get(line.match) || line.match,
       creditorId: line.creditorId || creditorByName.get(line.origin) || null
     })),
-    installments: (data.installments || []).map((item) => ({ ...item, item: item.item || item.name || item.description || "Parcelamento", creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin, owner: item.owner || "Felipe", paymentMethod: item.paymentMethod || "Cartão de crédito" })),
+    installments: rawInstallments.map((item) => {
+      const creditorId = item.creditorId || creditorByName.get(item.origin) || item.origin;
+      const owner = item.owner || "Felipe";
+      const paymentMethod = item.paymentMethod || "Cartão de crédito";
+      return { ...item, item: item.item || item.name || item.description || "Parcelamento", creditorId, owner, paymentMethod, cardId: item.cardId || cardByLegacyKey.get(`${creditorId}|${owner}|${paymentMethod}`) || "" };
+    }),
     fixedCosts: (data.fixedCosts || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.payment) || item.payment, paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" })),
     plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin })),
     paidOccurrences: data.paidOccurrences || [],
@@ -1720,6 +1890,7 @@ function createDefaultData() {
     kahLimit: 0,
     paymentMethods: ["PIX", "Débito em conta", "Cartão de crédito", "Boleto"],
     creditors: [],
+    creditCards: [],
     incomeLines: [],
     recurringIncomes: [],
     projectionLines: [],
@@ -1997,7 +2168,8 @@ function normalizeFgtsContractShallow(contract) {
 }
 
 function creditorUsageCount(id) {
-  return state.data.installments.filter((item) => item.creditorId === id).length
+  return state.data.creditCards.filter((card) => card.creditorId === id).length
+    + state.data.installments.filter((item) => item.creditorId === id).length
     + state.data.fixedCosts.filter((item) => item.creditorId === id).length
     + state.data.plannedPurchases.filter((item) => item.creditorId === id).length
     + state.data.fgts.contracts.filter((item) => item.creditorId === id).length
@@ -2007,12 +2179,22 @@ function creditorUsageCount(id) {
 
 function creditorOpenBalance(id) {
   const installments = state.data.installments
-    .filter((item) => item.creditorId === id)
+    .filter((item) => getInstallmentCard(item).creditorId === id)
     .reduce((total, item) => total + Number(item.amount || 0) * Math.max(0, Number(item.totalInstallments || 0) - Number(item.paidInstallments || 0)), 0);
   const fgts = state.data.fgts.contracts
     .filter((item) => item.creditorId === id)
     .reduce((total, item) => total + fgtsPendingTotal(item), 0);
   return installments + fgts;
+}
+
+function cardOpenBalance(id) {
+  return state.data.installments
+    .filter((item) => getInstallmentCard(item).id === id)
+    .reduce((total, item) => total + Number(item.amount || 0) * Math.max(0, Number(item.totalInstallments || 0) - Number(item.paidInstallments || 0)), 0);
+}
+
+function isCreditCardInUse(id) {
+  return state.data.installments.some((item) => getInstallmentCard(item).id === id);
 }
 
 function fgtsAnnualPayments(contract) {
@@ -2029,6 +2211,24 @@ function getCreditorName(id) {
 
 function getCreditor(id) {
   return state.data.creditors.find((creditor) => creditor.id === id) || null;
+}
+
+function getCreditCard(id) {
+  return state.data.creditCards.find((card) => card.id === id) || null;
+}
+
+function getInstallmentCard(item) {
+  const card = item.cardId ? getCreditCard(item.cardId) : null;
+  if (card) return { ...card, real: true };
+  const creditorId = item.creditorId || "";
+  const owner = item.owner || "Felipe";
+  return {
+    id: `legacy-${creditorId || "sem-credor"}-${owner}`.replaceAll(/\s+/g, "-"),
+    name: `${getCreditorName(creditorId)} ${owner}`.trim(),
+    creditorId,
+    owner,
+    real: false
+  };
 }
 
 function initials(value) {

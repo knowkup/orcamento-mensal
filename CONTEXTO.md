@@ -954,3 +954,32 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Commitar e publicar a correcao.
+
+## Atualizacao - 2026-05-25 10:25:00
+
+### Decisoes tomadas
+
+- `Credores` e `Cartoes/Crediarios` sao cadastros diferentes.
+- Em `Preferencias`, o usuario cadastra primeiro credores; depois cadastra cartoes/crediarios vinculados a um credor e a um dono.
+- O logo do cartao/crediario vem automaticamente do credor selecionado.
+- Em `Parcelamentos`, o novo parcelamento deve selecionar apenas o cartao/crediario; dono e forma de pagamento passam a vir desse cadastro.
+
+### Mudancas feitas
+
+- Separado bloco de `Credores` e bloco de `Cartoes e crediarios` em `Preferencias`.
+- Criado modal de cartao/crediario com nome, dono e credor vinculado.
+- Adicionado preview de logo do cartao/crediario puxado do credor selecionado.
+- Parcelamentos passaram a gravar `cardId` e derivar `creditorId`, dono e forma de pagamento do cartao/crediario.
+- Removidos campos `Dono` e `Forma de pagamento` do modal de parcelamento.
+- Planejamento e cards de parcelamento agora agrupam por cartao/crediario.
+- Normalizacao cria cartoes/crediarios deterministas a partir de parcelamentos antigos para preservar dados existentes.
+
+### Comandos relevantes
+
+- `node --check app.js`
+- `git diff --check`
+- Teste visual no navegador interno confirmando blocos separados em Preferencias, modal de cartao/crediario e modal de parcelamento sem dono/forma de pagamento.
+
+### Proximos passos
+
+- Commitar e publicar a correcao.
