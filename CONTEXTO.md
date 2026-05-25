@@ -888,3 +888,45 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Validar, commitar e fazer push.
+
+## Atualizacao - 2026-05-25 09:50:00
+
+### Decisoes tomadas
+
+- Em `Parcelamentos`, a origem passa a ser tratada como cartao/crediario/credor; a base continua usando `Credores` para preservar bancos, lojas, financiamentos e FGTS.
+- Parcelas com valores individuais ficam restritas ao FGTS.
+- Contrato do carro deve selecionar um credor cadastrado para usar logo/nome no modulo.
+- O checkbox de custo fixo foi removido; custo fixo cadastrado entra automaticamente no Planejamento.
+- Rendas recorrentes ficam em `Preferencias`; rendas esporadicas seguem como `Lancamento planejado`.
+
+### Mudancas feitas
+
+- Campos monetarios passaram a usar `inputmode="decimal"` e parsing/formato brasileiro para aceitar virgula no celular.
+- Corrigido fluxo de modais removendo `method="dialog"` para garantir que o submit JavaScript sempre execute antes do fechamento.
+- `Custos Fixos` agora abre cadastro via botao `Novo custo fixo` e modal.
+- `Preferencias` ganhou bloco de rendas recorrentes com cadastro, edicao/reajuste por mes e regra daquele mes para frente.
+- `Planejamento` passa a considerar rendas recorrentes futuras automaticamente.
+- `Parcelamentos` agora usa rotulo `Cartao ou crediario` no modal.
+- FGTS agora abre campos individuais por parcela conforme a quantidade informada, permitindo valores diferentes.
+- `Carro` ganhou seletor de credor no contrato e exibe logo/nome do credor no card/resumo.
+- Adicionado suporte mobile/PWA com `manifest.webmanifest`, `apple-touch-icon.png`, `icon-192.png` e `icon-512.png`.
+
+### Backups criados
+
+- `backups/20260525-analise-alteracoes`
+
+### Comandos relevantes
+
+- `git fetch origin`
+- `node --check app.js`
+- `git diff --check`
+- Teste visual no navegador interno em `http://127.0.0.1:4898/index.html` com viewport mobile, cadastrando cartao, parcelamento com `123,45`, campos individuais de FGTS e renda recorrente.
+
+### Pendencias
+
+- Validar em producao no iPhone real se o teclado decimal mostra a virgula conforme esperado pelo iOS.
+- Se o iPhone nao aceitar SVG como fallback, os PNGs adicionados ja passam a ser os icones preferenciais.
+
+### Proximos passos
+
+- Commitar e publicar a rodada.

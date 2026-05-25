@@ -6,7 +6,8 @@
     <title>Orçamento Mensal</title>
     <meta name="description" content="Controle mensal financeiro com projeção detalhada, parcelas, custos fixos, carro e FGTS.">
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
-    <link rel="apple-touch-icon" href="assets/icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
+    <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -144,41 +145,17 @@
         </section>
 
         <section class="view" id="custosView" data-title="Custos Fixos">
-          <div class="content-grid">
-            <section class="panel">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Recorrente</p>
-                  <h2>Novo custo fixo</h2>
-                </div>
-              </div>
-              <form class="stack-form" id="fixedCostForm">
-                <label>Custo<input name="name" required placeholder="Ex.: Netflix"></label>
-                <label>Credor<select name="creditorId" data-creditor-select></select></label>
-                <label>Dono<select name="owner" data-owner-select></select></label>
-                <div class="form-row">
-                  <label>Grupo<input name="group" placeholder="Ex.: Streaming"></label>
-                  <label>Vencimento<input name="dueDay" type="number" min="1" max="31" required></label>
-                </div>
-                <label>Método de pagamento<select name="paymentMethod" data-payment-method-select></select></label>
-                <label>Valor<input name="amount" type="number" step="0.01" min="0" required></label>
-                <label class="check-row">
-                  <input name="includeInProjection" type="checkbox" checked>
-                  <span>Entrar no Planejamento quando houver linha compatível</span>
-                </label>
-                <button class="primary-button full" type="submit">
-                  <i data-lucide="plus"></i>
-                  <span>Cadastrar custo</span>
-                </button>
-              </form>
-            </section>
-
+          <div class="content-grid single">
             <section class="panel wide">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Cadastro</p>
+                  <p class="eyebrow">Recorrente</p>
                   <h2>Custos por origem</h2>
                 </div>
+                <button class="primary-button" type="button" id="newFixedCostButton">
+                  <i data-lucide="plus"></i>
+                  <span>Novo custo fixo</span>
+                </button>
               </div>
               <div class="table-wrap">
                 <table class="data-table" id="fixedCostsTable"></table>
@@ -229,8 +206,8 @@
                 <label>Credor<select name="creditorId" data-creditor-select></select></label>
                 <label>Contrato<input name="contract" placeholder="Número ou banco"></label>
                 <div class="form-row">
-                  <label>Recebido<input name="received" type="number" step="0.01" min="0"></label>
-                  <label>Valor da parcela<input name="installmentAmount" type="number" step="0.01" min="0"></label>
+                  <label class="money-label">Recebido<input name="received" type="text" inputmode="decimal" data-money-input></label>
+                  <label class="money-label">Valor padrão da parcela<input name="installmentAmount" type="text" inputmode="decimal" data-money-input></label>
                 </div>
                 <div class="form-row">
                   <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
@@ -238,8 +215,9 @@
                 </div>
                 <div class="form-row">
                   <label>Primeiro vencimento<input name="firstDueDate" type="date"></label>
-                  <label>Valor quitação<input name="settlementAmount" type="number" step="0.01" min="0"></label>
+                  <label class="money-label">Valor quitação<input name="settlementAmount" type="text" inputmode="decimal" data-money-input></label>
                 </div>
+                <div class="installment-values" id="fgtsInstallmentValues"></div>
                 <button class="primary-button full" type="submit">
                   <i data-lucide="plus"></i>
                   <span>Cadastrar empréstimo</span>
@@ -267,12 +245,12 @@
               <div class="preference-content">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Credores</p>
+                  <p class="eyebrow">Cartões e credores</p>
                   <h2>Cadastro base</h2>
                 </div>
                 <button class="primary-button" type="button" id="newCreditorButton">
                   <i data-lucide="plus"></i>
-                  <span>Novo credor</span>
+                  <span>Novo cartão/credor</span>
                 </button>
               </div>
               <div class="table-wrap">
@@ -285,13 +263,31 @@
               <div class="preference-content">
               <div class="panel-heading">
                 <div>
+                  <p class="eyebrow">Rendas recorrentes</p>
+                  <h2>Salário, aluguel e entradas fixas</h2>
+                </div>
+                <button class="primary-button" type="button" id="newIncomeButton">
+                  <i data-lucide="plus"></i>
+                  <span>Nova renda</span>
+                </button>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table clean-table" id="incomeList"></table>
+              </div>
+              </div>
+            </section>
+            <section class="panel preference-block">
+              <div class="block-marker">3</div>
+              <div class="preference-content">
+              <div class="panel-heading">
+                <div>
                   <p class="eyebrow">Planejamento</p>
                   <h2>Saldos e limites</h2>
                 </div>
               </div>
               <form class="stack-form" id="settingsForm">
-                <label>Saldo em Conta<input name="accountBalance" type="number" step="0.01"></label>
-                <label>Limite Kah<input name="kahLimit" type="number" step="0.01"></label>
+                <label class="money-label">Saldo em Conta<input name="accountBalance" type="text" inputmode="decimal" data-money-input></label>
+                <label class="money-label">Limite Kah<input name="kahLimit" type="text" inputmode="decimal" data-money-input></label>
                 <button class="primary-button full" type="submit">
                   <i data-lucide="save"></i>
                   <span>Salvar ajustes</span>
@@ -305,7 +301,7 @@
     </div>
 
     <dialog class="dialog" id="installmentDialog">
-      <form class="stack-form" id="installmentForm" method="dialog">
+      <form class="stack-form" id="installmentForm">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Parcelamento</p>
@@ -316,11 +312,11 @@
           </button>
         </div>
         <label>Conta<input name="item" required placeholder="Ex.: Amazon"></label>
-        <label>Credor<select name="creditorId" data-creditor-select></select></label>
+        <label>Cartão ou crediário<select name="creditorId" data-creditor-select></select></label>
         <label>Dono<select name="owner" data-owner-select></select></label>
         <label>Forma de pagamento<select name="paymentMethod" data-payment-method-select></select></label>
         <div class="form-row">
-          <label class="money-label">Valor da parcela<input name="amount" type="number" step="0.01" min="0" required></label>
+          <label class="money-label">Valor da parcela<input name="amount" type="text" inputmode="decimal" data-money-input required></label>
           <label>Total parcelas<input name="total" type="number" step="1" min="1" required></label>
         </div>
         <div class="form-row">
@@ -334,12 +330,39 @@
       </form>
     </dialog>
 
+    <dialog class="dialog" id="fixedCostDialog">
+      <form class="stack-form" id="fixedCostForm">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Custo fixo</p>
+            <h2>Novo custo fixo</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeFixedCostButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Custo<input name="name" required placeholder="Ex.: Netflix"></label>
+        <label>Credor<select name="creditorId" data-creditor-select></select></label>
+        <label>Dono<select name="owner" data-owner-select></select></label>
+        <div class="form-row">
+          <label>Grupo<input name="group" placeholder="Ex.: Streaming"></label>
+          <label>Vencimento<input name="dueDay" type="number" min="1" max="31" required></label>
+        </div>
+        <label>Método de pagamento<select name="paymentMethod" data-payment-method-select></select></label>
+        <label class="money-label">Valor<input name="amount" type="text" inputmode="decimal" data-money-input required></label>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="plus"></i>
+          <span>Cadastrar custo</span>
+        </button>
+      </form>
+    </dialog>
+
     <dialog class="dialog" id="creditorDialog">
-      <form class="stack-form" id="creditorForm" method="dialog">
+      <form class="stack-form" id="creditorForm">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Credor</p>
-            <h2 id="creditorDialogTitle">Novo credor</h2>
+            <h2 id="creditorDialogTitle">Novo cartão/credor</h2>
           </div>
           <button class="icon-button" type="button" id="closeCreditorButton" title="Fechar">
             <i data-lucide="x"></i>
@@ -348,7 +371,7 @@
         <div class="creditor-editor">
           <div class="creditor-logo large" id="creditorLogoPreview">CR</div>
           <div>
-            <label>Nome<input name="name" required placeholder="Ex.: Nubank"></label>
+            <label>Nome<input name="name" required placeholder="Ex.: Nubank, Grazziotin, Itaú Click"></label>
             <input name="logoUrl" type="hidden">
             <input name="logoFile" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml">
           </div>
@@ -370,7 +393,7 @@
     </dialog>
 
     <dialog class="dialog" id="carPaymentDialog">
-      <form class="stack-form" id="carPaymentForm" method="dialog">
+      <form class="stack-form" id="carPaymentForm">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Pagamento</p>
@@ -381,7 +404,7 @@
           </button>
         </div>
         <input name="paymentId" type="hidden">
-        <label class="money-label">Valor pago<input name="paidAmount" type="number" step="0.01" min="0" required></label>
+        <label class="money-label">Valor pago<input name="paidAmount" type="text" inputmode="decimal" data-money-input required></label>
         <button class="primary-button full" type="submit">
           <i data-lucide="check"></i>
           <span>Registrar pagamento</span>
@@ -390,7 +413,7 @@
     </dialog>
 
     <dialog class="dialog" id="carContractDialog">
-      <form class="stack-form" id="carForm" method="dialog">
+      <form class="stack-form" id="carForm">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Financiamento</p>
@@ -401,12 +424,13 @@
           </button>
         </div>
         <label>Nome do carro<input name="name" required></label>
+        <label>Credor do financiamento<select name="creditorId" data-creditor-select></select></label>
         <div class="form-row">
-          <label class="money-label">Valor financiado<input name="financed" type="text" inputmode="decimal"></label>
-          <label class="money-label">Valor compra<input name="purchase" type="text" inputmode="decimal"></label>
+          <label class="money-label">Valor financiado<input name="financed" type="text" inputmode="decimal" data-money-input></label>
+          <label class="money-label">Valor compra<input name="purchase" type="text" inputmode="decimal" data-money-input></label>
         </div>
         <div class="form-row">
-          <label class="money-label">Parcela padrão<input name="monthly" type="text" inputmode="decimal"></label>
+          <label class="money-label">Parcela padrão<input name="monthly" type="text" inputmode="decimal" data-money-input></label>
           <label>Total parcelas<input name="totalInstallments" type="number" min="1" step="1"></label>
         </div>
         <button class="primary-button full" type="submit">
@@ -421,7 +445,7 @@
     </dialog>
 
     <dialog class="dialog" id="plannedDialog">
-      <form class="stack-form" id="plannedForm" method="dialog">
+      <form class="stack-form" id="plannedForm">
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Simulação</p>
@@ -442,8 +466,33 @@
           <label>Mês<input name="month" type="month" required></label>
         </div>
         <label>Dono<select name="owner" data-owner-select></select></label>
-        <label>Valor<input name="amount" type="number" step="0.01" min="0" required></label>
+        <label class="money-label">Valor<input name="amount" type="text" inputmode="decimal" data-money-input required></label>
         <button class="primary-button full" type="submit">Adicionar ao planejamento</button>
+      </form>
+    </dialog>
+
+    <dialog class="dialog" id="incomeDialog">
+      <form class="stack-form" id="incomeForm">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Renda recorrente</p>
+            <h2 id="incomeDialogTitle">Nova renda</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeIncomeButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Descrição<input name="label" required placeholder="Ex.: Salário, aluguel"></label>
+        <label>Fonte<input name="origin" required placeholder="Ex.: ATP, imóvel"></label>
+        <label>Dono<select name="owner" data-owner-select></select></label>
+        <div class="form-row">
+          <label>Mês inicial/alteração<input name="month" type="month" required></label>
+          <label class="money-label">Valor a partir desse mês<input name="amount" type="text" inputmode="decimal" data-money-input required></label>
+        </div>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="save"></i>
+          <span>Salvar renda</span>
+        </button>
       </form>
     </dialog>
 

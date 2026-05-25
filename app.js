@@ -21,7 +21,8 @@ const state = {
   installmentFilters: {},
   expandedInstallments: {},
   installmentEditingId: null,
-  creditorEditingId: null
+  creditorEditingId: null,
+  incomeEditingId: null
 };
 
 const el = {
@@ -48,6 +49,9 @@ const el = {
   closeInstallmentButton: document.querySelector("#closeInstallmentButton"),
   installmentsTable: document.querySelector("#installmentsTable"),
   fixedCostForm: document.querySelector("#fixedCostForm"),
+  fixedCostDialog: document.querySelector("#fixedCostDialog"),
+  newFixedCostButton: document.querySelector("#newFixedCostButton"),
+  closeFixedCostButton: document.querySelector("#closeFixedCostButton"),
   fixedCostsTable: document.querySelector("#fixedCostsTable"),
   settingsForm: document.querySelector("#settingsForm"),
   carForm: document.querySelector("#carForm"),
@@ -71,12 +75,19 @@ const el = {
   creditorDialogTitle: document.querySelector("#creditorDialogTitle"),
   newCreditorButton: document.querySelector("#newCreditorButton"),
   closeCreditorButton: document.querySelector("#closeCreditorButton"),
+  incomeForm: document.querySelector("#incomeForm"),
+  incomeDialog: document.querySelector("#incomeDialog"),
+  incomeDialogTitle: document.querySelector("#incomeDialogTitle"),
+  incomeList: document.querySelector("#incomeList"),
+  newIncomeButton: document.querySelector("#newIncomeButton"),
+  closeIncomeButton: document.querySelector("#closeIncomeButton"),
   plannedDialog: document.querySelector("#plannedDialog"),
   plannedForm: document.querySelector("#plannedForm"),
   plannedCredorField: document.querySelector("#plannedCredorField"),
   plannedFonteField: document.querySelector("#plannedFonteField"),
   addPlanButton: document.querySelector("#addPlanButton"),
   closePlanButton: document.querySelector("#closePlanButton"),
+  fgtsInstallmentValues: document.querySelector("#fgtsInstallmentValues"),
   toast: document.querySelector("#toast")
 };
 
@@ -99,22 +110,27 @@ function bindEvents() {
   el.newInstallmentButton.addEventListener("click", openInstallmentDialog);
   el.closeInstallmentButton.addEventListener("click", closeInstallmentDialog);
   el.fixedCostForm.addEventListener("submit", addFixedCost);
+  el.newFixedCostButton.addEventListener("click", openFixedCostDialog);
+  el.closeFixedCostButton.addEventListener("click", () => el.fixedCostDialog.close());
   el.settingsForm.addEventListener("submit", updateSettings);
   el.carForm.addEventListener("submit", updateCar);
   el.editCarButton.addEventListener("click", openCarContractDialog);
   el.closeCarContractButton.addEventListener("click", () => el.carContractDialog.close());
   el.carPaymentForm.addEventListener("submit", payCarInstallment);
   el.closeCarPaymentButton.addEventListener("click", () => el.carPaymentDialog.close());
-  ["financed", "purchase", "monthly"].forEach((name) => {
-    el.carForm.elements[name].addEventListener("blur", (event) => {
-      event.currentTarget.value = formatCurrencyInput(event.currentTarget.value);
-    });
-  });
+  bindMoneyInputs();
   el.fgtsForm.addEventListener("submit", addFgtsContract);
+  ["totalInstallments", "installmentAmount", "paidInstallments", "firstDueDate"].forEach((name) => {
+    el.fgtsForm.elements[name].addEventListener("input", renderFgtsInstallmentValueFields);
+    el.fgtsForm.elements[name].addEventListener("change", renderFgtsInstallmentValueFields);
+  });
   el.creditorForm.addEventListener("submit", addCreditor);
   el.creditorForm.elements.logoFile.addEventListener("change", handleCreditorLogoUpload);
   el.newCreditorButton.addEventListener("click", () => openCreditorDialog());
   el.closeCreditorButton.addEventListener("click", closeCreditorDialog);
+  el.incomeForm.addEventListener("submit", saveRecurringIncome);
+  el.newIncomeButton.addEventListener("click", () => openIncomeDialog());
+  el.closeIncomeButton.addEventListener("click", closeIncomeDialog);
   el.addPlanButton.addEventListener("click", openPlannedDialog);
   el.closePlanButton.addEventListener("click", () => el.plannedDialog.close());
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
@@ -266,7 +282,9 @@ function render() {
   renderCar();
   renderFgts();
   renderOrigins();
+  renderRecurringIncomes();
   renderSettings();
+  bindMoneyInputs();
   refreshIcons();
 }
 
@@ -310,8 +328,8 @@ function renderProjection() {
 }
 
 function renderSettings() {
-  el.settingsForm.elements.accountBalance.value = state.data.accountBalance || "";
-  el.settingsForm.elements.kahLimit.value = state.data.kahLimit || "";
+  el.settingsForm.elements.accountBalance.value = formatCurrencyInput(state.data.accountBalance || "");
+  el.settingsForm.elements.kahLimit.value = formatCurrencyInput(state.data.kahLimit || "");
 }
 
 function renderOccurrencesLegacy() {
@@ -441,6 +459,17 @@ function buildProjectionRows(months, keepPaidValues = false) {
       values: valuesFromMonthlyMap(line.values, months)
     });
   });
+  state.data.recurringIncomes.forEach((income) => {
+    rows.push({
+      id: income.id,
+      kind: "income",
+      owner: income.owner || "Felipe",
+      label: income.label,
+      origin: income.origin,
+      sourceLabel: "",
+      values: recurringIncomeValues(income, months)
+    });
+  });
 
   state.data.projectionLines.forEach((line) => {
     rows.push({
@@ -483,6 +512,36 @@ function valuesFromMonthlyMap(map, months) {
     values[month] = map?.[month] ?? map?.[`month-${monthNumber}`] ?? map?.default ?? 0;
   });
   return values;
+}
+
+function recurringIncomeValues(income, months) {
+  const changes = normalizedIncomeChanges(income);
+  const values = {};
+  months.forEach((month) => {
+    const current = [...changes].reverse().find((change) => change.month <= month);
+    values[month] = current ? Number(current.amount || 0) : 0;
+  });
+  return values;
+}
+
+function normalizedIncomeChanges(income) {
+  const changes = income.changes?.length
+    ? income.changes
+    : [{ month: income.startMonth || nextMonths(1)[0], amount: Number(income.amount || 0) }];
+  return changes
+    .map((change) => ({ month: change.month, amount: Number(change.amount || 0) }))
+    .filter((change) => change.month)
+    .sort((a, b) => a.month.localeCompare(b.month));
+}
+
+function latestIncomeChange(income) {
+  return normalizedIncomeChanges(income).at(-1) || { month: "", amount: 0 };
+}
+
+function upsertIncomeChange(changes, month, amount) {
+  const next = normalizedIncomeChanges({ changes }).filter((change) => change.month !== month);
+  next.push({ month, amount });
+  return next.sort((a, b) => a.month.localeCompare(b.month));
 }
 
 function appendDynamicProjectionRows(rows, months, keepPaidValues) {
@@ -773,7 +832,7 @@ function renderInstallments() {
 
 function renderFixedCosts() {
   el.fixedCostsTable.innerHTML = `
-    <thead><tr><th>Custo</th><th>Credor</th><th>Método</th><th>Grupo</th><th>Venc.</th><th>Valor</th><th>Projeção</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Custo</th><th>Credor</th><th>Método</th><th>Grupo</th><th>Venc.</th><th>Valor</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.fixedCosts.map((item) => `
         <tr>
@@ -783,10 +842,9 @@ function renderFixedCosts() {
           <td>${escapeHtml(item.group || "-")}</td>
           <td>${item.dueDay}</td>
           <td>${currency.format(item.amount)}</td>
-          <td>${item.includeInProjection !== false ? "Sim" : "Não"}</td>
           <td><button class="small-button danger-mini" type="button" data-delete-fixed="${item.id}">Excluir</button></td>
         </tr>
-      `).join("")}
+      `).join("") || `<tr><td colspan="7" class="muted-cell">Nenhum custo fixo cadastrado.</td></tr>`}
     </tbody>
   `;
 
@@ -806,8 +864,10 @@ function renderCar() {
   const pendingValue = pending.reduce((total, item) => total + Number(item.value), 0);
   const economy = paid.reduce((total, item) => total + Math.max(0, Number(item.value) - Number(item.paidAmount || item.value)), 0);
   const realProjected = paidValue + pendingValue;
+  const creditor = car.creditorId ? getCreditorName(car.creditorId) : "sem credor";
 
   el.carKpis.innerHTML = [
+    metric("Credor", creditor, "neutral", false),
     metric("Valor financiado", Number(car.financed || 0), "neutral"),
     metric("Valor de compra", Number(car.purchase || 0), "neutral"),
     metric("Financiamento", financing, "negative"),
@@ -939,7 +999,7 @@ function renderFgtsV2() {
 
 function renderOriginsV2() {
   el.creditorList.innerHTML = `
-    <thead><tr><th>Credor</th><th>Formas de pagamento</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Cartão/Credor</th><th>Formas de pagamento</th><th>Vínculos</th><th>Saldo previsto</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.creditors.map((creditor) => {
         const inUse = isCreditorInUse(creditor.id);
@@ -972,6 +1032,37 @@ function renderOriginsV2() {
   });
 }
 
+function renderRecurringIncomes() {
+  el.incomeList.innerHTML = `
+    <thead><tr><th>Renda</th><th>Fonte</th><th>Dono</th><th>Valor atual</th><th>Vale desde</th><th>Ações</th></tr></thead>
+    <tbody>
+      ${state.data.recurringIncomes.map((income) => {
+        const current = latestIncomeChange(income);
+        return `
+          <tr>
+            <td>${escapeHtml(income.label)}</td>
+            <td>${escapeHtml(income.origin || "-")}</td>
+            <td>${escapeHtml(income.owner || "Felipe")}</td>
+            <td>${currency.format(current.amount || 0)}</td>
+            <td>${current.month ? formatMonth(current.month) : "-"}</td>
+            <td class="row-actions">
+              <button class="small-button" type="button" data-edit-income="${income.id}">Editar/Reajustar</button>
+              <button class="small-button danger-mini" type="button" data-delete-income="${income.id}">Excluir</button>
+            </td>
+          </tr>
+        `;
+      }).join("") || `<tr><td colspan="6" class="muted-cell">Nenhuma renda recorrente cadastrada.</td></tr>`}
+    </tbody>
+  `;
+
+  el.incomeList.querySelectorAll("[data-edit-income]").forEach((button) => {
+    button.addEventListener("click", () => openIncomeDialog(button.dataset.editIncome));
+  });
+  el.incomeList.querySelectorAll("[data-delete-income]").forEach((button) => {
+    button.addEventListener("click", () => deleteRecurringIncome(button.dataset.deleteIncome));
+  });
+}
+
 function hydrateForms() {
   document.querySelectorAll("[data-creditor-select]").forEach((select) => {
     const current = select.value;
@@ -990,16 +1081,21 @@ function hydrateForms() {
   });
   const start = nextMonths(1)[0];
   if (el.plannedForm.elements.month) el.plannedForm.elements.month.value = start;
+  if (el.incomeForm.elements.month && !el.incomeForm.elements.month.value) el.incomeForm.elements.month.value = start;
 }
 
 async function addInstallment(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  if (!form.get("creditorId")) {
+    showToast("Cadastre e selecione um cartão/credor.");
+    return;
+  }
   const item = {
     id: crypto.randomUUID(),
     item: String(form.get("item")).trim(),
     creditorId: String(form.get("creditorId")),
-    amount: Number(form.get("amount")),
+    amount: parseCurrencyInput(form.get("amount")),
     totalInstallments: Number(form.get("total")),
     paidInstallments: Number(form.get("paid") || 0),
     purchaseDate: String(form.get("date") || ""),
@@ -1010,7 +1106,12 @@ async function addInstallment(event) {
   const editing = Boolean(state.installmentEditingId);
   if (editing) {
     const current = state.data.installments.find((entry) => entry.id === state.installmentEditingId);
-    if (current) Object.assign(current, item, { id: current.id });
+    if (current) {
+      Object.assign(current, item, { id: current.id });
+    } else {
+      state.data.installments.push(item);
+      state.expandedInstallments[item.id] = true;
+    }
   } else {
     state.data.installments.push(item);
     state.expandedInstallments[item.id] = true;
@@ -1030,7 +1131,7 @@ function openInstallmentDialog(id = null) {
   el.installmentForm.elements.creditorId.value = item?.creditorId || el.installmentForm.elements.creditorId.value;
   el.installmentForm.elements.owner.value = item?.owner || "Felipe";
   el.installmentForm.elements.paymentMethod.value = item?.paymentMethod || "Cartão de crédito";
-  el.installmentForm.elements.amount.value = item?.amount ? Number(item.amount).toFixed(2) : "";
+  el.installmentForm.elements.amount.value = item?.amount ? formatCurrencyInput(item.amount) : "";
   el.installmentForm.elements.total.value = item?.totalInstallments || "";
   el.installmentForm.elements.paid.value = item?.paidInstallments || 0;
   el.installmentForm.elements.date.value = item?.purchaseDate || "";
@@ -1041,6 +1142,12 @@ function closeInstallmentDialog() {
   state.installmentEditingId = null;
   el.installmentForm.reset();
   el.installmentDialog.close();
+}
+
+function openFixedCostDialog() {
+  hydrateForms();
+  el.fixedCostForm.reset();
+  el.fixedCostDialog.showModal();
 }
 
 async function payInstallment(key) {
@@ -1069,6 +1176,10 @@ async function deleteInstallment(id) {
 async function addFixedCost(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
+  if (!form.get("creditorId")) {
+    showToast("Cadastre e selecione um credor.");
+    return;
+  }
   state.data.fixedCosts.push({
     id: crypto.randomUUID(),
     name: String(form.get("name")).trim(),
@@ -1077,10 +1188,11 @@ async function addFixedCost(event) {
     owner: String(form.get("owner") || "Felipe"),
     group: String(form.get("group") || "").trim(),
     dueDay: Number(form.get("dueDay")),
-    amount: Number(form.get("amount")),
-    includeInProjection: form.get("includeInProjection") === "on"
+    amount: parseCurrencyInput(form.get("amount")),
+    includeInProjection: true
   });
   event.currentTarget.reset();
+  el.fixedCostDialog.close();
   await saveState("Custo fixo cadastrado.");
 }
 
@@ -1093,6 +1205,7 @@ async function updateCar(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   state.data.car.name = String(form.get("name")).trim();
+  state.data.car.creditorId = String(form.get("creditorId") || "");
   state.data.car.financed = parseCurrencyInput(form.get("financed"));
   state.data.car.purchase = parseCurrencyInput(form.get("purchase"));
   state.data.car.monthly = parseCurrencyInput(form.get("monthly"));
@@ -1105,6 +1218,7 @@ async function updateCar(event) {
 function openCarContractDialog() {
   const car = state.data.car;
   el.carForm.elements.name.value = car.name || "";
+  el.carForm.elements.creditorId.value = car.creditorId || el.carForm.elements.creditorId.value;
   el.carForm.elements.financed.value = formatCurrencyInput(car.financed || "");
   el.carForm.elements.purchase.value = formatCurrencyInput(car.purchase || "");
   el.carForm.elements.monthly.value = formatCurrencyInput(car.monthly || "");
@@ -1138,10 +1252,10 @@ function syncCarPayments() {
 async function updateSettings(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  state.data.accountBalance = Number(form.get("accountBalance") || 0);
+  state.data.accountBalance = parseCurrencyInput(form.get("accountBalance"));
   state.data.initialBalance = state.data.accountBalance;
-  state.data.kahLimit = Number(form.get("kahLimit") || 0);
-  await saveState("Ajustes salvos.");
+  state.data.kahLimit = parseCurrencyInput(form.get("kahLimit"));
+  await saveState("Preferências salvas.");
 }
 
 function openCarPaymentDialog(id) {
@@ -1159,7 +1273,7 @@ async function payCarInstallment(event) {
   const payment = state.data.car.payments.find((item) => item.id === String(form.get("paymentId")));
   if (!payment) return;
   payment.status = "Pago";
-  payment.paidAmount = Number(form.get("paidAmount") || payment.value || 0);
+  payment.paidAmount = parseCurrencyInput(form.get("paidAmount")) || Number(payment.value || 0);
   el.carPaymentDialog.close();
   await saveState("Parcela do carro paga.");
 }
@@ -1172,11 +1286,53 @@ async function unpayCarInstallment(id) {
   await saveState("Pagamento do carro removido.");
 }
 
+function renderFgtsInstallmentValueFields() {
+  const total = Math.min(60, Number(el.fgtsForm.elements.totalInstallments.value || 0));
+  if (!total) {
+    el.fgtsInstallmentValues.innerHTML = "";
+    return;
+  }
+  const defaultValue = parseCurrencyInput(el.fgtsForm.elements.installmentAmount.value);
+  const firstDueDate = el.fgtsForm.elements.firstDueDate.value || nextAnnualDate();
+  const currentValues = new FormData(el.fgtsForm);
+  el.fgtsInstallmentValues.innerHTML = `
+    <div>
+      <p class="eyebrow">Parcelas FGTS</p>
+      <div class="installment-values-grid">
+        ${Array.from({ length: total }, (_, index) => {
+          const number = index + 1;
+          const value = currentValues.get(`installmentValue${number}`) || (defaultValue ? formatCurrencyInput(defaultValue) : "");
+          const dueDate = addYearsToDate(firstDueDate, index);
+          return `
+            <label class="money-label">Parcela ${number} · ${formatDate(dueDate)}
+              <input name="installmentValue${number}" type="text" inputmode="decimal" data-money-input value="${escapeHtml(value)}">
+            </label>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+  bindMoneyInputs(el.fgtsInstallmentValues);
+}
+
+function getFgtsInstallmentValues(form, total) {
+  const defaultValue = parseCurrencyInput(form.get("installmentAmount"));
+  return Array.from({ length: total }, (_, index) => {
+    const value = parseCurrencyInput(form.get(`installmentValue${index + 1}`));
+    return value || defaultValue;
+  });
+}
+
 async function addFgtsContract(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const totalInstallments = Number(form.get("totalInstallments") || 1);
-  const installmentAmount = Number(form.get("installmentAmount") || 0);
+  if (!form.get("creditorId")) {
+    showToast("Cadastre e selecione um credor para o FGTS.");
+    return;
+  }
+  const installmentValues = getFgtsInstallmentValues(form, totalInstallments);
+  const installmentAmount = installmentValues[0] || parseCurrencyInput(form.get("installmentAmount"));
   const paidInstallments = Math.min(Number(form.get("paidInstallments") || 0), totalInstallments);
   const firstDueDate = String(form.get("firstDueDate") || "");
   state.data.fgts.contracts.push({
@@ -1185,18 +1341,19 @@ async function addFgtsContract(event) {
     creditorId: String(form.get("creditorId")),
     contract: String(form.get("contract") || "").trim(),
     createdAt: todayIsoDate(),
-    received: Number(form.get("received") || 0),
-    toPay: installmentAmount * (totalInstallments - paidInstallments),
+    received: parseCurrencyInput(form.get("received")),
+    toPay: installmentValues.slice(paidInstallments).reduce((total, value) => total + value, 0),
     installmentAmount,
     totalInstallments,
     paidInstallments,
     firstDueDate,
-    settlementAmount: Number(form.get("settlementAmount") || 0),
+    settlementAmount: parseCurrencyInput(form.get("settlementAmount")),
     status: "Ativo",
     annualPayments: [],
-    installments: createFgtsInstallments(totalInstallments, installmentAmount, paidInstallments, firstDueDate)
+    installments: createFgtsInstallments(totalInstallments, installmentValues, paidInstallments, firstDueDate)
   });
   event.currentTarget.reset();
+  renderFgtsInstallmentValueFields();
   await saveState("Empréstimo FGTS cadastrado.");
 }
 
@@ -1215,7 +1372,7 @@ async function quitFgtsContract(event) {
   const contract = state.data.fgts.contracts.find((item) => item.id === event.currentTarget.dataset.fgtsQuit);
   if (!contract) return;
   const form = new FormData(event.currentTarget);
-  contract.quitAmount = Number(form.get("amount"));
+  contract.quitAmount = parseCurrencyInput(form.get("amount"));
   contract.status = "Quitado";
   contract.toPay = 0;
   normalizeFgtsContract(contract);
@@ -1251,9 +1408,10 @@ async function addCreditor(event) {
   const payload = {
     id: existing?.id || crypto.randomUUID(),
     name,
-    paymentForms: form.getAll("paymentForms").map(String),
+    paymentForms: form.getAll("paymentForms").map(String).filter(Boolean),
     logoUrl: String(form.get("logoUrl") || "")
   };
+  if (!payload.paymentForms.length) payload.paymentForms = ["Cartão de crédito"];
   if (existing) {
     Object.assign(existing, payload);
   } else {
@@ -1275,7 +1433,7 @@ function openCreditorDialog(id = null) {
   el.creditorForm.elements.logoUrl.value = creditor?.logoUrl || "";
   const forms = creditor?.paymentForms || [creditor?.type].filter(Boolean);
   el.creditorForm.querySelectorAll("input[name='paymentForms']").forEach((input) => {
-    input.checked = forms.includes(input.value);
+    input.checked = creditor ? forms.includes(input.value) : input.value === "Cartão de crédito";
   });
   renderCreditorLogoPreview(creditor?.logoUrl || "");
   el.creditorDialog.showModal();
@@ -1298,11 +1456,65 @@ async function deleteCreditor(id) {
   await saveState("Credor excluído.");
 }
 
+function openIncomeDialog(id = null) {
+  hydrateForms();
+  state.incomeEditingId = id;
+  el.incomeForm.reset();
+  const income = id ? state.data.recurringIncomes.find((item) => item.id === id) : null;
+  const current = income ? latestIncomeChange(income) : { month: nextMonths(1)[0], amount: 0 };
+  el.incomeDialogTitle.textContent = income ? "Editar/Reajustar renda" : "Nova renda";
+  el.incomeForm.elements.label.value = income?.label || "";
+  el.incomeForm.elements.origin.value = income?.origin || "";
+  el.incomeForm.elements.owner.value = income?.owner || "Felipe";
+  el.incomeForm.elements.month.value = current.month || nextMonths(1)[0];
+  el.incomeForm.elements.amount.value = current.amount ? formatCurrencyInput(current.amount) : "";
+  el.incomeDialog.showModal();
+  refreshIcons();
+}
+
+function closeIncomeDialog() {
+  state.incomeEditingId = null;
+  el.incomeForm.reset();
+  el.incomeDialog.close();
+}
+
+async function saveRecurringIncome(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const month = String(form.get("month"));
+  const amount = parseCurrencyInput(form.get("amount"));
+  const existing = state.incomeEditingId
+    ? state.data.recurringIncomes.find((item) => item.id === state.incomeEditingId)
+    : null;
+  if (existing) {
+    existing.label = String(form.get("label")).trim();
+    existing.origin = String(form.get("origin")).trim();
+    existing.owner = String(form.get("owner") || "Felipe");
+    existing.changes = upsertIncomeChange(existing.changes || [], month, amount);
+  } else {
+    state.data.recurringIncomes.push({
+      id: crypto.randomUUID(),
+      label: String(form.get("label")).trim(),
+      origin: String(form.get("origin")).trim(),
+      owner: String(form.get("owner") || "Felipe"),
+      changes: [{ month, amount }]
+    });
+  }
+  closeIncomeDialog();
+  await saveState(existing ? "Renda recorrente atualizada." : "Renda recorrente cadastrada.");
+}
+
+async function deleteRecurringIncome(id) {
+  state.data.recurringIncomes = state.data.recurringIncomes.filter((item) => item.id !== id);
+  await saveState("Renda recorrente excluída.");
+}
+
 function isCreditorInUse(id) {
   return state.data.installments.some((item) => item.creditorId === id)
     || state.data.fixedCosts.some((item) => item.creditorId === id)
     || state.data.plannedPurchases.some((item) => item.creditorId === id)
     || state.data.fgts.contracts.some((item) => item.creditorId === id)
+    || state.data.car.creditorId === id
     || state.data.projectionLines.some((item) => item.creditorId === id || item.match === id);
 }
 
@@ -1345,7 +1557,7 @@ async function addPlannedPurchase(event) {
   const form = new FormData(event.currentTarget);
   const kind = String(form.get("kind") || "expense");
   const month = String(form.get("month"));
-  const amount = Number(form.get("amount"));
+  const amount = parseCurrencyInput(form.get("amount"));
   if (kind === "income") {
     state.data.incomeLines.push({
       id: crypto.randomUUID(),
@@ -1452,6 +1664,11 @@ function normalizeData(data) {
     creditors,
     paymentMethods: data.paymentMethods || defaults.paymentMethods,
     incomeLines: data.incomeLines || defaults.incomeLines,
+    recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => ({
+      ...income,
+      owner: income.owner || "Felipe",
+      changes: normalizedIncomeChanges(income)
+    })),
     projectionLines: (data.projectionLines || defaults.projectionLines).map((line) => ({
       ...line,
       match: creditorByName.get(line.match) || line.match,
@@ -1484,6 +1701,7 @@ function createDefaultData() {
     paymentMethods: ["PIX", "Débito em conta", "Cartão de crédito", "Boleto"],
     creditors: [],
     incomeLines: [],
+    recurringIncomes: [],
     projectionLines: [],
     installments: [],
     fixedCosts: [],
@@ -1492,6 +1710,7 @@ function createDefaultData() {
     receivedOccurrences: [],
     car: {
       name: "Carro",
+      creditorId: "",
       financed: 0,
       purchase: 0,
       monthly: 0,
@@ -1571,7 +1790,7 @@ function fgtsContractCard(contract) {
         ${metaBox("Parcelas pagas", `${paid.length} de ${contract.installments.length}`)}
         ${metaBox("Próximo vencimento", nextDue ? formatDate(nextDue) : "-")}
         <form class="inline-form debt-action" data-fgts-quit="${contract.id}">
-          <input name="amount" type="number" min="0" step="0.01" placeholder="Valor quitação" value="${contract.settlementAmount || ""}" required>
+          <input name="amount" type="text" inputmode="decimal" data-money-input placeholder="Valor quitação" value="${formatCurrencyInput(contract.settlementAmount || "")}" required>
           <button class="small-button" type="submit">Quitar</button>
         </form>
       </div>
@@ -1663,10 +1882,10 @@ function carDebtCard(car) {
     <details class="debt-card" open>
       <summary>
         <div class="entity-cell">
-          <span class="creditor-logo">CA</span>
+          ${car.creditorId ? creditorLogoHtml(car.creditorId) : `<span class="creditor-logo">CA</span>`}
           <div>
             <strong>${escapeHtml(car.name || "Carro")}</strong>
-            <span>Financiamento</span>
+            <span>${escapeHtml(car.creditorId ? getCreditorName(car.creditorId) : "Financiamento")}</span>
           </div>
         </div>
         <span class="status ${pending.length ? "warn" : "ok"}">${pending.length ? "Pendente" : "Quitado"}</span>
@@ -1724,10 +1943,14 @@ function normalizeFgtsContract(contract) {
   contract.toPay = fgtsPendingTotal(contract);
 }
 
-function createFgtsInstallments(total, amount, paid, firstDueDate) {
+function createFgtsInstallments(total, amountOrValues, paid, firstDueDate) {
   const start = firstDueDate || nextAnnualDate();
+  const values = Array.isArray(amountOrValues)
+    ? amountOrValues
+    : Array.from({ length: total }, () => Number(amountOrValues || 0));
   return Array.from({ length: total }, (_, index) => {
     const status = index < paid ? "Pago" : "Pendente";
+    const amount = Number(values[index] || 0);
     return {
       id: crypto.randomUUID(),
       number: index + 1,
@@ -1758,6 +1981,7 @@ function creditorUsageCount(id) {
     + state.data.fixedCosts.filter((item) => item.creditorId === id).length
     + state.data.plannedPurchases.filter((item) => item.creditorId === id).length
     + state.data.fgts.contracts.filter((item) => item.creditorId === id).length
+    + (state.data.car.creditorId === id ? 1 : 0)
     + state.data.projectionLines.filter((item) => item.creditorId === id || item.match === id).length;
 }
 
@@ -1868,6 +2092,19 @@ function parseCurrencyInput(value) {
 function formatCurrencyInput(value) {
   const number = typeof value === "number" ? value : parseCurrencyInput(value);
   return number ? currency.format(number).replace("R$", "").trim() : "";
+}
+
+function bindMoneyInputs(root = document) {
+  root.querySelectorAll("[data-money-input]").forEach((input) => {
+    if (input.dataset.moneyBound) return;
+    input.dataset.moneyBound = "true";
+    input.addEventListener("blur", () => {
+      input.value = formatCurrencyInput(input.value);
+    });
+    input.addEventListener("input", () => {
+      input.value = input.value.replace(/[^\d,.-]/g, "");
+    });
+  });
 }
 
 function todayKey() {

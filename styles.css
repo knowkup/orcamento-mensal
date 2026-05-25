@@ -912,6 +912,25 @@ select {
   min-height: 16px;
 }
 
+.installment-values {
+  display: grid;
+  gap: 8px;
+}
+
+.installment-values:empty {
+  display: none;
+}
+
+.installment-values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: var(--surface-soft);
+}
+
 .status.ok {
   background: rgba(24, 116, 75, 0.12);
   color: var(--green);
