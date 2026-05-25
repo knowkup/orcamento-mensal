@@ -1351,8 +1351,9 @@ function hydrateForms() {
   });
   document.querySelectorAll("[data-payment-method-select]").forEach((select) => {
     const current = select.value;
-    select.innerHTML = state.data.paymentMethods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
-    select.value = current && state.data.paymentMethods.includes(current) ? current : defaultPaymentMethod();
+    const methods = availablePaymentMethods();
+    select.innerHTML = methods.map((method) => `<option value="${escapeHtml(method)}">${escapeHtml(method)}</option>`).join("");
+    select.value = current && methods.includes(current) ? current : defaultPaymentMethod();
   });
   document.querySelectorAll("[data-owner-select]").forEach((select) => {
     const current = select.value;
@@ -1366,7 +1367,16 @@ function hydrateForms() {
 }
 
 function defaultPaymentMethod() {
-  return state.data.paymentMethods.find((method) => method !== "Cartão de crédito") || state.data.paymentMethods[0] || "PIX";
+  const methods = availablePaymentMethods();
+  return methods.find((method) => method !== "Cartão de crédito") || methods[0] || "PIX";
+}
+
+function availablePaymentMethods() {
+  const defaults = createDefaultData().paymentMethods;
+  const methods = Array.isArray(state.data.paymentMethods) && state.data.paymentMethods.length
+    ? state.data.paymentMethods
+    : defaults;
+  return [...new Set([...methods, "Cartão de crédito"])];
 }
 
 async function addInstallment(event) {
@@ -1457,6 +1467,7 @@ function closeFixedCostDialog() {
 
 function updateFixedCostFields() {
   const methodField = el.fixedCostForm.elements.paymentMethod;
+  if (!methodField.options.length) hydrateForms();
   if (!methodField.value) methodField.value = defaultPaymentMethod();
   const isCard = methodField.value === "Cartão de crédito";
   el.fixedCardField.hidden = !isCard;
@@ -2295,7 +2306,7 @@ function normalizeData(data) {
     ...data,
     creditors,
     creditCards,
-    paymentMethods: data.paymentMethods || defaults.paymentMethods,
+    paymentMethods: data.paymentMethods?.length ? data.paymentMethods : defaults.paymentMethods,
     incomeLines: data.incomeLines || defaults.incomeLines,
     recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => ({
       ...income,
