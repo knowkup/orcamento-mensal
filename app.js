@@ -65,6 +65,7 @@ const el = {
   fixedCostDialogTitle: document.querySelector("#fixedCostDialogTitle"),
   fixedCardField: document.querySelector("#fixedCardField"),
   fixedCreditorField: document.querySelector("#fixedCreditorField"),
+  fixedNewCreditorField: document.querySelector("#fixedNewCreditorField"),
   fixedOwnerField: document.querySelector("#fixedOwnerField"),
   newFixedCostButton: document.querySelector("#newFixedCostButton"),
   closeFixedCostButton: document.querySelector("#closeFixedCostButton"),
@@ -148,7 +149,7 @@ function bindEvents() {
   el.newInstallmentButton.addEventListener("click", openInstallmentDialog);
   el.closeInstallmentButton.addEventListener("click", closeInstallmentDialog);
   el.fixedCostForm.addEventListener("submit", addFixedCost);
-  el.newFixedCostButton.addEventListener("click", openFixedCostDialog);
+  el.newFixedCostButton.addEventListener("click", () => openFixedCostDialog());
   el.closeFixedCostButton.addEventListener("click", closeFixedCostDialog);
   el.fixedCostForm.elements.paymentMethod.addEventListener("change", updateFixedCostFields);
   el.settingsForm.addEventListener("submit", updateSettings);
@@ -1725,7 +1726,7 @@ function openFixedCostDialog(id = null) {
 function closeFixedCostDialog() {
   state.fixedCostEditingId = null;
   el.fixedCostForm.reset();
-  [el.fixedCardField, el.fixedCreditorField, el.fixedOwnerField].forEach((field) => setFixedCostFieldVisible(field, true));
+  [el.fixedCardField, el.fixedCreditorField, el.fixedNewCreditorField, el.fixedOwnerField].forEach((field) => setFixedCostFieldVisible(field, true));
   el.fixedCostDialog.close();
 }
 
@@ -1734,12 +1735,15 @@ function updateFixedCostFields() {
   if (!methodField.options.length) hydrateForms();
   methodField.required = true;
   const hasMethod = Boolean(methodField.value);
+  const hasCreditors = state.data.creditors.length > 0;
   const isCard = methodField.value === "Cartão de crédito";
   setFixedCostFieldVisible(el.fixedCardField, hasMethod && isCard);
-  setFixedCostFieldVisible(el.fixedCreditorField, hasMethod && !isCard);
+  setFixedCostFieldVisible(el.fixedCreditorField, hasMethod && !isCard && hasCreditors);
+  setFixedCostFieldVisible(el.fixedNewCreditorField, hasMethod && !isCard && !hasCreditors);
   setFixedCostFieldVisible(el.fixedOwnerField, hasMethod && !isCard);
   el.fixedCostForm.elements.cardId.required = hasMethod && isCard;
-  el.fixedCostForm.elements.creditorId.required = hasMethod && !isCard;
+  el.fixedCostForm.elements.creditorId.required = hasMethod && !isCard && hasCreditors;
+  el.fixedCostForm.elements.newCreditorName.required = hasMethod && !isCard && !hasCreditors;
   el.fixedCostForm.elements.owner.required = hasMethod && !isCard;
 }
 
@@ -1780,13 +1784,14 @@ async function addFixedCost(event) {
   const form = new FormData(event.currentTarget);
   const paymentMethod = String(el.fixedCostForm.elements.paymentMethod.value || "");
   const card = paymentMethod === "Cartão de crédito" ? getCreditCard(String(form.get("cardId"))) : null;
-  const creditorId = card?.creditorId || String(form.get("creditorId") || "");
+  const newCreditorName = String(form.get("newCreditorName") || "").trim();
+  const creditorId = card?.creditorId || String(form.get("creditorId") || "") || ensureCreditorForFixedCost(newCreditorName, paymentMethod);
   if (!paymentMethod) {
     showToast("Selecione o metodo de pagamento.");
     return;
   }
   if (!creditorId) {
-    showToast("Cadastre e selecione um credor.");
+    showToast(paymentMethod === "Cartão de crédito" ? "Cadastre e selecione um cartao/crediario." : "Informe ou cadastre um credor.");
     return;
   }
   const item = {
@@ -1810,6 +1815,20 @@ async function addFixedCost(event) {
   }
   closeFixedCostDialog();
   await saveState(editing ? "Custo fixo atualizado." : "Custo fixo cadastrado.");
+}
+
+function ensureCreditorForFixedCost(name, paymentMethod) {
+  if (!name) return "";
+  const existing = state.data.creditors.find((creditor) => creditor.name.toLowerCase() === name.toLowerCase());
+  if (existing) return existing.id;
+  const creditor = {
+    id: crypto.randomUUID(),
+    name,
+    paymentForms: [paymentMethod].filter(Boolean),
+    logoUrl: ""
+  };
+  state.data.creditors.push(creditor);
+  return creditor.id;
 }
 
 async function deleteFixedCost(id) {

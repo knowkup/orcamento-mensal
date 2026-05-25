@@ -80,6 +80,8 @@ Data inicial: 2026-05-24
 
 ## Mudancas feitas
 
+- Corrigido bug na aba `Custos Fixos`: o botao `Novo custo fixo` passava o evento de clique como ID de edicao, fazendo o salvamento entrar como atualizacao e nao inserir novos custos.
+- Ajustado o formulario de `Custos Fixos` para permitir informar um novo credor quando ainda nao ha credores cadastrados, evitando que o submit fique bloqueado silenciosamente por um select vazio.
 - Criado arquivo de contexto inicial.
 - Criado `CONTEXTO_CODEX.md`.
 - Criado `.gitignore`.
