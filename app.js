@@ -429,13 +429,16 @@ function renderMonthlyControl() {
     .filter((row) => row.kind === "expense")
     .map((row) => ({ row, value: row.values[month] || 0 }))
     .filter((item) => item.value > 0 || rowHasAnyPayment(item.row, month));
+  const pendingEntries = entries.filter((item) => !isIncomeReceived(`${item.row.id}:${month}`));
+  const pendingExits = exits.filter((item) => rowOutstanding(item.row, month, item.value) > 0);
+  const realizedEntries = entries.filter((item) => isIncomeReceived(`${item.row.id}:${month}`));
+  const realizedExits = exits.filter((item) => rowHasAnyPayment(item.row, month));
   const received = entries.reduce((total, item) => total + (isIncomeReceived(`${item.row.id}:${month}`) ? receivedAmount(`${item.row.id}:${month}`, item.value) : 0), 0);
   const paid = exits.reduce((total, item) => total + rowPaidAmount(item.row, month, item.value), 0);
-  const expectedIncome = entries.reduce((total, item) => total + item.value, 0);
-  const expectedExpense = exits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
+  const expectedIncome = pendingEntries.reduce((total, item) => total + item.value, 0);
+  const expectedExpense = pendingExits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
   const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
-  const hasPending = entries.some((item) => !isIncomeReceived(`${item.row.id}:${month}`))
-    || exits.some((item) => rowOutstanding(item.row, month, item.value) > 0);
+  const hasPending = pendingEntries.length > 0 || pendingExits.length > 0;
 
   el.monthlyReference.textContent = formatMonthLong(month);
   el.closeMonthButton.disabled = hasPending;
@@ -453,14 +456,21 @@ function renderMonthlyControl() {
         <span>Entradas previstas</span>
         <strong>${currency.format(expectedIncome)}</strong>
       </div>
-      ${monthlyItems(entries, month, "income")}
+      ${monthlyItems(pendingEntries, month, "income")}
     </section>
     <section class="monthly-column expense-column">
       <div class="monthly-column-head">
         <span>Saídas previstas</span>
         <strong>-${currency.format(expectedExpense)}</strong>
       </div>
-      ${monthlyItems(exits, month, "expense")}
+      ${monthlyItems(pendingExits, month, "expense")}
+    </section>
+    <section class="monthly-column realized-column">
+      <div class="monthly-column-head">
+        <span>Realizado no mÃªs</span>
+        <strong>${currency.format(received - paid)}</strong>
+      </div>
+      ${monthlyRealizedItems(realizedEntries, realizedExits, month)}
     </section>
   `;
 
@@ -482,19 +492,26 @@ function renderMonthlyControl() {
   el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
 
-function monthlyItems(items, month, kind) {
+function monthlyItems(items, month, kind, scope = "pending") {
   if (!items.length) return `<div class="empty-state compact">Nada previsto para este mês.</div>`;
   return items
     .sort((a, b) => compareMonthlyEntries(a, b, month, kind))
     .map(({ row, value }) => {
     const key = `${row.id}:${month}`;
     const done = kind === "income" ? isIncomeReceived(key) : isOccurrencePaid(key);
-    const displayValue = kind === "income" && done ? receivedAmount(key, value) : kind === "expense" ? (done ? paidAmount(key, value) : rowOutstanding(row, month, value)) : value;
+    const displayValue = kind === "income" && done
+      ? receivedAmount(key, value)
+      : kind === "expense"
+        ? (scope === "realized" ? rowPaidAmount(row, month, value) : (done ? paidAmount(key, value) : rowOutstanding(row, month, value)))
+        : value;
     const attr = kind === "income"
       ? (done ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
       : (done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
     const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
     const buttonLabel = kind === "income" ? (done ? "Cancelar Recebimento" : "Receber") : (done ? "Excluir pagamento" : "Pagar");
+    const actionButton = scope === "realized" && kind === "expense" && !done
+      ? ""
+      : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
     const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : `<span class="creditor-logo">${escapeHtml(initials(row.origin || row.label))}</span>`;
     const deleteButton = isManualPlannedRow(row)
       ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
@@ -502,7 +519,9 @@ function monthlyItems(items, month, kind) {
     const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
     const dueDate = rowDueDate(row, month);
     const accountCount = monthlyAccountCount(row, month);
-    const statusLabel = done ? (kind === "income" ? "Recebido" : "Pago") : "Pendente";
+    const statusLabel = kind === "income"
+      ? (done ? "Recebido" : "Pendente")
+      : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""} ${kind === "income" ? "income-item" : "expense-item"}">
         <div class="entity-cell monthly-entity">
@@ -517,13 +536,24 @@ function monthlyItems(items, month, kind) {
         <div class="monthly-field compact"><span>Status</span><strong>${statusLabel}</strong></div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
-          <button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>
+          ${actionButton}
           ${deleteButton}
         </div>
         ${breakdown}
       </article>
     `;
   }).join("");
+}
+
+function monthlyRealizedItems(entries, exits, month) {
+  if (!entries.length && !exits.length) return `<div class="empty-state compact">Nada realizado neste mÃªs.</div>`;
+  const entryRows = entries.length
+    ? `<div class="realized-group"><span>Recebimentos</span>${monthlyItems(entries, month, "income", "realized")}</div>`
+    : "";
+  const exitRows = exits.length
+    ? `<div class="realized-group"><span>Pagamentos</span>${monthlyItems(exits, month, "expense", "realized")}</div>`
+    : "";
+  return `${entryRows}${exitRows}`;
 }
 
 function monthlyAccountCount(row, month) {
@@ -595,6 +625,15 @@ function rowHasAnyPayment(row, month) {
   return isOccurrencePaid(`${row.id}:${month}`) || (row.children?.[month] || []).some((item) => isOccurrencePaid(item.key));
 }
 
+function rowReceivedAmount(row, month, fallback) {
+  const key = `${row.id}:${month}`;
+  return isIncomeReceived(key) ? receivedAmount(key, fallback) : 0;
+}
+
+function rowIncomeOutstanding(row, month, value) {
+  return Math.max(0, Number(value || 0) - rowReceivedAmount(row, month, value));
+}
+
 function rowPaidAmount(row, month, fallback) {
   const key = `${row.id}:${month}`;
   if (isOccurrencePaid(key)) return paidAmount(key, fallback);
@@ -605,6 +644,19 @@ function rowPaidAmount(row, month, fallback) {
 
 function rowOutstanding(row, month, value) {
   return Math.max(0, Number(value || 0) - rowPaidAmount(row, month, value));
+}
+
+function adjustAccountBalance(delta) {
+  state.data.accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0) + Number(delta || 0);
+}
+
+function applyCashMovement(key, amount) {
+  state.data.appliedCashMovements = { ...(state.data.appliedCashMovements || {}) };
+  const previous = Number(state.data.appliedCashMovements[key] || 0);
+  const next = Number(amount || 0);
+  adjustAccountBalance(next - previous);
+  if (next) state.data.appliedCashMovements[key] = next;
+  else delete state.data.appliedCashMovements[key];
 }
 
 function accountBalanceCard(value) {
@@ -1029,7 +1081,7 @@ function differenceValue(line, months, month, index) {
 function buildTotals(rows, months) {
   let accumulated = Number(state.data.accountBalance || state.data.initialBalance || 0);
   return months.map((month) => {
-    const income = rows.filter((row) => row.kind === "income").reduce((total, row) => total + (row.values[month] || 0), 0);
+    const income = rows.filter((row) => row.kind === "income").reduce((total, row) => total + rowIncomeOutstanding(row, month, row.values[month] || 0), 0);
     const expense = rows.filter((row) => row.kind === "expense").reduce((total, row) => total + rowOutstanding(row, month, row.values[month] || 0), 0);
     const balance = income - expense;
     accumulated += balance;
@@ -1069,12 +1121,12 @@ function isManualPlannedRow(row) {
 function projectionCell(row, month) {
   const value = row.values[month] || 0;
   const key = `${row.id}:${month}`;
-  const paid = isOccurrencePaid(key);
-  const displayValue = row.kind === "expense" ? rowOutstanding(row, month, value) : value;
-  if (!displayValue && !paid) return `<td class="muted-cell">-</td>`;
+  const done = row.kind === "expense" ? isOccurrencePaid(key) : isIncomeReceived(key);
+  const displayValue = row.kind === "expense" ? rowOutstanding(row, month, value) : rowIncomeOutstanding(row, month, value);
+  if (!displayValue && !done) return `<td class="muted-cell">-</td>`;
   const sign = row.kind === "income" ? "" : "-";
   const className = row.kind === "income" ? "positive" : "negative";
-  const status = paid && row.kind === "expense" ? `<small class="cell-status">pago no controle</small>` : "";
+  const status = done ? `<small class="cell-status">${row.kind === "income" ? "recebido no controle" : "pago no controle"}</small>` : "";
   return `<td><span class="${className}">${sign}${currency.format(displayValue)}</span>${status}</td>`;
 }
 
@@ -1851,6 +1903,7 @@ function markCarOccurrencePaid(payment) {
     state.data.paidAmounts[key] = Number(payment.paidAmount || payment.value || 0);
     state.data.paidDates[key] = payment.paymentDate || todayIsoDate();
   });
+  applyCashMovement(keys[0], -Number(payment.paidAmount || payment.value || 0));
 }
 
 function clearCarOccurrencePayment(payment) {
@@ -1861,6 +1914,7 @@ function clearCarOccurrencePayment(payment) {
     if (state.data.paidAmounts) delete state.data.paidAmounts[key];
     if (state.data.paidDates) delete state.data.paidDates[key];
   });
+  applyCashMovement(keys[0], 0);
 }
 
 function openFgtsDialog(id = null) {
@@ -2387,6 +2441,7 @@ async function registerPaidOccurrence(key, amount, paymentDate) {
   state.data.paidDates = { ...(state.data.paidDates || {}) };
   if (value != null) state.data.paidAmounts[key] = value;
   state.data.paidDates[key] = paymentDate || todayIsoDate();
+  applyCashMovement(key, -paidAmount(key, value || 0));
   syncExpenseSource(key, true, value, state.data.paidDates[key]);
   await saveState("Pagamento registrado.");
 }
@@ -2395,6 +2450,7 @@ async function cancelPaidOccurrence(key) {
   state.data.paidOccurrences = (state.data.paidOccurrences || []).filter((item) => item !== key);
   if (state.data.paidAmounts) delete state.data.paidAmounts[key];
   if (state.data.paidDates) delete state.data.paidDates[key];
+  applyCashMovement(key, 0);
   syncExpenseSource(key, false);
   await saveState("Pagamento cancelado.");
 }
@@ -2413,6 +2469,7 @@ async function toggleReceivedOccurrence(key) {
 async function cancelReceivedOccurrence(key) {
   state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((item) => item !== key);
   if (state.data.receivedAmounts) delete state.data.receivedAmounts[key];
+  applyCashMovement(key, 0);
   await saveState("Recebimento cancelado.");
 }
 
@@ -2469,9 +2526,7 @@ async function closeMonth() {
     return;
   }
   if (!window.confirm(`Fechar ${formatMonthLong(month)} e levar o saldo atual para o próximo mês?`)) return;
-  const received = entries.reduce((total, row) => total + receivedAmount(`${row.id}:${month}`, row.values[month] || 0), 0);
-  const paid = exits.reduce((total, row) => total + rowPaidAmount(row, month, row.values[month] || 0), 0);
-  state.data.accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0) + received - paid;
+  state.data.accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
   state.data.initialBalance = state.data.accountBalance;
   state.data.closedMonths = [...new Set([...(state.data.closedMonths || []), month])];
   await saveState("Mês fechado e saldo levado para o próximo cálculo.");
@@ -2512,8 +2567,10 @@ async function confirmReceivedOccurrence(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const key = String(form.get("key"));
+  const amount = parseCurrencyInput(form.get("amount"));
   state.data.receivedOccurrences = [...new Set([...(state.data.receivedOccurrences || []), key])];
-  state.data.receivedAmounts = { ...(state.data.receivedAmounts || {}), [key]: parseCurrencyInput(form.get("amount")) };
+  state.data.receivedAmounts = { ...(state.data.receivedAmounts || {}), [key]: amount };
+  applyCashMovement(key, amount);
   el.receiveDialog.close();
   await saveState("Entrada recebida.");
 }
@@ -2631,6 +2688,7 @@ function normalizeData(data) {
     paidAmounts: data.paidAmounts || {},
     paidDates: data.paidDates || {},
     receivedAmounts: data.receivedAmounts || {},
+    appliedCashMovements: data.appliedCashMovements || {},
     car: { ...defaults.car, ...(data.car || {}) },
     fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) }
   };
@@ -2644,7 +2702,24 @@ function normalizeData(data) {
     dueDate: payment.dueDate || (payment.month ? `${payment.month}-01` : "")
   }));
   normalized.car.firstDueDate = normalized.car.firstDueDate || normalized.car.payments[0]?.dueDate || "";
+  if (!data.appliedCashMovements) migrateCashMovements(normalized);
   return normalized;
+}
+
+function migrateCashMovements(data) {
+  const movements = {};
+  (data.receivedOccurrences || []).forEach((key) => {
+    const amount = Number(data.receivedAmounts?.[key] || 0);
+    if (amount) movements[key] = amount;
+  });
+  (data.paidOccurrences || []).forEach((key) => {
+    if (key.startsWith("child-car|")) return;
+    const amount = Number(data.paidAmounts?.[key] || 0);
+    if (amount) movements[key] = -amount;
+  });
+  const delta = Object.values(movements).reduce((total, value) => total + Number(value || 0), 0);
+  data.accountBalance = Number(data.accountBalance || data.initialBalance || 0) + delta;
+  data.appliedCashMovements = movements;
 }
 
 function createDefaultData() {
@@ -2668,6 +2743,8 @@ function createDefaultData() {
     receivedOccurrences: [],
     paidAmounts: {},
     paidDates: {},
+    receivedAmounts: {},
+    appliedCashMovements: {},
     car: {
       name: "Carro",
       creditorId: "",
