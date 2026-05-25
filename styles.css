@@ -900,6 +900,7 @@ svg {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 13px 14px;
   border-bottom: 1px solid var(--line);
@@ -940,6 +941,39 @@ svg {
   min-height: 34px;
   width: 34px;
   padding: 0;
+}
+
+.monthly-breakdown {
+  width: 100%;
+  border-top: 1px dashed var(--line);
+  padding-top: 8px;
+}
+
+.monthly-breakdown summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.monthly-breakdown-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.monthly-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+  padding: 8px 10px;
+}
+
+.monthly-breakdown-row.done {
+  background: rgba(53, 184, 121, 0.08);
 }
 
 .occurrence-list,
@@ -1497,6 +1531,7 @@ select {
   .form-row,
   .occurrence-actions,
   .monthly-item,
+  .monthly-breakdown-row,
   .monthly-item-action,
   .debt-action {
     flex-direction: column;

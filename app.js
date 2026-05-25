@@ -85,6 +85,10 @@ const el = {
   receiveForm: document.querySelector("#receiveForm"),
   receiveTitle: document.querySelector("#receiveTitle"),
   closeReceiveButton: document.querySelector("#closeReceiveButton"),
+  expensePaymentDialog: document.querySelector("#expensePaymentDialog"),
+  expensePaymentForm: document.querySelector("#expensePaymentForm"),
+  expensePaymentTitle: document.querySelector("#expensePaymentTitle"),
+  closeExpensePaymentButton: document.querySelector("#closeExpensePaymentButton"),
   accountBalanceDialog: document.querySelector("#accountBalanceDialog"),
   accountBalanceForm: document.querySelector("#accountBalanceForm"),
   closeAccountBalanceButton: document.querySelector("#closeAccountBalanceButton"),
@@ -155,6 +159,8 @@ function bindEvents() {
   el.closeCarPaymentButton.addEventListener("click", () => el.carPaymentDialog.close());
   el.receiveForm.addEventListener("submit", confirmReceivedOccurrence);
   el.closeReceiveButton.addEventListener("click", () => el.receiveDialog.close());
+  el.expensePaymentForm.addEventListener("submit", confirmPaidOccurrence);
+  el.closeExpensePaymentButton.addEventListener("click", () => el.expensePaymentDialog.close());
   el.accountBalanceForm.addEventListener("submit", saveAccountBalance);
   el.closeAccountBalanceButton.addEventListener("click", () => el.accountBalanceDialog.close());
   bindMoneyInputs();
@@ -338,7 +344,7 @@ function render() {
 
 function renderProjection() {
   const months = nextMonths(12);
-  const rows = buildProjectionRows(months);
+  const rows = buildProjectionRows(months, true);
   const totals = buildTotals(rows, months);
   const current = totals[0];
 
@@ -422,14 +428,14 @@ function renderMonthlyControl() {
   const exits = rows
     .filter((row) => row.kind === "expense")
     .map((row) => ({ row, value: row.values[month] || 0 }))
-    .filter((item) => item.value > 0 || isOccurrencePaid(`${item.row.id}:${month}`));
+    .filter((item) => item.value > 0 || rowHasAnyPayment(item.row, month));
   const received = entries.reduce((total, item) => total + (isIncomeReceived(`${item.row.id}:${month}`) ? receivedAmount(`${item.row.id}:${month}`, item.value) : 0), 0);
-  const paid = exits.reduce((total, item) => total + (isOccurrencePaid(`${item.row.id}:${month}`) ? item.value : 0), 0);
+  const paid = exits.reduce((total, item) => total + rowPaidAmount(item.row, month, item.value), 0);
   const expectedIncome = entries.reduce((total, item) => total + item.value, 0);
   const expectedExpense = exits.reduce((total, item) => total + item.value, 0);
   const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
   const hasPending = entries.some((item) => !isIncomeReceived(`${item.row.id}:${month}`))
-    || exits.some((item) => !isOccurrencePaid(`${item.row.id}:${month}`));
+    || exits.some((item) => rowOutstanding(item.row, month, item.value) > 0);
 
   el.monthlyReference.textContent = formatMonthLong(month);
   el.closeMonthButton.disabled = hasPending;
@@ -461,8 +467,14 @@ function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-receive-income]").forEach((button) => {
     button.addEventListener("click", () => openReceiveDialog(button.dataset.receiveIncome, button.dataset.expected));
   });
-  el.monthlyBoard.querySelectorAll("[data-pay-occurrence]").forEach((button) => {
-    button.addEventListener("click", () => togglePaidOccurrence(button.dataset.payOccurrence));
+  el.monthlyBoard.querySelectorAll("[data-cancel-income]").forEach((button) => {
+    button.addEventListener("click", () => cancelReceivedOccurrence(button.dataset.cancelIncome));
+  });
+  el.monthlyBoard.querySelectorAll("[data-pay-expense]").forEach((button) => {
+    button.addEventListener("click", () => openExpensePaymentDialog(button.dataset.payExpense, button.dataset.expected, button.dataset.label));
+  });
+  el.monthlyBoard.querySelectorAll("[data-cancel-payment]").forEach((button) => {
+    button.addEventListener("click", () => cancelPaidOccurrence(button.dataset.cancelPayment));
   });
   el.monthlyBoard.querySelectorAll("[data-delete-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => deleteManualPlanned(button.dataset.deleteManualPlan));
@@ -473,17 +485,20 @@ function renderMonthlyControl() {
 function monthlyItems(items, month, kind) {
   if (!items.length) return `<div class="empty-state compact">Nada previsto para este mês.</div>`;
   return items
-    .sort((a, b) => ownerRank(a.row.owner) - ownerRank(b.row.owner))
+    .sort((a, b) => compareMonthlyEntries(a, b, month))
     .map(({ row, value }) => {
     const key = `${row.id}:${month}`;
     const done = kind === "income" ? isIncomeReceived(key) : isOccurrencePaid(key);
-    const displayValue = kind === "income" && done ? receivedAmount(key, value) : value;
-    const attr = kind === "income" ? `data-receive-income="${key}" data-expected="${value}"` : `data-pay-occurrence="${key}"`;
-    const buttonLabel = kind === "income" ? (done ? "Recebido" : "Receber") : (done ? "Pago" : "Pagar");
+    const displayValue = kind === "income" && done ? receivedAmount(key, value) : kind === "expense" && done ? paidAmount(key, value) : value;
+    const attr = kind === "income"
+      ? (done ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
+      : (done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
+    const buttonLabel = kind === "income" ? (done ? "Cancelar Recebimento" : "Receber") : (done ? "Cancelar Pagamento" : "Pagar");
     const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : `<span class="creditor-logo">${escapeHtml(initials(row.origin || row.label))}</span>`;
     const deleteButton = isManualPlannedRow(row)
       ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
       : "";
+    const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""}">
         <div class="entity-cell">
@@ -498,9 +513,81 @@ function monthlyItems(items, month, kind) {
           <button class="small-button ${kind === "expense" ? "pay" : ""}" type="button" ${attr}>${buttonLabel}</button>
           ${deleteButton}
         </div>
+        ${breakdown}
       </article>
     `;
   }).join("");
+}
+
+function monthlyBreakdown(row, month) {
+  const children = (row.children?.[month] || []).filter((item) => Number(item.value || 0) > 0 || isOccurrencePaid(item.key));
+  if (!children.length) return "";
+  return `
+    <details class="monthly-breakdown">
+      <summary>${children.length} conta(s) neste valor</summary>
+      <div class="monthly-breakdown-list">
+        ${children
+          .sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")) || a.label.localeCompare(b.label, "pt-BR"))
+          .map((item) => {
+            const done = isOccurrencePaid(item.key);
+            const displayValue = done ? paidAmount(item.key, item.value) : item.value;
+            const attr = done
+              ? `data-cancel-payment="${item.key}"`
+              : `data-pay-expense="${item.key}" data-expected="${item.value}" data-label="${escapeHtml(item.label)}"`;
+            return `
+              <div class="monthly-breakdown-row ${done ? "done" : ""}">
+                <div>
+                  <strong>${escapeHtml(item.label)}</strong>
+                  <span>${item.dueDate ? formatDate(item.dueDate) : formatMonthLong(month)}</span>
+                </div>
+                <div class="monthly-item-action">
+                  <strong class="negative">-${currency.format(displayValue)}</strong>
+                  <button class="small-button pay" type="button" ${attr}>${done ? "Cancelar Pagamento" : "Pagar"}</button>
+                </div>
+              </div>
+            `;
+          }).join("")}
+      </div>
+    </details>
+  `;
+}
+
+function compareMonthlyEntries(a, b, month) {
+  return compareRowsByDueDate(a.row, b.row, month)
+    || String(a.row.label || "").localeCompare(String(b.row.label || ""), "pt-BR");
+}
+
+function compareRowsByDueDate(a, b, month) {
+  return rowDueDate(a, month).localeCompare(rowDueDate(b, month))
+    || ownerRank(a.owner) - ownerRank(b.owner)
+    || String(a.origin || "").localeCompare(String(b.origin || ""), "pt-BR");
+}
+
+function rowDueDate(row, month) {
+  return row.dueDates?.[month] || firstDueDate(row.children?.[month]) || `${month}-01`;
+}
+
+function firstDueDate(children = []) {
+  return children
+    .map((item) => item.dueDate)
+    .filter(Boolean)
+    .sort()[0] || "";
+}
+
+function rowHasAnyPayment(row, month) {
+  return isOccurrencePaid(`${row.id}:${month}`) || (row.children?.[month] || []).some((item) => isOccurrencePaid(item.key));
+}
+
+function rowPaidAmount(row, month, fallback) {
+  const key = `${row.id}:${month}`;
+  if (isOccurrencePaid(key)) return paidAmount(key, fallback);
+  return (row.children?.[month] || []).reduce((total, item) => (
+    total + (isOccurrencePaid(item.key) ? paidAmount(item.key, item.value) : 0)
+  ), 0);
+}
+
+function rowOutstanding(row, month, value) {
+  return Math.max(0, Number(value || 0) - rowPaidAmount(row, month, value));
 }
 
 function accountBalanceCard(value) {
@@ -526,7 +613,8 @@ function buildProjectionRows(months, keepPaidValues = false) {
       label: line.label,
       origin: line.origin,
       sourceLabel: "",
-      values: valuesFromMonthlyMap(line.values, months)
+      values: valuesFromMonthlyMap(line.values, months),
+      dueDates: line.date ? { [line.date.slice(0, 7)]: line.date } : {}
     });
   });
   state.data.recurringIncomes.forEach((income) => {
@@ -537,7 +625,8 @@ function buildProjectionRows(months, keepPaidValues = false) {
       label: income.label,
       origin: income.origin,
       sourceLabel: "",
-      values: recurringIncomeValues(income, months)
+      values: recurringIncomeValues(income, months),
+      dueDates: Object.fromEntries(months.map((month) => [month, `${month}-01`]))
     });
   });
 
@@ -555,7 +644,7 @@ function buildProjectionRows(months, keepPaidValues = false) {
 
   appendDynamicProjectionRows(rows, months, keepPaidValues);
   appendKahDifferenceRow(rows, months);
-  return rows.sort((a, b) => ownerRank(a.owner) - ownerRank(b.owner));
+  return rows.sort((a, b) => compareRowsByDueDate(a, b, months[0]));
 }
 
 function valuesForProjectionLine(line, months, keepPaidValues = false) {
@@ -619,8 +708,12 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
   const installmentGroups = uniqueGroups(state.data.installments, (item) => groupKey(item));
   installmentGroups.forEach((group) => {
     const installmentValues = {};
+    const installmentChildren = {};
+    const installmentDueDates = {};
     months.forEach((month, index) => {
       installmentValues[month] = installmentTotalForGroup(group, index);
+      installmentChildren[month] = installmentChildrenForGroup(group, index, month);
+      installmentDueDates[month] = firstDueDate(installmentChildren[month]);
       const key = `auto-installments-${group.id}:${month}`;
       if (!keepPaidValues && isOccurrencePaid(key)) installmentValues[month] = 0;
     });
@@ -635,15 +728,21 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
         label: group.name,
         origin: getCreditorName(group.creditorId),
         sourceLabel: "",
-        values: installmentValues
+        values: installmentValues,
+        dueDates: installmentDueDates,
+        children: installmentChildren
       });
     }
   });
 
   uniqueFixedCostGroups().forEach((group) => {
     const fixedValues = {};
+    const fixedChildren = {};
+    const fixedDueDates = {};
     months.forEach((month) => {
       fixedValues[month] = fixedTotalForGroup(group.key);
+      fixedChildren[month] = fixedChildrenForGroup(group.key, month);
+      fixedDueDates[month] = firstDueDate(fixedChildren[month]);
       const key = `auto-fixed-${group.id}:${month}`;
       if (!keepPaidValues && isOccurrencePaid(key)) fixedValues[month] = 0;
     });
@@ -658,7 +757,9 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
         label: group.label,
         origin: group.origin,
         sourceLabel: "",
-        values: fixedValues
+        values: fixedValues,
+        dueDates: fixedDueDates,
+        children: fixedChildren
       });
     }
   });
@@ -680,18 +781,23 @@ function appendDynamicProjectionRows(rows, months, keepPaidValues) {
         label: item.description || "Lançamento planejado",
         origin: getCreditorName(item.creditorId),
         sourceLabel: "",
-        values: plannedValues
+        values: plannedValues,
+        dueDates: { [plannedMonth(item)]: item.date || `${plannedMonth(item)}-01` }
       });
     }
   });
 
   const carValues = {};
+  const carChildren = {};
+  const carDueDates = {};
   months.forEach((month) => {
     carValues[month] = carValueForMonth(month);
+    carChildren[month] = carChildrenForMonth(month);
+    carDueDates[month] = firstDueDate(carChildren[month]);
     const key = `auto-car:${month}`;
     if (!keepPaidValues && isOccurrencePaid(key)) carValues[month] = 0;
   });
-  if (Object.values(carValues).some(Boolean)) rows.push({ id: "auto-car", kind: "expense", owner: "Felipe", creditorId: state.data.car.creditorId, label: state.data.car.name || "Carro", origin: state.data.car.creditorId ? getCreditorName(state.data.car.creditorId) : "Financiamento", sourceLabel: "", values: carValues });
+  if (Object.values(carValues).some(Boolean)) rows.push({ id: "auto-car", kind: "expense", owner: "Felipe", creditorId: state.data.car.creditorId, label: state.data.car.name || "Carro", origin: state.data.car.creditorId ? getCreditorName(state.data.car.creditorId) : "Financiamento", sourceLabel: "", values: carValues, dueDates: carDueDates, children: carChildren });
 }
 
 function groupKey(item) {
@@ -724,6 +830,21 @@ function installmentTotalForGroup(group, monthIndex) {
       const left = Math.max(0, Number(item.totalInstallments) - Number(item.paidInstallments));
       return monthIndex < left ? total + Number(item.amount) : total;
     }, 0);
+}
+
+function installmentChildrenForGroup(group, monthIndex, month) {
+  return state.data.installments
+    .filter((item) => groupKey(item) === group.key && item.active !== false)
+    .flatMap((item) => {
+      const number = Number(item.paidInstallments || 0) + monthIndex + 1;
+      if (number > Number(item.totalInstallments || 0)) return [];
+      return [{
+        key: `child-installment|${item.id}|${number}:${month}`,
+        label: `${item.item || "Parcelamento"} ${number}/${item.totalInstallments}`,
+        value: Number(item.amount || 0),
+        dueDate: installmentDueDate(item.purchaseDate || `${month}-01`, number - 1)
+      }];
+    });
 }
 
 function appendKahDifferenceRow(rows, months) {
@@ -785,7 +906,7 @@ function plannedTotal(origin, month) {
 function carValueForMonth(month) {
   ensureCarPayments();
   return state.data.car.payments
-    .filter((item) => carPaymentMonth(item) === month && item.status !== "Pago")
+    .filter((item) => carPaymentMonth(item) === month)
     .reduce((total, item) => total + Number(item.value || 0), 0);
 }
 
@@ -833,6 +954,29 @@ function fixedTotalForGroup(key) {
   return state.data.fixedCosts
     .filter((item) => item.includeInProjection !== false && fixedCostGroupKey(item) === key)
     .reduce((total, item) => total + Number(item.amount || 0), 0);
+}
+
+function fixedChildrenForGroup(key, month) {
+  return state.data.fixedCosts
+    .filter((item) => item.includeInProjection !== false && fixedCostGroupKey(item) === key)
+    .map((item) => ({
+      key: `child-fixed|${item.id}:${month}`,
+      label: item.name || "Custo fixo",
+      value: Number(item.amount || 0),
+      dueDate: `${month}-${String(item.dueDay || 1).padStart(2, "0")}`
+    }));
+}
+
+function carChildrenForMonth(month) {
+  ensureCarPayments();
+  return state.data.car.payments
+    .filter((item) => carPaymentMonth(item) === month)
+    .map((item) => ({
+      key: `child-car|${item.id}:${month}`,
+      label: `${state.data.car.name || "Carro"} ${item.number || ""}`.trim(),
+      value: Number(item.value || 0),
+      dueDate: item.dueDate || `${month}-01`
+    }));
 }
 
 function differenceValue(line, months, month, index) {
@@ -2129,24 +2273,67 @@ async function deleteManualPlanned(id) {
       if (key.startsWith(`${id}:`)) delete state.data.receivedAmounts[key];
     });
   }
+  ["paidAmounts", "paidDates"].forEach((field) => {
+    if (!state.data[field]) return;
+    Object.keys(state.data[field]).forEach((key) => {
+      if (key.startsWith(`${id}:`)) delete state.data[field][key];
+    });
+  });
   await saveState("Lançamento planejado excluído.");
 }
 
 async function togglePaidOccurrence(key) {
   const paid = state.data.paidOccurrences || [];
   if (paid.includes(key)) {
-    state.data.paidOccurrences = paid.filter((item) => item !== key);
-    syncExpenseSource(key, false);
-    await saveState("Ocorrência reaberta.");
+    await cancelPaidOccurrence(key);
   } else {
-    state.data.paidOccurrences = [...paid, key];
-    syncExpenseSource(key, true);
-    await saveState("Ocorrência baixada.");
+    await registerPaidOccurrence(key, null, todayIsoDate());
   }
 }
 
 function isOccurrencePaid(key) {
   return (state.data.paidOccurrences || []).includes(key);
+}
+
+function paidAmount(key, fallback) {
+  return Number(state.data.paidAmounts?.[key] ?? fallback ?? 0);
+}
+
+function openExpensePaymentDialog(key, expected, label) {
+  el.expensePaymentTitle.textContent = label || "Registrar pagamento";
+  el.expensePaymentForm.elements.key.value = key;
+  el.expensePaymentForm.elements.paidAmount.value = formatCurrencyInput(paidAmount(key, Number(expected || 0)));
+  el.expensePaymentForm.elements.paymentDate.value = state.data.paidDates?.[key] || todayIsoDate();
+  el.expensePaymentDialog.showModal();
+}
+
+async function confirmPaidOccurrence(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const key = String(form.get("key"));
+  const amount = parseCurrencyInput(form.get("paidAmount"));
+  const paymentDate = String(form.get("paymentDate") || todayIsoDate());
+  el.expensePaymentDialog.close();
+  await registerPaidOccurrence(key, amount, paymentDate);
+}
+
+async function registerPaidOccurrence(key, amount, paymentDate) {
+  const value = amount == null ? undefined : Number(amount || 0);
+  state.data.paidOccurrences = [...new Set([...(state.data.paidOccurrences || []), key])];
+  state.data.paidAmounts = { ...(state.data.paidAmounts || {}) };
+  state.data.paidDates = { ...(state.data.paidDates || {}) };
+  if (value != null) state.data.paidAmounts[key] = value;
+  state.data.paidDates[key] = paymentDate || todayIsoDate();
+  syncExpenseSource(key, true, value, state.data.paidDates[key]);
+  await saveState("Pagamento registrado.");
+}
+
+async function cancelPaidOccurrence(key) {
+  state.data.paidOccurrences = (state.data.paidOccurrences || []).filter((item) => item !== key);
+  if (state.data.paidAmounts) delete state.data.paidAmounts[key];
+  if (state.data.paidDates) delete state.data.paidDates[key];
+  syncExpenseSource(key, false);
+  await saveState("Pagamento cancelado.");
 }
 
 async function toggleReceivedOccurrence(key) {
@@ -2160,14 +2347,35 @@ async function toggleReceivedOccurrence(key) {
   }
 }
 
-function syncExpenseSource(key, paid) {
-  const [rowId, month] = key.split(":");
+async function cancelReceivedOccurrence(key) {
+  state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((item) => item !== key);
+  if (state.data.receivedAmounts) delete state.data.receivedAmounts[key];
+  await saveState("Recebimento cancelado.");
+}
+
+function splitOccurrenceKey(key) {
+  const index = String(key).lastIndexOf(":");
+  if (index < 0) return { rowId: String(key), month: "" };
+  return { rowId: String(key).slice(0, index), month: String(key).slice(index + 1) };
+}
+
+function syncExpenseSource(key, paid, amount, paymentDate) {
+  const { rowId, month } = splitOccurrenceKey(key);
   if (rowId === "auto-car") {
     const payment = state.data.car.payments.find((item) => carPaymentMonth(item) === month);
     if (payment) {
       payment.status = paid ? "Pago" : "Pendente";
-      payment.paidAmount = paid ? Number(payment.value || 0) : 0;
-      payment.paymentDate = paid ? todayIsoDate() : "";
+      payment.paidAmount = paid ? Number(amount ?? payment.value ?? 0) : 0;
+      payment.paymentDate = paid ? (paymentDate || todayIsoDate()) : "";
+    }
+  }
+  if (rowId.startsWith("child-car|")) {
+    const paymentId = rowId.split("|")[1];
+    const payment = state.data.car.payments.find((item) => item.id === paymentId);
+    if (payment) {
+      payment.status = paid ? "Pago" : "Pendente";
+      payment.paidAmount = paid ? Number(amount ?? payment.value ?? 0) : 0;
+      payment.paymentDate = paid ? (paymentDate || todayIsoDate()) : "";
     }
   }
   if (rowId.startsWith("auto-installments-")) {
@@ -2190,16 +2398,16 @@ async function closeMonth() {
   const month = nextMonths(1)[0];
   const rows = buildProjectionRows([month], true);
   const entries = rows.filter((row) => row.kind === "income" && (row.values[month] || 0) > 0);
-  const exits = rows.filter((row) => row.kind === "expense" && ((row.values[month] || 0) > 0 || isOccurrencePaid(`${row.id}:${month}`)));
+  const exits = rows.filter((row) => row.kind === "expense" && ((row.values[month] || 0) > 0 || rowHasAnyPayment(row, month)));
   const hasPending = entries.some((row) => !isIncomeReceived(`${row.id}:${month}`))
-    || exits.some((row) => !isOccurrencePaid(`${row.id}:${month}`));
+    || exits.some((row) => rowOutstanding(row, month, row.values[month] || 0) > 0);
   if (hasPending) {
     showToast("Baixe todas as entradas e saídas antes de fechar.");
     return;
   }
   if (!window.confirm(`Fechar ${formatMonthLong(month)} e levar o saldo atual para o próximo mês?`)) return;
   const received = entries.reduce((total, row) => total + receivedAmount(`${row.id}:${month}`, row.values[month] || 0), 0);
-  const paid = exits.reduce((total, row) => total + Number(row.values[month] || 0), 0);
+  const paid = exits.reduce((total, row) => total + rowPaidAmount(row, month, row.values[month] || 0), 0);
   state.data.accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0) + received - paid;
   state.data.initialBalance = state.data.accountBalance;
   state.data.closedMonths = [...new Set([...(state.data.closedMonths || []), month])];
@@ -2357,6 +2565,8 @@ function normalizeData(data) {
     plannedPurchases: (data.plannedPurchases || []).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.origin) || item.origin, date: item.date || (item.month ? `${item.month}-01` : ""), installments: item.installments || 1 })),
     paidOccurrences: data.paidOccurrences || [],
     receivedOccurrences: data.receivedOccurrences || [],
+    paidAmounts: data.paidAmounts || {},
+    paidDates: data.paidDates || {},
     receivedAmounts: data.receivedAmounts || {},
     car: { ...defaults.car, ...(data.car || {}) },
     fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) }
@@ -2393,6 +2603,8 @@ function createDefaultData() {
     plannedPurchases: [],
     paidOccurrences: [],
     receivedOccurrences: [],
+    paidAmounts: {},
+    paidDates: {},
     car: {
       name: "Carro",
       creditorId: "",

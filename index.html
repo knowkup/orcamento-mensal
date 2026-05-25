@@ -495,6 +495,27 @@
       </form>
     </dialog>
 
+    <dialog class="dialog" id="expensePaymentDialog">
+      <form class="stack-form" id="expensePaymentForm">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Pagamento</p>
+            <h2 id="expensePaymentTitle">Registrar pagamento</h2>
+          </div>
+          <button class="icon-button" type="button" id="closeExpensePaymentButton" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <input name="key" type="hidden">
+        <label class="money-label">Valor pago<input name="paidAmount" type="text" inputmode="decimal" data-money-input required></label>
+        <label>Data do pagamento<input name="paymentDate" type="date" required></label>
+        <button class="primary-button full" type="submit">
+          <i data-lucide="check"></i>
+          <span>Registrar pagamento</span>
+        </button>
+      </form>
+    </dialog>
+
     <dialog class="dialog" id="accountBalanceDialog">
       <form class="stack-form" id="accountBalanceForm">
         <div class="panel-heading">
