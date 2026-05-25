@@ -870,17 +870,17 @@ svg {
 .monthly-column {
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 12px;
-  background: #f7fafb;
+  overflow: hidden;
+  background: #ffffff;
 }
 
 .monthly-column-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 10px;
-  padding: 2px 2px 8px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--line);
+  background: #fbfdfc;
 }
 
 .monthly-column-head span {
@@ -904,40 +904,37 @@ svg {
 
 .monthly-item {
   display: grid;
-  gap: 12px;
-  margin-top: 10px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  grid-template-columns: minmax(260px, 1.8fr) minmax(118px, 0.7fr) minmax(70px, 0.42fr) minmax(92px, 0.52fr) minmax(190px, 0.9fr);
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
   background: #ffffff;
-  box-shadow: 0 8px 20px rgba(15, 36, 54, 0.04);
+  box-shadow: none;
 }
 
 .monthly-item:last-child {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 0;
 }
 
 .monthly-item.done {
-  background: linear-gradient(180deg, #eefbf4, #ffffff);
-  border-color: rgba(53, 184, 121, 0.24);
+  background: #f7fbf8;
 }
 
 .monthly-item.expense-item:not(.done) {
-  background: linear-gradient(180deg, #fff7f6, #ffffff);
-  border-color: #f1d4d2;
+  background: #fffafa;
 }
 
 .monthly-item.income-item:not(.done) {
-  background: linear-gradient(180deg, #f0fbf5, #ffffff);
-  border-color: #cfead8;
+  background: #fbfffd;
 }
 
 .monthly-item.owner-kah-card {
-  background: linear-gradient(180deg, #fff8e8, #ffffff);
+  background: #fffdf7;
 }
 
 .monthly-item.owner-kah-card.done {
-  background: linear-gradient(180deg, #f5efd9, #ffffff);
+  background: #faf8ed;
 }
 
 .monthly-item strong,
@@ -951,11 +948,28 @@ svg {
   font-size: 12px;
 }
 
-.monthly-item-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
+.monthly-entity strong {
+  font-size: 13px;
+}
+
+.monthly-field {
+  display: grid;
+  gap: 4px;
+}
+
+.monthly-field span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.monthly-field strong {
+  font-size: 13px;
+}
+
+.monthly-field.compact {
+  max-width: 100px;
 }
 
 .monthly-item-action {
@@ -971,34 +985,6 @@ svg {
   font-size: 16px;
 }
 
-.monthly-item-meta {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.monthly-item-meta span {
-  min-height: 58px;
-  margin: 0;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 9px 10px;
-  background: rgba(255, 255, 255, 0.72);
-}
-
-.monthly-item-meta small {
-  display: block;
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 750;
-}
-
-.monthly-item-meta strong {
-  margin-top: 6px;
-  font-size: 14px;
-  color: var(--ink);
-}
-
 .monthly-item-action .mini-icon {
   min-height: 34px;
   width: 34px;
@@ -1006,9 +992,9 @@ svg {
 }
 
 .monthly-breakdown {
-  width: 100%;
+  grid-column: 1 / -1;
   border-top: 1px dashed var(--line);
-  padding-top: 8px;
+  padding-top: 10px;
 }
 
 .monthly-breakdown summary {
@@ -1592,7 +1578,6 @@ select {
 
   .form-row,
   .occurrence-actions,
-  .monthly-item-main,
   .monthly-breakdown-row,
   .monthly-item-action,
   .debt-action {
@@ -1600,7 +1585,7 @@ select {
     align-items: stretch;
   }
 
-  .monthly-item-meta {
+  .monthly-item {
     grid-template-columns: 1fr;
   }
 

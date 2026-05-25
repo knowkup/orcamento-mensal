@@ -505,24 +505,20 @@ function monthlyItems(items, month, kind) {
     const statusLabel = done ? (kind === "income" ? "Recebido" : "Pago") : "Pendente";
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""} ${kind === "income" ? "income-item" : "expense-item"}">
-        <div class="monthly-item-main">
-          <div class="entity-cell">
-            ${marker}
-            <div>
-              <strong>${escapeHtml(row.label)}</strong>
-              <span>${escapeHtml(row.origin || "-")}</span>
-            </div>
-          </div>
-          <div class="monthly-item-action">
-            <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
-            <button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>
-            ${deleteButton}
+        <div class="entity-cell monthly-entity">
+          ${marker}
+          <div>
+            <strong>${escapeHtml(row.label)}</strong>
+            <span>${escapeHtml(row.origin || "-")}</span>
           </div>
         </div>
-        <div class="monthly-item-meta">
-          <span><small>Vencimento</small><strong>${dueDate ? formatDate(dueDate) : "-"}</strong></span>
-          <span><small>Contas</small><strong>${accountCount}</strong></span>
-          <span><small>Status</small><strong>${statusLabel}</strong></span>
+        <div class="monthly-field"><span>Vencimento</span><strong>${dueDate ? formatDate(dueDate) : "-"}</strong></div>
+        <div class="monthly-field compact"><span>Contas</span><strong>${accountCount}</strong></div>
+        <div class="monthly-field compact"><span>Status</span><strong>${statusLabel}</strong></div>
+        <div class="monthly-item-action">
+          <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
+          <button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>
+          ${deleteButton}
         </div>
         ${breakdown}
       </article>
