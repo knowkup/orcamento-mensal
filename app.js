@@ -1041,9 +1041,9 @@ function renderInstallmentChips() {
   ];
   el.installmentFilters.innerHTML = chips.map((chip) => `
     <button class="filter-chip ${state.installmentCreditorFilter === chip.id ? "active" : ""}" type="button" data-installment-creditor="${chip.id}">
-      ${chip.id === "all" ? `<i class="all-chip-dot"></i>` : creditorLogoHtml(chip.id)}
+      ${chip.id === "all" ? `<span class="filter-symbol">◌</span>` : creditorLogoHtml(chip.id)}
       <strong>${escapeHtml(chip.label)}</strong>
-      <span>${chip.count}</span>
+      <span class="filter-count">${chip.count}</span>
     </button>
   `).join("");
   el.installmentFilters.querySelectorAll("[data-installment-creditor]").forEach((button) => {
