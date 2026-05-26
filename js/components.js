@@ -70,7 +70,7 @@ export function genericDebtCard(config) {
         <div class="summary-stat"><span>Parcela</span><strong>${currency.format(config.amount || 0)}</strong></div>
         <div class="summary-stat"><span>Próxima parcela</span><strong>${nextDue ? formatDate(nextDue) : "-"}</strong></div>
         <div class="summary-stat compact-status"><span>Status</span><strong>${paid.length}/${installments.length}</strong></div>
-        <div class="summary-stat"><span>Saldo</span><strong>${currency.format(balance)}</strong></div>
+        <div class="summary-stat"><span>Falta pagar</span><strong>${currency.format(balance)}</strong></div>
         <span class="summary-chevron">${icon("chevron-down")}</span>
       </summary>
       <div class="debt-meta-grid">

@@ -197,9 +197,7 @@ export function renderFgtsV2() {
   const toPay = state.data.fgts.contracts.reduce((total, item) => total + fgtsPendingTotal(item), 0);
   el.fgtsKpis.innerHTML = [
     metric("Recebido", received, "positive"),
-    metric("A pagar", -toPay, "negative"),
-    metric("Saldo", state.data.fgts.balance, "neutral"),
-    metric("Liberado", state.data.fgts.available, "positive")
+    metric("A pagar", -toPay, "negative")
   ].join("");
 
   el.fgtsTable.innerHTML = state.data.fgts.contracts.length

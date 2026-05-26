@@ -222,6 +222,17 @@ h2 {
   font-weight: 650;
 }
 
+/* botão de fechar mês: âmbar para sinalizar ação final */
+.close-month-btn {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(184, 135, 50, 0.18);
+}
+.close-month-btn:not(:disabled):hover {
+  filter: brightness(1.08);
+}
+
 .ghost-button {
   background: transparent;
 }

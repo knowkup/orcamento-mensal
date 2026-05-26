@@ -15,7 +15,7 @@ export function renderProjection() {
   el.monthSummary.innerHTML = [
     metric("Entradas", current.income, "positive"),
     metric("Saídas", -current.expense, "negative"),
-    metric("Sobra do mês", current.balance, current.balance >= 0 ? "positive" : "negative"),
+    metric("Resultado do mês", current.balance, current.balance >= 0 ? "positive" : "negative"),
     metric("Saldo acumulado", current.accumulated, current.accumulated >= 0 ? "positive" : "negative")
   ].join("");
   renderPlanningChart(totals, months);
@@ -28,7 +28,7 @@ export function renderProjection() {
     groupRow("Saídas", months.length),
     ...rows.filter((row) => row.kind === "expense").map((row) => projectionRow(row, months)),
     totalRow("Total saídas", months, (month) => -totals.find((item) => item.month === month).expense, "negative"),
-    totalRow("Sobra do mês", months, (month) => totals.find((item) => item.month === month).balance, "balance"),
+    totalRow("Resultado do mês", months, (month) => totals.find((item) => item.month === month).balance, "balance"),
     totalRow("Saldo acumulado", months, (month) => totals.find((item) => item.month === month).accumulated, "balance")
   ].join("");
 

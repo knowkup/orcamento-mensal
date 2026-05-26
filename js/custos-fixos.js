@@ -8,7 +8,7 @@ export function renderFixedCosts() {
     return creditorSort || Number(a.dueDay || 0) - Number(b.dueDay || 0);
   });
   el.fixedCostsTable.innerHTML = `
-    <thead><tr><th>Custo</th><th>Credor</th><th>Método</th><th>Grupo</th><th>Venc.</th><th>Valor</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Custo</th><th>Credor</th><th>Método</th><th>Grupo</th><th>Vence Dia</th><th>Valor</th><th>Ações</th></tr></thead>
     <tbody>
       ${fixedCosts.map((item) => `
         <tr>

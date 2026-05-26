@@ -63,7 +63,7 @@ export function renderOriginsV2() {
 
 export function renderCreditCards() {
   el.cardList.innerHTML = `
-    <thead><tr><th>Cartao/Crediario</th><th>Credor</th><th>Dono</th><th>Venc.</th><th>Saldo previsto</th><th>Acoes</th></tr></thead>
+    <thead><tr><th>Cartao/Crediario</th><th>Credor</th><th>Dono</th><th>Venc.</th><th>Total comprometido</th><th>Acoes</th></tr></thead>
     <tbody>
       ${sortedCreditCards().map((card) => {
         const inUse = isCreditCardInUse(card.id);
