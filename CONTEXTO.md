@@ -1125,3 +1125,42 @@ git push origin main            # publica no GitHub Pages automaticamente
 
 - Validar em producao no GitHub Pages se todos os modulos carregam sem erro de console.
 - Validar com dados reais no Firebase se edicao de contratos FGTS preserva historico.
+
+## Atualizacao - 2026-05-26 (bugs)
+
+### Decisoes tomadas
+
+- Bug 1 corrigido via calculo por data de vencimento real em vez de indice de mes.
+- Bug 2 corrigido via campo fixedCostAmountOverrides por mes, sem alterar cadastro.
+- Bug 3 corrigido via insercao automatica de revert em changes no mes seguinte.
+- syncExpenseSource agora trata chaves child-installment para atualizar paidInstallments
+  ao pagar parcela filha no breakdown do Controle Mensal.
+
+### Mudancas feitas
+
+- planejamento.js: adicionada funcao installmentNumForMonth; installmentTotalForGroup e
+  installmentChildrenForGroup aceitam parametro de mes e flag strict para calculo
+  por data real (Controle Mensal) vs por indice (Planejamento 12 meses).
+- planejamento.js: fixedTotalForGroup e fixedChildrenForGroup respeitam
+  fixedCostAmountOverrides por mes.
+- controle.js: syncExpenseSource trata child-installment e atualiza paidInstallments.
+- controle.js: openFixedCostAmountDialog e saveFixedCostAmount para override mensal
+  de custo fixo sem alterar cadastro recorrente.
+- controle.js: botao de lapis no breakdown de custo fixo abre o modal de override.
+- preferencias.js: openIncomeExceptionDialog, closeIncomeExceptionDialog,
+  saveIncomeException para excecao mensal de renda recorrente com revert automatico.
+- preferencias.js: botao Excecao de mes na lista de rendas recorrentes.
+- data.js: fixedCostAmountOverrides adicionado ao createDefaultData e normalizeData.
+- state.js: referencias aos novos dialogs (fixedCostAmountDialog, incomeExceptionDialog).
+- index.html: dialogs fixedCostAmountDialog e incomeExceptionDialog.
+- app.js: bindings dos novos forms e botoes de fechar.
+
+### Backups criados
+
+- backups/20260526-155612
+
+### Pendencias
+
+- Validar em producao no iPhone real o fluxo de excecao mensal de renda.
+- Validar override de custo fixo no Controle Mensal com dados reais.
+- Validar que parcelamento com paidInstallments > 0 nao aparece mais no mes errado.
