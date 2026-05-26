@@ -2,6 +2,72 @@
 
 Data inicial: 2026-05-24
 
+## Estado atual do projeto (atualizado em 2026-05-26)
+
+### Estrutura de arquivos
+
+```
+Orcamento Mensal/
+├── index.html              — interface principal
+├── styles.css              — estilos
+├── firebase-config.js      — credenciais Firebase (nao versionar segredos)
+├── firestore.rules         — regras de seguranca Firestore
+├── manifest.webmanifest    — PWA
+├── CONTEXTO.md             — este arquivo
+├── README.md               — documentacao publica
+├── .gitignore
+├── .nojekyll
+├── assets/                 — favicon.svg, icon.svg, icon-192.png, icon-512.png, apple-touch-icon.png
+├── js/                     — codigo do app dividido em 15 modulos ES
+│   ├── app.js              — entry point: boot, bindEvents, render, showView
+│   ├── state.js            — objeto state, cache DOM (el), constantes
+│   ├── data.js             — createDefaultData, normalizeData, migracoes
+│   ├── storage.js          — localStorage, export/import JSON
+│   ├── firebase.js         — auth, Firestore, saveState
+│   ├── utils.js            — datas, formatacao, DOM helpers
+│   ├── creditors.js        — credores e cartoes helpers
+│   ├── components.js       — componentes UI reutilizaveis
+│   ├── planejamento.js     — projecao e grafico
+│   ├── controle.js         — controle mensal e acoes do mes
+│   ├── parcelamentos.js    — parcelamentos
+│   ├── custos-fixos.js     — custos fixos
+│   ├── carro.js            — financiamento do carro
+│   ├── fgts.js             — FGTS e contratos
+│   └── preferencias.js     — credores, cartoes, rendas recorrentes
+├── backups/                — backups locais (nao versionado)
+└── _arquivo/               — arquivos desativados (nao versionado)
+```
+
+### Stack
+
+- HTML + CSS + JavaScript puro (ES modules nativos, sem bundler)
+- Firebase Firestore para sincronizacao entre dispositivos
+- GitHub Pages para publicacao (branch `main`)
+
+### Repositorio
+
+- GitHub: `https://github.com/kupka1988/orcamento-mensal.git`
+- Firebase project: `orcamento-mensal-fdc1a`
+- URL publicada: `https://kupka1988.github.io/orcamento-mensal/`
+
+### Comandos essenciais
+
+```powershell
+node --check js/app.js          # validar sintaxe do entry point
+node --check js/<modulo>.js     # validar modulo especifico
+git diff --check                # verificar whitespace
+git add js/ index.html ...      # nao usar git add -A
+git push origin main            # publica no GitHub Pages automaticamente
+```
+
+### Padroes adotados no codigo
+
+- `state.saveStateFn(msg)` — chamado nos modulos em vez de importar saveState diretamente (evita circular dep)
+- `state.renderFn()` e `state.hydrateFn()` — idem para render e hydrateForms
+- Todos os modulos importam `state` e `el` de `./state.js`
+
+---
+
 ## Premissas operacionais
 
 - Trabalhar sempre na pasta oficial do OneDrive.
@@ -9,7 +75,7 @@ Data inicial: 2026-05-24
 - Criar backups em `backups/YYYYMMDD-HHMMSS` antes de mudancas relevantes.
 - Nao versionar `backups/`.
 - Trabalhar incrementalmente, sem trocar stack ou recriar estrutura sem pedido explicito.
-- Validar antes de finalizar sempre que houver validacoes disponiveis.
+- Validar com `node --check js/app.js` (e o modulo alterado) antes de finalizar.
 - Revisar `git diff` antes de concluir.
 - Ao alterar codigo, fazer commit e push ao final quando houver remoto configurado.
 - Manter Git organizado: trabalhar com commits pequenos, mensagens claras e `git status` limpo ao finalizar cada etapa.
