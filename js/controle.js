@@ -130,7 +130,8 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const dueDate = rowDueDate(row, month);
     const dateLabel = kind === "income" ? "Recebimento" : "Vencimento";
     const accountCount = monthlyAccountCount(row, month);
-    const hasBreakdown = kind === "expense" && accountCount > 1;
+    // mostra chevron sempre que houver conteúdo de breakdown (inclui grupos com 1 item)
+    const hasBreakdown = kind === "expense" && Boolean(breakdown);
     const statusLabel = kind === "income"
       ? (done ? "Recebido" : "Pendente")
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
