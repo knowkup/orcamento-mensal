@@ -1030,3 +1030,32 @@ Data inicial: 2026-05-24
 ### Proximos passos
 
 - Commitar e publicar a correcao.
+
+## Atualizacao - 2026-05-26
+
+### Decisoes tomadas
+
+- Reorganizacao do projeto em modulos ES aprovada e executada.
+- Linguagem mantida (vanilla JS); sem troca de stack ou bundler.
+- app.js monolitico (3411 linhas) substituido por 15 modulos em js/.
+
+### Mudancas feitas
+
+- Removido app.js da raiz.
+- Criada pasta js/ com 15 modulos ES:
+  state.js, data.js, storage.js, firebase.js, utils.js,
+  creditors.js, components.js, planejamento.js, controle.js,
+  parcelamentos.js, custos-fixos.js, carro.js, fgts.js,
+  preferencias.js, app.js (entry point).
+- Atualizado index.html para carregar js/app.js.
+- Padroes adotados: state.saveStateFn, state.renderFn, state.hydrateFn
+  para evitar dependencias circulares em nivel de modulo.
+
+### Backups criados
+
+- backups/20260526-104927
+
+### Pendencias
+
+- Validar em producao no GitHub Pages se todos os modulos carregam sem erro de console.
+- Validar com dados reais no Firebase se edicao de contratos FGTS preserva historico.
