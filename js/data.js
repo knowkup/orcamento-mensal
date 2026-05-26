@@ -29,6 +29,7 @@ export function createDefaultData() {
     paidDates: {},
     receivedAmounts: {},
     appliedCashMovements: {},
+    fixedCostAmountOverrides: {},
     car: {
       name: "Carro",
       creditorId: "",
@@ -152,6 +153,7 @@ export function normalizeData(data) {
     paidDates: data.paidDates || {},
     receivedAmounts: data.receivedAmounts || {},
     appliedCashMovements: data.appliedCashMovements || {},
+    fixedCostAmountOverrides: data.fixedCostAmountOverrides || {},
     car: { ...defaults.car, ...(data.car || {}) },
     fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) }
   };

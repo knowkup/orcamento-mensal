@@ -222,14 +222,15 @@ export function upsertIncomeChange(changes, month, amount) {
 
 export function appendDynamicProjectionRows(rows, months, keepPaidValues) {
   ensureCarPayments();
+  const strict = months.length > 1;
   const installmentGroups = uniqueGroups(state.data.installments, (item) => groupKey(item));
   installmentGroups.forEach((group) => {
     const installmentValues = {};
     const installmentChildren = {};
     const installmentDueDates = {};
     months.forEach((month, index) => {
-      installmentValues[month] = installmentTotalForGroup(group, index);
-      installmentChildren[month] = installmentChildrenForGroup(group, index, month);
+      installmentValues[month] = installmentTotalForGroup(group, index, month, strict);
+      installmentChildren[month] = installmentChildrenForGroup(group, index, month, strict);
       installmentDueDates[month] = group.cardId ? cardDueDateForMonth(group.cardId, month) : firstDueDate(installmentChildren[month]);
       const key = `auto-installments-${group.id}:${month}`;
       if (!keepPaidValues && isOccurrencePaid(key)) installmentValues[month] = 0;
@@ -257,7 +258,7 @@ export function appendDynamicProjectionRows(rows, months, keepPaidValues) {
     const fixedChildren = {};
     const fixedDueDates = {};
     months.forEach((month) => {
-      fixedValues[month] = fixedTotalForGroup(group.key);
+      fixedValues[month] = fixedTotalForGroup(group.key, month);
       fixedChildren[month] = fixedChildrenForGroup(group.key, month);
       fixedDueDates[month] = group.cardId ? cardDueDateForMonth(group.cardId, month) : firstDueDate(fixedChildren[month]);
       const key = `auto-fixed-${group.id}:${month}`;
@@ -342,21 +343,50 @@ export function uniqueGroups(items, keyGetter) {
   return [...groups.values()];
 }
 
-export function installmentTotalForGroup(group, monthIndex) {
+function installmentNumForMonth(item, month, strict) {
+  const [py, pm] = (item.purchaseDate || "").split("-").map(Number);
+  const [cy, cm] = month.split("-").map(Number);
+  if (!py || !pm || !cy || !cm) return null;
+  // installment n is due in month where n = elapsed months from purchase
+  // (installmentDueDate uses 1-based pm as Date 0-based, so it adds 1 extra month)
+  const naturalN = (cy * 12 + cm) - (py * 12 + pm);
+  const paid = Number(item.paidInstallments || 0);
+  const total = Number(item.totalInstallments || 0);
+  if (naturalN < 1 || naturalN > total) return null;
+  if (strict) {
+    return naturalN > paid ? naturalN : null;
+  }
+  // Non-strict (Controle Mensal): show first unpaid installment due on or before this month
+  const firstUnpaid = paid + 1;
+  if (firstUnpaid > total || firstUnpaid > naturalN) return null;
+  return firstUnpaid;
+}
+
+export function installmentTotalForGroup(group, monthIndex, month = null, strict = true) {
   return state.data.installments
     .filter((item) => groupKey(item) === group.key && item.active !== false)
     .reduce((total, item) => {
+      if (month && item.purchaseDate) {
+        const n = installmentNumForMonth(item, month, strict);
+        return n ? total + Number(item.amount) : total;
+      }
       const left = Math.max(0, Number(item.totalInstallments) - Number(item.paidInstallments));
       return monthIndex < left ? total + Number(item.amount) : total;
     }, 0);
 }
 
-export function installmentChildrenForGroup(group, monthIndex, month) {
+export function installmentChildrenForGroup(group, monthIndex, month, strict = true) {
   return state.data.installments
     .filter((item) => groupKey(item) === group.key && item.active !== false)
     .flatMap((item) => {
-      const number = Number(item.paidInstallments || 0) + monthIndex + 1;
-      if (number > Number(item.totalInstallments || 0)) return [];
+      let number;
+      if (item.purchaseDate) {
+        number = installmentNumForMonth(item, month, strict);
+        if (!number) return [];
+      } else {
+        number = Number(item.paidInstallments || 0) + monthIndex + 1;
+        if (number > Number(item.totalInstallments || 0)) return [];
+      }
       return [{
         key: `child-installment|${item.id}|${number}:${month}`,
         label: `${item.item || "Parcelamento"} ${number}/${item.totalInstallments}`,
@@ -479,21 +509,29 @@ export function fixedCostGroupInfo(key, item) {
   };
 }
 
-export function fixedTotalForGroup(key) {
+export function fixedTotalForGroup(key, month = null) {
+  const overrides = state.data.fixedCostAmountOverrides || {};
   return state.data.fixedCosts
     .filter((item) => item.includeInProjection !== false && fixedCostGroupKey(item) === key)
-    .reduce((total, item) => total + Number(item.amount || 0), 0);
+    .reduce((total, item) => {
+      const ov = month !== null ? overrides[`${item.id}:${month}`] : undefined;
+      return total + (ov !== undefined ? ov : Number(item.amount || 0));
+    }, 0);
 }
 
 export function fixedChildrenForGroup(key, month) {
+  const overrides = state.data.fixedCostAmountOverrides || {};
   return state.data.fixedCosts
     .filter((item) => item.includeInProjection !== false && fixedCostGroupKey(item) === key)
-    .map((item) => ({
-      key: `child-fixed|${item.id}:${month}`,
-      label: item.name || "Custo fixo",
-      value: Number(item.amount || 0),
-      dueDate: monthDayDate(month, item.dueDay || 1)
-    }));
+    .map((item) => {
+      const ov = overrides[`${item.id}:${month}`];
+      return {
+        key: `child-fixed|${item.id}:${month}`,
+        label: item.name || "Custo fixo",
+        value: ov !== undefined ? ov : Number(item.amount || 0),
+        dueDate: monthDayDate(month, item.dueDay || 1)
+      };
+    });
 }
 
 export function carChildrenForMonth(month) {

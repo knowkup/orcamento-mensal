@@ -96,6 +96,9 @@ export function renderMonthlyControl() {
       button.classList.toggle("is-open", details.open);
     });
   });
+  el.monthlyBoard.querySelectorAll("[data-edit-fixed-amount]").forEach((button) => {
+    button.addEventListener("click", () => openFixedCostAmountDialog(button.dataset.editFixedAmount));
+  });
   el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
 
@@ -189,6 +192,10 @@ function monthlyBreakdown(row, month) {
             const attr = done
               ? `data-cancel-payment="${item.key}"`
               : `data-pay-expense="${item.key}" data-expected="${item.value}" data-label="${escapeHtml(item.label)}"`;
+            const isFixed = item.key.startsWith("child-fixed|");
+            const editAmountButton = isFixed && !done
+              ? `<button class="icon-button mini-icon" type="button" title="Editar valor deste mês" data-edit-fixed-amount="${item.key}">${icon("pencil")}</button>`
+              : "";
             return `
               <div class="monthly-breakdown-row ${done ? "done" : ""}">
                 <div>
@@ -197,6 +204,7 @@ function monthlyBreakdown(row, month) {
                 </div>
                 <div class="monthly-item-action">
                   <strong class="negative">-${currency.format(displayValue)}</strong>
+                  ${editAmountButton}
                   <button class="small-button pay ${done ? "danger-mini" : ""}" type="button" ${attr}>${done ? "Excluir pagamento" : "Pagar"}</button>
                 </div>
               </div>
@@ -514,6 +522,19 @@ export function syncExpenseSource(key, paid, amount, paymentDate) {
         });
     }
   }
+  if (rowId.startsWith("child-installment|")) {
+    // "child-installment|{itemId}|{number}" — pagar/cancelar parcela filha precisa
+    // atualizar paidInstallments para que a mesma parcela não reapareça no mês seguinte.
+    const parts = rowId.split("|");
+    const itemId = parts[1];
+    const number = Number(parts[2] || 0);
+    const item = state.data.installments.find((entry) => entry.id === itemId);
+    if (item && number > 0) {
+      item.paidInstallments = paid
+        ? Math.min(Number(item.totalInstallments || 0), Math.max(Number(item.paidInstallments || 0), number))
+        : Math.max(0, number - 1);
+    }
+  }
 }
 
 export async function closeMonth() {
@@ -567,4 +588,27 @@ export async function confirmReceivedOccurrence(event) {
   applyCashMovement(key, amount);
   el.receiveDialog.close();
   if (state.saveStateFn) await state.saveStateFn("Entrada recebida.");
+}
+
+export function openFixedCostAmountDialog(key) {
+  const { rowId, month } = splitOccurrenceKey(key);
+  const id = rowId.replace("child-fixed|", "");
+  const cost = state.data.fixedCosts.find((item) => item.id === id);
+  const overrideKey = `${id}:${month}`;
+  const overrides = state.data.fixedCostAmountOverrides || {};
+  const current = overrides[overrideKey] !== undefined ? overrides[overrideKey] : Number(cost?.amount || 0);
+  el.fixedCostAmountForm.elements.key.value = overrideKey;
+  el.fixedCostAmountForm.elements.amount.value = formatCurrencyInput(current);
+  el.fixedCostAmountTitle.textContent = cost?.name || "Custo fixo";
+  el.fixedCostAmountDialog.showModal();
+}
+
+export async function saveFixedCostAmount(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const key = String(form.get("key"));
+  const amount = parseCurrencyInput(form.get("amount"));
+  state.data.fixedCostAmountOverrides = { ...(state.data.fixedCostAmountOverrides || {}), [key]: amount };
+  el.fixedCostAmountDialog.close();
+  if (state.saveStateFn) await state.saveStateFn("Valor do custo fixo ajustado para o mês.");
 }

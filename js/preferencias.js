@@ -1,7 +1,7 @@
 import { state, el, currency } from "./state.js";
-import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, nextMonths, formatMonth, refreshIcons } from "./utils.js";
+import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, nextMonths, formatMonth, refreshIcons, addMonthsToDate } from "./utils.js";
 import { getCreditorName, getCreditor, getCreditCard, sortedCreditors, sortedCreditCards, creditorLogoHtml, sourceLogoHtml, initials, isCreditCardInUse, creditorUsageCount, cardOpenBalance } from "./creditors.js";
-import { createDefaultData } from "./data.js";
+import { createDefaultData, normalizedIncomeChanges } from "./data.js";
 import { latestIncomeChange, upsertIncomeChange } from "./planejamento.js";
 
 export function renderSettings() {
@@ -114,6 +114,7 @@ export function renderRecurringIncomes() {
             <td>${current.month ? formatMonth(current.month) : "-"}</td>
             <td class="row-actions">
               <button class="small-button" type="button" data-edit-income="${income.id}">Editar/Reajustar</button>
+              <button class="small-button" type="button" data-exception-income="${income.id}">Exceção de mês</button>
               <button class="small-button danger-mini" type="button" data-delete-income="${income.id}">Excluir</button>
             </td>
           </tr>
@@ -124,6 +125,9 @@ export function renderRecurringIncomes() {
 
   el.incomeList.querySelectorAll("[data-edit-income]").forEach((button) => {
     button.addEventListener("click", () => openIncomeDialog(button.dataset.editIncome));
+  });
+  el.incomeList.querySelectorAll("[data-exception-income]").forEach((button) => {
+    button.addEventListener("click", () => openIncomeExceptionDialog(button.dataset.exceptionIncome));
   });
   el.incomeList.querySelectorAll("[data-delete-income]").forEach((button) => {
     button.addEventListener("click", () => deleteRecurringIncome(button.dataset.deleteIncome));
@@ -363,6 +367,47 @@ export async function saveRecurringIncome(event) {
 export async function deleteRecurringIncome(id) {
   state.data.recurringIncomes = state.data.recurringIncomes.filter((item) => item.id !== id);
   if (state.saveStateFn) await state.saveStateFn("Renda recorrente excluída.");
+}
+
+export function openIncomeExceptionDialog(id) {
+  state.incomeExceptionId = id;
+  const income = state.data.recurringIncomes.find((item) => item.id === id);
+  el.incomeExceptionDialogTitle.textContent = income ? `Exceção: ${income.label}` : "Exceção de mês";
+  el.incomeExceptionForm.reset();
+  el.incomeExceptionForm.elements.month.value = nextMonths(1)[0];
+  el.incomeExceptionForm.elements.amount.value = "";
+  el.incomeExceptionDialog.showModal();
+}
+
+export function closeIncomeExceptionDialog() {
+  state.incomeExceptionId = null;
+  el.incomeExceptionForm.reset();
+  el.incomeExceptionDialog.close();
+}
+
+export async function saveIncomeException(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const month = String(form.get("month"));
+  const amount = parseCurrencyInput(form.get("amount"));
+  const income = state.data.recurringIncomes.find((item) => item.id === state.incomeExceptionId);
+  if (!income) { closeIncomeExceptionDialog(); return; }
+
+  const changes = normalizedIncomeChanges(income);
+  const nextMonth = addMonthsToDate(`${month}-01`, 1).slice(0, 7);
+
+  // amount to revert to in month+1 (latest change at or before nextMonth, excluding exception month)
+  const revertAmount = [...changes].reverse().find((c) => c.month <= nextMonth && c.month !== month)?.amount ?? 0;
+
+  income.changes = upsertIncomeChange(income.changes || [], month, amount);
+
+  // only add the revert if there's no explicit change already defined for nextMonth
+  if (!changes.find((c) => c.month === nextMonth)) {
+    income.changes = upsertIncomeChange(income.changes, nextMonth, revertAmount);
+  }
+
+  closeIncomeExceptionDialog();
+  if (state.saveStateFn) await state.saveStateFn("Exceção de renda cadastrada.");
 }
 
 export function isCreditorInUse(id) {

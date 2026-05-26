@@ -28,6 +28,7 @@ export const state = {
   cardEditingId: null,
   fixedCostEditingId: null,
   incomeEditingId: null,
+  incomeExceptionId: null,
   plannedEditingId: null,
   plannedEditingKind: null
 };
@@ -128,5 +129,13 @@ export const el = {
   addPlanButton: document.querySelector("#addPlanButton"),
   closePlanButton: document.querySelector("#closePlanButton"),
   fgtsInstallmentValues: document.querySelector("#fgtsInstallmentValues"),
+  fixedCostAmountDialog: document.querySelector("#fixedCostAmountDialog"),
+  fixedCostAmountForm: document.querySelector("#fixedCostAmountForm"),
+  fixedCostAmountTitle: document.querySelector("#fixedCostAmountTitle"),
+  closeFixedCostAmountButton: document.querySelector("#closeFixedCostAmountButton"),
+  incomeExceptionDialog: document.querySelector("#incomeExceptionDialog"),
+  incomeExceptionForm: document.querySelector("#incomeExceptionForm"),
+  incomeExceptionDialogTitle: document.querySelector("#incomeExceptionDialogTitle"),
+  closeIncomeExceptionButton: document.querySelector("#closeIncomeExceptionButton"),
   toast: document.querySelector("#toast")
 };
