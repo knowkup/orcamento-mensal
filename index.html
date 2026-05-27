@@ -46,6 +46,10 @@
             <i data-lucide="landmark"></i>
             <span>FGTS</span>
           </button>
+          <button class="nav-tab" type="button" data-view="ferias">
+            <i data-lucide="umbrella"></i>
+            <span>Férias</span>
+          </button>
           <button class="nav-tab" type="button" data-view="ajustes">
             <i data-lucide="settings"></i>
             <span>Preferências</span>
@@ -224,6 +228,43 @@
           </div>
         </section>
 
+        <section class="view" id="feriasView" data-title="Simulador de Férias">
+          <div class="vertical-stack">
+            <section class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Trabalhista 2026</p>
+                  <h2>Simulação de salário de férias</h2>
+                </div>
+              </div>
+              <div class="ferias-inputs">
+                <div class="form-row">
+                  <label class="money-label">Salário base
+                    <input type="text" id="feriasBaseSalary" inputmode="decimal" data-money-input placeholder="0,00">
+                  </label>
+                  <label>Dias de férias
+                    <select id="feriasDays">
+                      <option value="">Selecione</option>
+                      <option value="5">5 dias</option>
+                      <option value="10">10 dias</option>
+                      <option value="15">15 dias</option>
+                      <option value="20">20 dias</option>
+                      <option value="25">25 dias</option>
+                      <option value="30">30 dias</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="money-label">Empréstimo consignado — parcela mensal (opcional)
+                  <input type="text" id="feriasConsignado" inputmode="decimal" data-money-input placeholder="Deixe em branco se não houver">
+                </label>
+              </div>
+            </section>
+            <section class="panel" id="feriasResultPanel" hidden>
+              <div id="feriasResult"></div>
+            </section>
+          </div>
+        </section>
+
         <section class="view" id="ajustesView" data-title="Preferências">
           <div class="preferences-stack">
             <section class="panel preference-block">
@@ -296,6 +337,18 @@
                   <span>Salvar ajustes</span>
                 </button>
               </form>
+              </div>
+            </section>
+            <section class="panel preference-block">
+              <div class="block-marker">5</div>
+              <div class="preference-content">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Simulador de Férias</p>
+                  <h2>Tabelas tributárias INSS e IRRF</h2>
+                </div>
+              </div>
+              <div id="taxTablesBlock"></div>
               </div>
             </section>
           </div>

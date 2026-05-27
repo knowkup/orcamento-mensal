@@ -1592,6 +1592,134 @@ select {
   text-align: center;
 }
 
+/* ── Simulador de Férias ─────────────────────────────── */
+
+.ferias-inputs {
+  display: grid;
+  gap: 12px;
+  max-width: 580px;
+}
+
+.payslip {
+  max-width: 580px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  font-size: 14px;
+}
+
+.payslip-header {
+  padding: 14px 18px;
+  background: var(--sidebar);
+  color: #ffffff;
+}
+
+.payslip-header strong {
+  display: block;
+  font-size: 15px;
+}
+
+.payslip-header span {
+  display: block;
+  margin-top: 3px;
+  opacity: 0.72;
+  font-size: 12px;
+}
+
+.payslip-section {
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+}
+
+.payslip-section-title {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.payslip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  padding: 5px 0;
+}
+
+.payslip-subtotal {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--line);
+  font-weight: 700;
+}
+
+.payslip-pos {
+  color: var(--green);
+  font-weight: 650;
+}
+
+.payslip-neg {
+  color: var(--red);
+  font-weight: 650;
+}
+
+.payslip-net {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 18px;
+  border-top: 2px solid var(--line);
+  background: var(--surface-soft);
+}
+
+.payslip-net > span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.payslip-net > strong {
+  font-size: 24px;
+  font-weight: 750;
+  color: var(--green);
+}
+
+/* ── Tabelas tributárias (Preferências) ──────────────── */
+
+.tax-table-section {
+  margin-bottom: 16px;
+}
+
+.tax-table-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.tax-simpl-label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tax-simpl-label input {
+  max-width: 200px;
+  min-height: 36px;
+}
+
+.tax-tables-note {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 @media (max-width: 1060px) {
   .app-shell {
     grid-template-columns: 1fr;
@@ -1606,7 +1734,7 @@ select {
   }
 
   .nav-tabs {
-    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-columns: repeat(8, minmax(0, 1fr));
   }
 
   .nav-tab {

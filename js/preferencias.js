@@ -459,3 +459,128 @@ export function handleIncomeLogoUpload(event) {
 export function renderIncomeLogoPreview(src) {
   el.incomeLogoPreview.innerHTML = src ? `<img alt="Logo" src="${escapeHtml(src)}">` : "RD";
 }
+
+export function renderTaxTables() {
+  const container = document.querySelector("#taxTablesBlock");
+  if (!container) return;
+  const t = state.data.taxes ?? {};
+  const inss = t.inss ?? [];
+  const irrf = t.irrf ?? {};
+  const brackets = irrf.brackets ?? [];
+
+  container.innerHTML = `
+    <div class="tax-table-section">
+      <div class="tax-table-header">
+        <strong>INSS &mdash; faixas progressivas</strong>
+        <button class="small-button" type="button" id="addInssRowBtn">+ Faixa</button>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table clean-table">
+          <thead><tr><th>Até (R$)</th><th>Alíquota (%)</th><th></th></tr></thead>
+          <tbody id="inssRows">
+            ${inss.map((b) => `
+              <tr>
+                <td><input type="number" class="inss-upto" step="0.01" min="0" value="${b.upTo}"></td>
+                <td><input type="number" class="inss-rate" step="0.01" min="0" max="100" value="${b.rate}"></td>
+                <td><button class="small-button danger-mini" type="button" data-remove-row>&minus;</button></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="tax-table-section">
+      <div class="tax-table-header">
+        <strong>IRRF &mdash; faixas e alíquotas</strong>
+        <button class="small-button" type="button" id="addIrrfRowBtn">+ Faixa</button>
+      </div>
+      <label class="tax-simpl-label">
+        Dedução simplificada mensal (R$)
+        <input type="number" id="irrfSimplifiedDeduction" step="0.01" min="0" value="${irrf.simplifiedDeduction ?? 2571.20}">
+      </label>
+      <div class="table-wrap">
+        <table class="data-table clean-table">
+          <thead><tr><th>Até (R$) &mdash; vazio = acima</th><th>Alíquota (%)</th><th>Dedução (R$)</th><th></th></tr></thead>
+          <tbody id="irrfRows">
+            ${brackets.map((b) => `
+              <tr>
+                <td><input type="number" class="irrf-upto" step="0.01" min="0" value="${b.upTo ?? ""}"></td>
+                <td><input type="number" class="irrf-rate" step="0.01" min="0" max="100" value="${b.rate}"></td>
+                <td><input type="number" class="irrf-deduction" step="0.01" min="0" value="${b.deduction || 0}"></td>
+                <td><button class="small-button danger-mini" type="button" data-remove-row>&minus;</button></td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <button class="primary-button full" type="button" id="saveTaxTablesBtn">Salvar tabelas tributárias</button>
+    <small class="tax-tables-note">Atualize quando o governo publicar novos valores. Usado pelo Simulador de Férias.</small>
+  `;
+
+  document.querySelector("#addInssRowBtn")?.addEventListener("click", () => {
+    const tbody = document.querySelector("#inssRows");
+    if (!tbody) return;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="number" class="inss-upto" step="0.01" min="0" placeholder="Ex: 5000"></td>
+      <td><input type="number" class="inss-rate" step="0.01" min="0" max="100" placeholder="Ex: 14"></td>
+      <td><button class="small-button danger-mini" type="button" data-remove-row>&minus;</button></td>
+    `;
+    tr.querySelector("[data-remove-row]").addEventListener("click", () => tr.remove());
+    tbody.appendChild(tr);
+  });
+
+  document.querySelector("#addIrrfRowBtn")?.addEventListener("click", () => {
+    const tbody = document.querySelector("#irrfRows");
+    if (!tbody) return;
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td><input type="number" class="irrf-upto" step="0.01" min="0" placeholder="vazio = acima"></td>
+      <td><input type="number" class="irrf-rate" step="0.01" min="0" max="100" placeholder="Ex: 15"></td>
+      <td><input type="number" class="irrf-deduction" step="0.01" min="0" placeholder="Ex: 394.16"></td>
+      <td><button class="small-button danger-mini" type="button" data-remove-row>&minus;</button></td>
+    `;
+    tr.querySelector("[data-remove-row]").addEventListener("click", () => tr.remove());
+    tbody.appendChild(tr);
+  });
+
+  container.querySelectorAll("[data-remove-row]").forEach((btn) => {
+    btn.addEventListener("click", () => btn.closest("tr").remove());
+  });
+
+  document.querySelector("#saveTaxTablesBtn")?.addEventListener("click", saveTaxTables);
+}
+
+async function saveTaxTables() {
+  const inss = [];
+  document.querySelectorAll("#inssRows tr").forEach((tr) => {
+    const upTo = parseFloat(tr.querySelector(".inss-upto")?.value ?? "");
+    const rate = parseFloat(tr.querySelector(".inss-rate")?.value ?? "");
+    if (!isNaN(upTo) && !isNaN(rate)) inss.push({ upTo, rate });
+  });
+  inss.sort((a, b) => a.upTo - b.upTo);
+
+  const brackets = [];
+  document.querySelectorAll("#irrfRows tr").forEach((tr) => {
+    const upToVal = tr.querySelector(".irrf-upto")?.value ?? "";
+    const upTo = upToVal === "" ? null : parseFloat(upToVal);
+    const rate = parseFloat(tr.querySelector(".irrf-rate")?.value ?? "");
+    const deduction = parseFloat(tr.querySelector(".irrf-deduction")?.value ?? "0") || 0;
+    if (!isNaN(rate)) brackets.push({ upTo: (upToVal !== "" && !isNaN(upTo)) ? upTo : null, rate, deduction });
+  });
+  brackets.sort((a, b) => {
+    if (a.upTo === null) return 1;
+    if (b.upTo === null) return -1;
+    return a.upTo - b.upTo;
+  });
+
+  const simplVal = parseFloat(document.querySelector("#irrfSimplifiedDeduction")?.value ?? "2571.20");
+  const simplifiedDeduction = isNaN(simplVal) ? 2571.20 : simplVal;
+
+  if (!state.data.taxes) state.data.taxes = {};
+  state.data.taxes.inss = inss;
+  state.data.taxes.irrf = { simplifiedDeduction, brackets };
+
+  if (state.saveStateFn) await state.saveStateFn("Tabelas tributárias salvas.");
+}

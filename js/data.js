@@ -44,6 +44,24 @@ export function createDefaultData() {
       blocked: 0,
       available: 0,
       contracts: []
+    },
+    taxes: {
+      inss: [
+        { upTo: 1621.00, rate: 7.5 },
+        { upTo: 2902.84, rate: 9 },
+        { upTo: 4354.27, rate: 12 },
+        { upTo: 8475.55, rate: 14 }
+      ],
+      irrf: {
+        simplifiedDeduction: 2571.20,
+        brackets: [
+          { upTo: 2428.80, rate: 0, deduction: 0 },
+          { upTo: 2826.65, rate: 7.5, deduction: 182.16 },
+          { upTo: 3751.05, rate: 15, deduction: 394.16 },
+          { upTo: 4664.68, rate: 22.5, deduction: 675.49 },
+          { upTo: null, rate: 27.5, deduction: 908.73 }
+        ]
+      }
     }
   };
 }
@@ -155,7 +173,11 @@ export function normalizeData(data) {
     appliedCashMovements: data.appliedCashMovements || {},
     fixedCostAmountOverrides: data.fixedCostAmountOverrides || {},
     car: { ...defaults.car, ...(data.car || {}) },
-    fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) }
+    fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) },
+    taxes: {
+      inss: data.taxes?.inss?.length ? data.taxes.inss : defaults.taxes.inss,
+      irrf: data.taxes?.irrf ?? defaults.taxes.irrf
+    }
   };
   if (!normalized.fgts.contracts.length) {
     normalized.fgts.balance = 0;

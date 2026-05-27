@@ -9,7 +9,8 @@ import { renderInstallments, addInstallment, openInstallmentDialog, closeInstall
 import { renderFixedCosts, openFixedCostDialog, closeFixedCostDialog, updateFixedCostFields, addFixedCost } from "./custos-fixos.js";
 import { renderCar, updateCar, openCarContractDialog, ensureCarPayments, updateSettings, openCarPaymentDialog, payCarInstallment, unpayCarInstallment } from "./carro.js";
 import { renderFgts, openFgtsDialog, closeFgtsDialog, addFgtsContract, renderFgtsInstallmentValueFields } from "./fgts.js";
-import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException } from "./preferencias.js";
+import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException } from "./preferencias.js";
+import { renderFerias, bindFeriasEvents } from "./ferias.js";
 
 boot();
 
@@ -78,6 +79,7 @@ function bindEvents() {
   el.closeFixedCostAmountButton.addEventListener("click", () => el.fixedCostAmountDialog.close());
   el.incomeExceptionForm.addEventListener("submit", saveIncomeException);
   el.closeIncomeExceptionButton.addEventListener("click", closeIncomeExceptionDialog);
+  bindFeriasEvents();
   el.projectionTopScroll.addEventListener("scroll", () => {
     el.projectionScroll.scrollLeft = el.projectionTopScroll.scrollLeft;
   });
@@ -107,6 +109,8 @@ function render() {
   renderCreditCards();
   renderRecurringIncomes();
   renderSettings();
+  renderTaxTables();
+  renderFerias();
   bindMoneyInputs();
   refreshIcons();
 }
