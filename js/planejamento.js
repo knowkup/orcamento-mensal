@@ -1,5 +1,6 @@
 import { state, el, currency } from "./state.js";
 import { nextMonths, formatMonth, formatMonthLong, compactCurrency, escapeHtml, icon, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
+import { calcNetClt } from "./taxes.js";
 import { getCreditorName, getInstallmentCard, ownerRank } from "./creditors.js";
 import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from "./components.js";
 import { ensureCarPayments } from "./carro.js";
@@ -205,7 +206,10 @@ export function recurringIncomeValues(income, months) {
   const values = {};
   months.forEach((month) => {
     const current = [...changes].reverse().find((change) => change.month <= month);
-    values[month] = current ? Number(current.amount || 0) : 0;
+    const gross = current ? Number(current.amount || 0) : 0;
+    values[month] = income.isClt && gross > 0
+      ? calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1)
+      : gross;
   });
   return values;
 }

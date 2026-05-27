@@ -1,5 +1,6 @@
 import { state, el, currency } from "./state.js";
 import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, nextMonths, formatMonth, refreshIcons, addMonthsToDate } from "./utils.js";
+import { calcNetClt } from "./taxes.js";
 import { getCreditorName, getCreditor, getCreditCard, sortedCreditors, sortedCreditCards, creditorLogoHtml, sourceLogoHtml, initials, isCreditCardInUse, creditorUsageCount, cardOpenBalance } from "./creditors.js";
 import { createDefaultData, normalizedIncomeChanges } from "./data.js";
 import { latestIncomeChange, upsertIncomeChange } from "./planejamento.js";
@@ -104,13 +105,17 @@ export function renderRecurringIncomes() {
     <tbody>
       ${state.data.recurringIncomes.map((income) => {
         const current = latestIncomeChange(income);
+        const gross = current.amount || 0;
+        const netHtml = income.isClt && gross > 0
+          ? `<br><small class="muted-cell">líq. ${currency.format(calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1))}</small>`
+          : "";
         return `
           <tr>
             <td><div class="entity-cell">${sourceLogoHtml(income.logoUrl, income.label)}<strong>${escapeHtml(income.label)}</strong></div></td>
             <td>${escapeHtml(income.origin || "-")}</td>
             <td>${escapeHtml(income.owner || "Felipe")}</td>
             <td>${income.receiveDay || 1}</td>
-            <td>${currency.format(current.amount || 0)}</td>
+            <td>${currency.format(gross)}${netHtml}</td>
             <td>${current.month ? formatMonth(current.month) : "-"}</td>
             <td class="row-actions">
               <button class="small-button" type="button" data-edit-income="${income.id}">Editar/Reajustar</button>
@@ -308,6 +313,12 @@ export function renderCardLogoPreview(creditorId) {
     : escapeHtml(initials(creditor?.name || "CC"));
 }
 
+export function toggleIncomeCltFields() {
+  const checked = document.querySelector("#incomeIsClt")?.checked;
+  const fields = document.querySelector("#incomeCltFields");
+  if (fields) fields.hidden = !checked;
+}
+
 export function openIncomeDialog(id = null) {
   if (state.hydrateFn) state.hydrateFn();
   state.incomeEditingId = id;
@@ -322,6 +333,14 @@ export function openIncomeDialog(id = null) {
   el.incomeForm.elements.receiveDay.value = income?.receiveDay || 1;
   el.incomeForm.elements.month.value = current.month || nextMonths(1)[0];
   el.incomeForm.elements.amount.value = current.amount ? formatCurrencyInput(current.amount) : "";
+  const isClt = income?.isClt || false;
+  el.incomeForm.elements.isClt.checked = isClt;
+  const cltFields = document.querySelector("#incomeCltFields");
+  if (cltFields) cltFields.hidden = !isClt;
+  if (isClt && income?.clt) {
+    el.incomeForm.elements.cltConsignado.value = income.clt.consignado ? formatCurrencyInput(income.clt.consignado) : "";
+    el.incomeForm.elements.cltAlimentacao.value = income.clt.alimentacao ?? 1;
+  }
   renderIncomeLogoPreview(income?.logoUrl || "");
   el.incomeDialog.showModal();
   refreshIcons();
@@ -339,6 +358,10 @@ export async function saveRecurringIncome(event) {
   const form = new FormData(event.currentTarget);
   const month = String(form.get("month"));
   const amount = parseCurrencyInput(form.get("amount"));
+  const isClt = form.get("isClt") === "on";
+  const cltConsignado = parseCurrencyInput(form.get("cltConsignado") || "0");
+  const cltAlimentacao = parseFloat(form.get("cltAlimentacao") || "1") || 1;
+  const clt = isClt ? { consignado: cltConsignado, alimentacao: cltAlimentacao } : null;
   const existing = state.incomeEditingId
     ? state.data.recurringIncomes.find((item) => item.id === state.incomeEditingId)
     : null;
@@ -349,6 +372,8 @@ export async function saveRecurringIncome(event) {
     existing.owner = String(form.get("owner") || "Felipe");
     existing.receiveDay = Number(form.get("receiveDay") || 1);
     existing.changes = upsertIncomeChange(existing.changes || [], month, amount);
+    existing.isClt = isClt;
+    existing.clt = clt;
   } else {
     state.data.recurringIncomes.push({
       id: crypto.randomUUID(),
@@ -357,7 +382,9 @@ export async function saveRecurringIncome(event) {
       logoUrl: String(form.get("logoUrl") || ""),
       owner: String(form.get("owner") || "Felipe"),
       receiveDay: Number(form.get("receiveDay") || 1),
-      changes: [{ month, amount }]
+      changes: [{ month, amount }],
+      isClt,
+      clt
     });
   }
   closeIncomeDialog();

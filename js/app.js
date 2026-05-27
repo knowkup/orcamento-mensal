@@ -9,7 +9,7 @@ import { renderInstallments, addInstallment, openInstallmentDialog, closeInstall
 import { renderFixedCosts, openFixedCostDialog, closeFixedCostDialog, updateFixedCostFields, addFixedCost } from "./custos-fixos.js";
 import { renderCar, updateCar, openCarContractDialog, ensureCarPayments, updateSettings, openCarPaymentDialog, payCarInstallment, unpayCarInstallment } from "./carro.js";
 import { renderFgts, openFgtsDialog, closeFgtsDialog, addFgtsContract, renderFgtsInstallmentValueFields } from "./fgts.js";
-import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException } from "./preferencias.js";
+import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException, toggleIncomeCltFields } from "./preferencias.js";
 import { renderFerias, bindFeriasEvents } from "./ferias.js";
 
 boot();
@@ -80,6 +80,7 @@ function bindEvents() {
   el.incomeExceptionForm.addEventListener("submit", saveIncomeException);
   el.closeIncomeExceptionButton.addEventListener("click", closeIncomeExceptionDialog);
   bindFeriasEvents();
+  document.querySelector("#incomeIsClt")?.addEventListener("change", toggleIncomeCltFields);
   el.projectionTopScroll.addEventListener("scroll", () => {
     el.projectionScroll.scrollLeft = el.projectionTopScroll.scrollLeft;
   });

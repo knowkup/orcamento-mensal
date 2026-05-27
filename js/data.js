@@ -142,13 +142,18 @@ export function normalizeData(data) {
     creditCards,
     paymentMethods: data.paymentMethods?.length ? data.paymentMethods : defaults.paymentMethods,
     incomeLines: data.incomeLines || defaults.incomeLines,
-    recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => ({
-      ...income,
-      owner: income.owner || "Felipe",
-      logoUrl: income.logoUrl || "",
-      receiveDay: Number(income.receiveDay || 1),
-      changes: normalizedIncomeChanges(income)
-    })),
+    recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => {
+      const isClt = income.isClt || false;
+      return {
+        ...income,
+        owner: income.owner || "Felipe",
+        logoUrl: income.logoUrl || "",
+        receiveDay: Number(income.receiveDay || 1),
+        changes: normalizedIncomeChanges(income),
+        isClt,
+        clt: isClt ? { consignado: Number(income.clt?.consignado || 0), alimentacao: Number(income.clt?.alimentacao ?? 1) } : null
+      };
+    }),
     projectionLines: (data.projectionLines || defaults.projectionLines).map((line) => ({
       ...line,
       match: creditorByName.get(line.match) || line.match,
