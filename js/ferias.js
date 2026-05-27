@@ -69,7 +69,7 @@ export function renderFerias() {
 
 export function bindFeriasEvents() {
   document.querySelector("#feriasBaseSalary")?.addEventListener("input", _recalc);
-  document.querySelector("#feriasDays")?.addEventListener("change", _recalc);
+  document.querySelector("#feriasDays")?.addEventListener("input", _recalc);
   document.querySelector("#feriasConsignado")?.addEventListener("input", _recalc);
 }
 

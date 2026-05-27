@@ -243,15 +243,7 @@
                     <input type="text" id="feriasBaseSalary" inputmode="decimal" data-money-input placeholder="0,00">
                   </label>
                   <label>Dias de férias
-                    <select id="feriasDays">
-                      <option value="">Selecione</option>
-                      <option value="5">5 dias</option>
-                      <option value="10">10 dias</option>
-                      <option value="15">15 dias</option>
-                      <option value="20">20 dias</option>
-                      <option value="25">25 dias</option>
-                      <option value="30">30 dias</option>
-                    </select>
+                    <input type="number" id="feriasDays" min="1" max="30" step="1" placeholder="Ex.: 15">
                   </label>
                 </div>
                 <label class="money-label">Empréstimo consignado — parcela mensal (opcional)
