@@ -881,6 +881,368 @@ svg {
   transform: translateY(-50%);
 }
 
+/* ── Planejamento redesign ────────────────────────────────── */
+
+.proj-kpis {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* Accumulated balance SVG chart */
+.acc-chart-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.acc-svg {
+  display: block;
+  width: 100%;
+  min-width: 600px;
+  height: auto;
+}
+
+.acc-zero-line {
+  stroke: var(--line);
+  stroke-width: 1.5;
+  stroke-dasharray: 5 4;
+}
+
+.acc-area {
+  fill-opacity: 0.14;
+}
+
+.acc-area-pos {
+  fill: var(--green);
+}
+
+.acc-area-neg {
+  fill: var(--red);
+}
+
+.acc-line {
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.acc-dot {
+  stroke: #fff;
+  stroke-width: 2.5;
+  cursor: pointer;
+  transition: r 0.15s;
+}
+
+.acc-dot:hover {
+  r: 7;
+}
+
+.acc-dot-pos {
+  fill: var(--green);
+}
+
+.acc-dot-neg {
+  fill: var(--red);
+}
+
+.acc-dot-active {
+  r: 7;
+  stroke-width: 3;
+}
+
+.acc-months-row {
+  display: flex;
+  min-width: 600px;
+  padding: 4px 12px 0;
+}
+
+.acc-month-btn {
+  flex: 1;
+  min-height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.acc-month-btn:hover {
+  background: var(--surface-soft);
+  color: var(--ink);
+}
+
+.acc-month-btn.acc-lbl-active {
+  background: rgba(38, 93, 115, 0.1);
+  color: var(--blue);
+  font-weight: 800;
+}
+
+.acc-month-btn.negative {
+  color: var(--red);
+}
+
+.acc-chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.acc-legend-line {
+  display: inline-block;
+  width: 24px;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--blue);
+}
+
+.acc-legend-zero {
+  display: inline-block;
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed var(--line);
+}
+
+/* Events strip */
+.proj-events-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.proj-event-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 180px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+}
+
+.proj-event-card strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.proj-event-card span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.proj-event-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  color: var(--muted);
+  background: var(--surface-soft);
+}
+
+.event-danger {
+  border-color: rgba(182, 61, 56, 0.3);
+  background: rgba(182, 61, 56, 0.04);
+}
+
+.event-danger .proj-event-icon {
+  background: rgba(182, 61, 56, 0.1);
+  color: var(--red);
+}
+
+.event-danger strong {
+  color: var(--red);
+}
+
+.event-positive .proj-event-icon {
+  background: rgba(53, 184, 121, 0.12);
+  color: var(--green);
+}
+
+.event-negative .proj-event-icon {
+  background: rgba(182, 61, 56, 0.08);
+  color: var(--red);
+}
+
+.event-info .proj-event-icon {
+  background: rgba(38, 93, 115, 0.1);
+  color: var(--blue);
+}
+
+/* Monthly summary table */
+.proj-monthly-panel {
+  margin-bottom: 14px;
+}
+
+.mst-table {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mst-header,
+.mst-row-main {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 32px;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.mst-header {
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--line);
+}
+
+.mst-row {
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.mst-row:last-child {
+  border-bottom: 0;
+}
+
+.mst-row:hover > .mst-row-main {
+  background: var(--surface-soft);
+}
+
+.mst-row.mst-row-neg > .mst-row-main {
+  background: rgba(182, 61, 56, 0.035);
+}
+
+.mst-row.expanded > .mst-row-main {
+  background: rgba(38, 93, 115, 0.06);
+}
+
+.mst-row-main {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mst-month {
+  font-weight: 800;
+  text-transform: capitalize;
+  color: var(--ink);
+}
+
+.mst-chevron {
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+
+.mst-detail {
+  padding: 12px 14px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-warm);
+}
+
+.mst-detail-group {
+  margin-bottom: 10px;
+}
+
+.mst-detail-group:last-of-type {
+  margin-bottom: 0;
+}
+
+.mst-detail-group-title {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.mst-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mst-detail-row:last-child {
+  border-bottom: 0;
+}
+
+.mst-detail-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 2px solid var(--line);
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 700;
+  text-align: right;
+}
+
+.mst-detail-footer strong {
+  font-size: 16px;
+}
+
+/* Collapsible projection table */
+.proj-details {
+  margin-bottom: 14px;
+}
+
+.proj-details summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 4px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  user-select: none;
+}
+
+.proj-details summary::-webkit-details-marker {
+  display: none;
+}
+
+.proj-details summary:hover {
+  color: var(--ink);
+}
+
+.proj-details[open] summary {
+  color: var(--ink);
+  margin-bottom: 12px;
+}
+
+.summary-chevron-icon {
+  margin-left: auto;
+  transition: transform 0.2s;
+}
+
+.proj-details[open] .summary-chevron-icon {
+  transform: rotate(180deg);
+}
+
+/* ── end Planejamento redesign ────────────────────────────── */
+
 .monthly-board {
   display: grid;
   grid-template-columns: 1fr;
@@ -1786,6 +2148,24 @@ select {
 
   .topbar-actions {
     justify-content: flex-start;
+  }
+
+  .proj-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .proj-kpis .metric:first-child {
+    grid-column: span 2;
+  }
+
+  .mst-header,
+  .mst-row-main {
+    grid-template-columns: 1.4fr 1fr 1fr 1fr 32px;
+  }
+
+  .mst-header span:nth-child(4),
+  .mst-row-main span:nth-child(4) {
+    display: none;
   }
 
   .month-summary,

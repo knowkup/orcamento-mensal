@@ -87,34 +87,45 @@
         </header>
 
         <section class="view active" id="planejamentoView" data-title="Planejamento">
-          <div class="month-summary" id="monthSummary"></div>
+          <div class="proj-kpis" id="monthSummary"></div>
 
           <section class="panel chart-panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Visão futura</p>
-                <h2>Resumo dos próximos 12 meses</h2>
+                <p class="eyebrow">Saldo acumulado projetado</p>
+                <h2>Evolução dos próximos 12 meses</h2>
               </div>
             </div>
             <div class="planning-chart" id="planningChart"></div>
           </section>
 
-          <section class="panel projection-panel">
+          <div id="projEvents"></div>
+
+          <section class="panel proj-monthly-panel">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Próximos 12 meses</p>
-                <h2>Entradas, saídas e saldo projetado</h2>
+                <p class="eyebrow">Detalhamento mensal</p>
+                <h2>Resumo por mês</h2>
               </div>
               <button class="primary-button accent-button" type="button" id="addPlanButton">
                 <i data-lucide="calendar-plus"></i>
                 <span>Lançamento planejado</span>
               </button>
             </div>
+            <div id="projMonthlySummary"></div>
+          </section>
+
+          <details class="panel proj-details">
+            <summary>
+              <i data-lucide="table-2"></i>
+              <span>Ver todos os lançamentos</span>
+              <i data-lucide="chevron-down" class="summary-chevron-icon"></i>
+            </summary>
             <div class="top-scroll" id="projectionTopScroll"><div></div></div>
             <div class="projection-scroll">
               <table class="projection-table" id="projectionTable"></table>
             </div>
-          </section>
+          </details>
         </section>
 
         <section class="view" id="controleView" data-title="Controle Mensal">

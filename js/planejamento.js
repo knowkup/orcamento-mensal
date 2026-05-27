@@ -1,5 +1,7 @@
 import { state, el, currency } from "./state.js";
 import { nextMonths, formatMonth, formatMonthLong, compactCurrency, escapeHtml, icon, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
+
+let _expandedSummaryMonth = null;
 import { calcNetClt } from "./taxes.js";
 import { getCreditorName, getInstallmentCard, ownerRank } from "./creditors.js";
 import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from "./components.js";
@@ -11,16 +13,179 @@ export function renderProjection() {
   const months = nextMonths(12);
   const rows = buildProjectionRows(months, true);
   const totals = buildTotals(rows, months);
-  const current = totals[0];
 
-  el.monthSummary.innerHTML = [
-    metric("Entradas", current.income, "positive"),
-    metric("Saídas", -current.expense, "negative"),
-    metric("Resultado do mês", current.balance, current.balance >= 0 ? "positive" : "negative"),
-    metric("Saldo acumulado", current.accumulated, current.accumulated >= 0 ? "positive" : "negative")
-  ].join("");
+  _renderKpis(totals);
   renderPlanningChart(totals, months);
+  _renderEvents(totals, months, rows);
+  _renderMonthlySummary(totals, months, rows);
+  _renderProjectionTable(rows, months, totals);
+  requestAnimationFrame(syncProjectionTopScroll);
+}
 
+function _renderKpis(totals) {
+  const last = totals[totals.length - 1];
+  const minT = totals.reduce((a, b) => (b.accumulated < a.accumulated ? b : a));
+  const maxT = totals.reduce((a, b) => (b.accumulated > a.accumulated ? b : a));
+  const totalBalance = totals.reduce((s, t) => s + t.balance, 0);
+  const negativeMonths = totals.filter((t) => t.accumulated < 0).length;
+  const fmt = (v) => currency.format(v);
+
+  el.monthSummary.innerHTML = `
+    <article class="metric ${last.accumulated >= 0 ? "positive" : "negative"}">
+      <span>Saldo ao final do período</span>
+      <strong>${fmt(last.accumulated)}</strong>
+    </article>
+    <article class="metric ${minT.accumulated >= 0 ? "positive" : "negative"}">
+      <span>Menor saldo</span>
+      <strong>${fmt(minT.accumulated)}</strong>
+      <small>${formatMonthLong(minT.month)}</small>
+    </article>
+    <article class="metric ${maxT.accumulated >= 0 ? "positive" : "negative"}">
+      <span>Maior saldo</span>
+      <strong>${fmt(maxT.accumulated)}</strong>
+      <small>${formatMonthLong(maxT.month)}</small>
+    </article>
+    <article class="metric ${totalBalance >= 0 ? "positive" : "negative"}">
+      <span>Tendência do período</span>
+      <strong>${totalBalance >= 0 ? "+" : ""}${fmt(totalBalance)}</strong>
+    </article>
+    <article class="metric ${negativeMonths === 0 ? "positive" : "negative"}">
+      <span>Meses negativos</span>
+      <strong>${negativeMonths === 0 ? "Nenhum" : String(negativeMonths)}</strong>
+      ${negativeMonths > 0 ? `<small>de ${totals.length} meses</small>` : ""}
+    </article>
+  `;
+}
+
+function _renderEvents(totals, months, rows) {
+  const eventsEl = document.querySelector("#projEvents");
+  if (!eventsEl) return;
+
+  const events = [];
+  const fmt = (v) => currency.format(v);
+
+  const minT = totals.reduce((a, b) => (b.accumulated < a.accumulated ? b : a));
+  if (minT.accumulated < 0) {
+    events.push({ ic: "alert-triangle", label: "Mês crítico", detail: `${formatMonthLong(minT.month)}: ${fmt(minT.accumulated)}`, cls: "event-danger" });
+  } else {
+    events.push({ ic: "trending-down", label: "Menor saldo", detail: `${formatMonthLong(minT.month)}: ${fmt(minT.accumulated)}`, cls: "event-neutral" });
+  }
+
+  const maxInT = totals.reduce((a, b) => (b.income > a.income ? b : a));
+  events.push({ ic: "trending-up", label: "Maior entrada", detail: `${formatMonthLong(maxInT.month)}: +${fmt(maxInT.income)}`, cls: "event-positive" });
+
+  const maxExT = totals.reduce((a, b) => (b.expense > a.expense ? b : a));
+  events.push({ ic: "receipt", label: "Maior saída", detail: `${formatMonthLong(maxExT.month)}: -${fmt(maxExT.expense)}`, cls: "event-negative" });
+
+  const keywords = [
+    { re: /f[eé]rias/i, label: "Férias", ic: "umbrella" },
+    { re: /13|d[eé]cimo/i, label: "13º Salário", ic: "gift" },
+    { re: /ipva/i, label: "IPVA", ic: "car" },
+    { re: /seguro/i, label: "Seguro", ic: "shield" },
+  ];
+  const allPlanned = [...(state.data.incomeLines || []), ...(state.data.plannedPurchases || [])];
+  keywords.forEach(({ re, label, ic }) => {
+    const found = allPlanned.find((p) => re.test(p.label || p.description || ""));
+    if (found) {
+      const month = found.date ? String(found.date).slice(0, 7) : found.month || "";
+      events.push({ ic, label, detail: month ? formatMonthLong(month) : "previsto", cls: "event-info" });
+    }
+  });
+
+  eventsEl.innerHTML = `
+    <div class="proj-events-strip">
+      ${events.map((e) => `
+        <div class="proj-event-card ${e.cls}">
+          <span class="proj-event-icon">${icon(e.ic)}</span>
+          <div>
+            <strong>${e.label}</strong>
+            <span>${e.detail}</span>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function _renderMonthlySummary(totals, months, rows) {
+  const summaryEl = document.querySelector("#projMonthlySummary");
+  if (!summaryEl) return;
+  const fmt = (v) => currency.format(v);
+
+  const rowsHtml = totals.map((t) => {
+    const isExpanded = _expandedSummaryMonth === t.month;
+    const negAccum = t.accumulated < 0;
+    const negBal = t.balance < 0;
+
+    const incomeRows = rows.filter((r) => r.kind === "income" && (r.values[t.month] || 0) > 0);
+    const expenseRows = rows.filter((r) => r.kind === "expense" && (r.values[t.month] || 0) > 0);
+
+    const detailHtml = isExpanded ? `
+      <div class="mst-detail">
+        ${incomeRows.length ? `
+          <div class="mst-detail-group">
+            <p class="mst-detail-group-title">Entradas</p>
+            ${incomeRows.map((r) => `
+              <div class="mst-detail-row">
+                <span>${escapeHtml(r.label)}</span>
+                <span class="positive">+${fmt(r.values[t.month])}</span>
+              </div>`).join("")}
+          </div>` : ""}
+        ${expenseRows.length ? `
+          <div class="mst-detail-group">
+            <p class="mst-detail-group-title">Saídas</p>
+            ${expenseRows.map((r) => `
+              <div class="mst-detail-row">
+                <span>${escapeHtml(r.label)}</span>
+                <span class="negative">-${fmt(r.values[t.month])}</span>
+              </div>`).join("")}
+          </div>` : ""}
+        <div class="mst-detail-footer">
+          Saldo acumulado após ${formatMonthLong(t.month)}:
+          <strong class="${negAccum ? "negative" : "positive"}">${fmt(t.accumulated)}</strong>
+        </div>
+      </div>
+    ` : "";
+
+    return `
+      <div class="mst-row ${isExpanded ? "expanded" : ""} ${negAccum ? "mst-row-neg" : ""}" data-summary-month="${t.month}">
+        <div class="mst-row-main">
+          <span class="mst-month">${formatMonthLong(t.month)}</span>
+          <span class="positive">+${fmt(t.income)}</span>
+          <span class="negative">-${fmt(t.expense)}</span>
+          <span class="${negBal ? "negative" : "positive"}">${negBal ? "" : "+"}${fmt(t.balance)}</span>
+          <span class="${negAccum ? "negative" : "positive"}">${fmt(t.accumulated)}</span>
+          <span class="mst-chevron">${icon(isExpanded ? "chevron-up" : "chevron-down")}</span>
+        </div>
+        ${detailHtml}
+      </div>
+    `;
+  }).join("");
+
+  summaryEl.innerHTML = `
+    <div class="mst-table">
+      <div class="mst-header">
+        <span>Mês</span>
+        <span>Entradas</span>
+        <span>Saídas</span>
+        <span>Resultado</span>
+        <span>Saldo acumulado</span>
+        <span></span>
+      </div>
+      ${rowsHtml}
+    </div>
+  `;
+
+  summaryEl.querySelectorAll("[data-summary-month]").forEach((rowEl) => {
+    rowEl.addEventListener("click", () => {
+      const month = rowEl.dataset.summaryMonth;
+      _expandedSummaryMonth = _expandedSummaryMonth === month ? null : month;
+      _renderMonthlySummary(totals, months, rows);
+    });
+  });
+}
+
+function _renderProjectionTable(rows, months, totals) {
   const monthHeaders = months.map((month) => `<th>${formatMonth(month)}</th>`).join("");
   const body = [
     groupRow("Entradas", months.length),
@@ -49,7 +214,6 @@ export function renderProjection() {
   el.projectionTable.querySelectorAll("[data-delete-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => deleteManualPlanned(button.dataset.deleteManualPlan));
   });
-  requestAnimationFrame(syncProjectionTopScroll);
 }
 
 function projectionRow(row, months) {
@@ -86,46 +250,77 @@ function projectionCell(row, month) {
 }
 
 export function renderPlanningChart(totals, months) {
-  const maxValue = Math.max(
-    1,
-    ...totals.flatMap((item) => [Math.abs(item.income), Math.abs(item.expense), Math.abs(item.balance)])
-  );
-  const points = totals.map((item, index) => {
-    const x = 42 + index * 76;
-    const y = 166 - ((item.balance + maxValue) / (maxValue * 2)) * 132;
-    return { x, y, value: item.balance };
-  });
+  const accValues = totals.map((t) => t.accumulated);
+  const minVal = Math.min(0, ...accValues);
+  const maxVal = Math.max(0, ...accValues);
+  const range = Math.max(1, maxVal - minVal);
+
+  const W = 960;
+  const SVG_H = 130;
+  const PAD_L = 12; const PAD_R = 12;
+  const PAD_T = 18; const PAD_B = 12;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = SVG_H - PAD_T - PAD_B;
+  const n = totals.length;
+
+  const xPos = (i) => PAD_L + (n > 1 ? (i / (n - 1)) * chartW : chartW / 2);
+  const yPos = (v) => PAD_T + (1 - (v - minVal) / range) * chartH;
+  const zeroY = yPos(0);
+
+  const pts = totals.map((t, i) => [xPos(i), yPos(t.accumulated)]);
+  const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
+  const areaD = [
+    `M${pts[0][0].toFixed(1)},${zeroY.toFixed(1)}`,
+    ...pts.map((p) => `L${p[0].toFixed(1)},${p[1].toFixed(1)}`),
+    `L${pts[pts.length - 1][0].toFixed(1)},${zeroY.toFixed(1)}Z`
+  ].join(" ");
+
+  const hasNeg = minVal < 0;
+  const areaClass = hasNeg ? "acc-area-neg" : "acc-area-pos";
+
+  const dotsHtml = totals.map((t, i) => {
+    const x = xPos(i).toFixed(1);
+    const y = yPos(t.accumulated).toFixed(1);
+    const activeClass = _expandedSummaryMonth === t.month ? " acc-dot-active" : "";
+    const posClass = t.accumulated >= 0 ? " acc-dot-pos" : " acc-dot-neg";
+    return `<circle class="acc-dot${posClass}${activeClass}" cx="${x}" cy="${y}" r="5.5" data-month="${t.month}"><title>${formatMonthLong(t.month)}: ${currency.format(t.accumulated)}</title></circle>`;
+  }).join("");
+
   el.planningChart.innerHTML = `
-    <div class="chart-legend">
-      <span><i class="legend-dot income"></i>Entradas</span>
-      <span><i class="legend-dot expense"></i>Saídas</span>
-      <span><i class="legend-dot balance"></i>Saldo</span>
-    </div>
-    <div class="bar-chart-wrap">
-      <svg class="balance-line" viewBox="0 0 900 190" preserveAspectRatio="none" aria-hidden="true">
-        <polyline points="${points.map((point) => `${point.x},${point.y}`).join(" ")}"></polyline>
-        ${points.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="4"></circle>`).join("")}
+    <div class="acc-chart-wrap">
+      <svg class="acc-svg" viewBox="0 0 ${W} ${SVG_H}" preserveAspectRatio="none" aria-hidden="true">
+        <line x1="${PAD_L}" y1="${zeroY.toFixed(1)}" x2="${(W - PAD_R).toFixed(1)}" y2="${zeroY.toFixed(1)}" class="acc-zero-line"/>
+        <path d="${areaD}" class="acc-area ${areaClass}"/>
+        <path d="${lineD}" class="acc-line"/>
+        ${dotsHtml}
       </svg>
-      <div class="bar-chart">
-      ${totals.map((item, index) => {
-        const incomeHeight = Math.max(4, (item.income / maxValue) * 150);
-        const expenseHeight = Math.max(4, (item.expense / maxValue) * 150);
-        return `
-          <div class="bar-month">
-            <div class="bar-stack" title="${formatMonth(months[index])}">
-              <span class="bar-value income-value">${compactCurrency(item.income)}</span>
-              <span class="bar income" style="height:${incomeHeight}px"></span>
-              <span class="bar expense" style="height:${expenseHeight}px"></span>
-              <span class="bar-value expense-value">-${compactCurrency(item.expense)}</span>
-              <span class="line-value ${item.balance < 0 ? "negative" : "positive"}">${compactCurrency(item.balance)}</span>
-            </div>
-            <strong>${formatMonth(months[index])}</strong>
-          </div>
-        `;
-      }).join("")}
+      <div class="acc-months-row">
+        ${totals.map((t, i) => {
+          const active = _expandedSummaryMonth === t.month ? " acc-lbl-active" : "";
+          const neg = t.accumulated < 0 ? " negative" : "";
+          return `<button class="acc-month-btn${neg}${active}" type="button" data-chart-month="${t.month}" title="${currency.format(t.accumulated)}">${formatMonth(t.month)}</button>`;
+        }).join("")}
       </div>
     </div>
+    <div class="acc-chart-legend">
+      <span class="acc-legend-line"></span>Saldo acumulado &nbsp;
+      <span class="acc-legend-zero"></span>Zero
+    </div>
   `;
+
+  el.planningChart.querySelectorAll("[data-chart-month]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const month = btn.dataset.chartMonth;
+      _expandedSummaryMonth = _expandedSummaryMonth === month ? null : month;
+      const months12 = nextMonths(12);
+      const rows12 = buildProjectionRows(months12, true);
+      const totals12 = buildTotals(rows12, months12);
+      renderPlanningChart(totals12, months12);
+      _renderMonthlySummary(totals12, months12, rows12);
+      // scroll to monthly summary
+      document.querySelector("#projMonthlySummary")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  });
 }
 
 export function buildProjectionRows(months, keepPaidValues = false) {
