@@ -47,8 +47,8 @@
             <span>FGTS</span>
           </button>
           <button class="nav-tab" type="button" data-view="ferias">
-            <i data-lucide="umbrella"></i>
-            <span>Férias</span>
+            <i data-lucide="sliders"></i>
+            <span>Simulador</span>
           </button>
           <button class="nav-tab" type="button" data-view="ajustes">
             <i data-lucide="settings"></i>
@@ -228,13 +228,17 @@
           </div>
         </section>
 
-        <section class="view" id="feriasView" data-title="Simulador de Férias">
+        <section class="view" id="feriasView" data-title="Simulador">
           <div class="vertical-stack">
             <section class="panel">
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">Trabalhista 2026</p>
-                  <h2>Simulação de salário de férias</h2>
+                  <h2>Simulador de holerite</h2>
+                </div>
+                <div class="segmented">
+                  <button class="segment active" type="button" id="feriaModeFerias">Férias</button>
+                  <button class="segment" type="button" id="feriaModeSalario">Salário mensal</button>
                 </div>
               </div>
               <div class="ferias-inputs">
@@ -242,10 +246,13 @@
                   <label class="money-label">Salário bruto CLT
                     <input type="text" id="feriasBaseSalary" inputmode="decimal" data-money-input placeholder="0,00">
                   </label>
-                  <label>Dias de férias
-                    <input type="number" id="feriasDays" min="1" max="30" step="1" placeholder="Ex.: 15">
+                  <label>Dias
+                    <input type="number" id="feriasDays" min="1" max="31" step="1" placeholder="Ex.: 15">
                   </label>
                 </div>
+                <label id="feriasAlimentacaoRow" hidden>Desconto alimentação (% do proporcional)
+                  <input type="number" id="feriasAlimentacao" min="0" max="100" step="0.1" value="1">
+                </label>
                 <label class="money-label">Empréstimo consignado — parcela mensal (opcional)
                   <input type="text" id="feriasConsignado" inputmode="decimal" data-money-input placeholder="Deixe em branco se não houver">
                 </label>
