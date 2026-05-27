@@ -583,6 +583,16 @@ svg {
   max-width: 260px;
   background: #f8fbfa;
   white-space: normal;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.projection-table .sticky-col > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .projection-table tbody .sticky-col {
@@ -1537,8 +1547,22 @@ select {
 }
 
 .projection-table .sticky-col .row-edit {
-  margin-left: 8px;
-  vertical-align: middle;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.projection-table tr:hover .sticky-col .row-edit {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: none) {
+  .projection-table .sticky-col .row-edit {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .mini-progress i {
