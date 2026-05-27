@@ -239,6 +239,7 @@
                 <div class="segmented">
                   <button class="segment active" type="button" id="feriaModeFerias">Férias</button>
                   <button class="segment" type="button" id="feriaModeSalario">Salário mensal</button>
+                  <button class="segment" type="button" id="feriasModeDecimo">13º Salário</button>
                 </div>
               </div>
               <div class="ferias-inputs">
@@ -253,9 +254,11 @@
                 <label id="feriasAlimentacaoRow" hidden>Desconto alimentação (% do proporcional)
                   <input type="number" id="feriasAlimentacao" min="0" max="100" step="0.1" value="1">
                 </label>
-                <label class="money-label">Empréstimo consignado — parcela mensal (opcional)
-                  <input type="text" id="feriasConsignado" inputmode="decimal" data-money-input placeholder="Deixe em branco se não houver">
-                </label>
+                <div id="feriasConsignadoRow">
+                  <label class="money-label">Empréstimo consignado — parcela mensal (opcional)
+                    <input type="text" id="feriasConsignado" inputmode="decimal" data-money-input placeholder="Deixe em branco se não houver">
+                  </label>
+                </div>
               </div>
             </section>
             <section class="panel" id="feriasResultPanel" hidden>

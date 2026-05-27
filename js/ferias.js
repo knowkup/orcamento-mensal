@@ -18,6 +18,17 @@ function calcFerias(baseSalary, days, consignado) {
   return { prop, bonus, gross, inss, irrf, consignadoDiscount, totalDeductions, net };
 }
 
+function calcDecimo(baseSalary, days) {
+  const gross = Math.round(baseSalary / 30 * days * 100) / 100;
+  const adiantamento = Math.round(gross / 2 * 100) / 100;
+  const inss = calcInss(gross);
+  const irrf = calcIrrf(gross, inss);
+  const totalDeductions = Math.round((inss + irrf) * 100) / 100;
+  const saldo = Math.round((gross / 2 - inss - irrf) * 100) / 100;
+  const net = Math.round((gross - totalDeductions) * 100) / 100;
+  return { gross, adiantamento, inss, irrf, totalDeductions, saldo, net };
+}
+
 function calcSalario(baseSalary, days, alimentacaoPercent, consignado) {
   const prop = Math.round(baseSalary / 30 * days * 100) / 100;
   const inss = calcInss(prop);
@@ -59,22 +70,22 @@ export function bindFeriasEvents() {
   document.querySelector("#feriasAlimentacao")?.addEventListener("input", _recalc);
   document.querySelector("#feriaModeFerias")?.addEventListener("click", () => _setMode("ferias"));
   document.querySelector("#feriaModeSalario")?.addEventListener("click", () => _setMode("salario"));
+  document.querySelector("#feriasModeDecimo")?.addEventListener("click", () => _setMode("decimo"));
 }
 
 function _setMode(mode) {
   _mode = mode;
   const daysEl = document.querySelector("#feriasDays");
   const alimentacaoRow = document.querySelector("#feriasAlimentacaoRow");
+  const consignadoRow = document.querySelector("#feriasConsignadoRow");
 
   document.querySelector("#feriaModeFerias")?.classList.toggle("active", mode === "ferias");
   document.querySelector("#feriaModeSalario")?.classList.toggle("active", mode === "salario");
+  document.querySelector("#feriasModeDecimo")?.classList.toggle("active", mode === "decimo");
 
-  if (mode === "salario") {
-    if (!daysEl?.value) daysEl.value = "30";
-    if (alimentacaoRow) alimentacaoRow.hidden = false;
-  } else {
-    if (alimentacaoRow) alimentacaoRow.hidden = true;
-  }
+  if (alimentacaoRow) alimentacaoRow.hidden = mode !== "salario";
+  if (consignadoRow) consignadoRow.hidden = mode === "decimo";
+  if ((mode === "salario" || mode === "decimo") && !daysEl?.value) daysEl.value = "30";
 
   _recalc();
 }
@@ -103,6 +114,8 @@ function _recalc() {
   if (_mode === "salario") {
     const alimentacaoPercent = parseFloat(alimentacaoEl?.value ?? "1") || 1;
     resultEl.innerHTML = _payslipSalario(calcSalario(baseSalary, days, alimentacaoPercent, consignado), baseSalary, days, fmt);
+  } else if (_mode === "decimo") {
+    resultEl.innerHTML = _payslipDecimo(calcDecimo(baseSalary, days), baseSalary, days, fmt);
   } else {
     resultEl.innerHTML = _payslipFerias(calcFerias(baseSalary, days, consignado), baseSalary, days, fmt);
   }
@@ -202,6 +215,49 @@ function _payslipSalario(r, baseSalary, days, fmt) {
       </div>
       <div class="payslip-net">
         <span>Valor líquido</span>
+        <strong>${fmt(r.net)}</strong>
+      </div>
+    </div>
+  `;
+}
+
+function _payslipDecimo(r, baseSalary, days, fmt) {
+  return `
+    <div class="payslip">
+      <div class="payslip-header">
+        <div>
+          <strong>Demonstrativo do 13º Salário</strong>
+          <span>${days} dias &middot; Salário bruto ${fmt(baseSalary)}</span>
+        </div>
+      </div>
+      <div class="payslip-section">
+        <p class="payslip-section-title">1ª Parcela &mdash; Adiantamento</p>
+        <div class="payslip-row">
+          <span>50% do bruto (sem descontos)</span>
+          <span class="payslip-pos">${fmt(r.adiantamento)}</span>
+        </div>
+      </div>
+      <div class="payslip-section">
+        <p class="payslip-section-title">2ª Parcela &mdash; Saldo</p>
+        <div class="payslip-row">
+          <span>50% do bruto</span>
+          <span class="payslip-pos">${fmt(r.adiantamento)}</span>
+        </div>
+        <div class="payslip-row">
+          <span>INSS (tabela progressiva 2026)</span>
+          <span class="payslip-neg">&minus;${fmt(r.inss)}</span>
+        </div>
+        <div class="payslip-row">
+          <span>IRRF</span>
+          ${r.irrf > 0 ? `<span class="payslip-neg">&minus;${fmt(r.irrf)}</span>` : `<span class="muted-cell">Isento</span>`}
+        </div>
+        <div class="payslip-row payslip-subtotal">
+          <span>Líquido da 2ª parcela</span>
+          <span>${fmt(r.saldo)}</span>
+        </div>
+      </div>
+      <div class="payslip-net">
+        <span>Total líquido (1ª + 2ª parcela)</span>
         <strong>${fmt(r.net)}</strong>
       </div>
     </div>
