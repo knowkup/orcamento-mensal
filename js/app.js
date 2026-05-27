@@ -74,7 +74,14 @@ function bindEvents() {
   el.closeMonthButton.addEventListener("click", closeMonth);
   el.closePlanButton.addEventListener("click", closePlannedDialog);
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
-  el.plannedForm.elements.kind.addEventListener("change", updatePlannedFields);
+  document.querySelector("#plannedKindExpense")?.addEventListener("click", () => {
+    el.plannedForm.elements.kind.value = "expense";
+    updatePlannedFields();
+  });
+  document.querySelector("#plannedKindIncome")?.addEventListener("click", () => {
+    el.plannedForm.elements.kind.value = "income";
+    updatePlannedFields();
+  });
   el.fixedCostAmountForm.addEventListener("submit", saveFixedCostAmount);
   el.closeFixedCostAmountButton.addEventListener("click", () => el.fixedCostAmountDialog.close());
   el.incomeExceptionForm.addEventListener("submit", saveIncomeException);

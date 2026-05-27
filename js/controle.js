@@ -326,7 +326,7 @@ export function openPlannedDialog(id = null, kind = null) {
   el.plannedForm.elements.kind.value = income ? "income" : "expense";
   el.plannedForm.elements.description.value = income?.label || expense?.description || "";
   el.plannedForm.elements.creditorId.value = expense?.creditorId || el.plannedForm.elements.creditorId.value;
-  el.plannedForm.elements.sourceCreditorId.value = income?.creditorId || el.plannedForm.elements.sourceCreditorId.value;
+  if (el.plannedForm.elements.fonte) el.plannedForm.elements.fonte.value = income?.origin || "";
   el.plannedForm.elements.date.value = item?.date || todayIsoDate();
   el.plannedForm.elements.installments.value = expense?.installments || 1;
   el.plannedForm.elements.owner.value = item?.owner || "Felipe";
@@ -349,8 +349,15 @@ export function updatePlannedFields() {
   el.plannedCredorField.hidden = isIncome;
   el.plannedFonteField.hidden = !isIncome;
   el.plannedForm.elements.creditorId.required = !isIncome;
-  el.plannedForm.elements.sourceCreditorId.required = isIncome;
-  el.plannedForm.elements.kind.disabled = Boolean(state.plannedEditingId);
+  const editing = Boolean(state.plannedEditingId);
+  const expBtn = document.querySelector("#plannedKindExpense");
+  const incBtn = document.querySelector("#plannedKindIncome");
+  expBtn?.classList.toggle("active", !isIncome);
+  incBtn?.classList.toggle("active", isIncome);
+  if (expBtn) expBtn.disabled = editing;
+  if (incBtn) incBtn.disabled = editing;
+  const titleEl = document.querySelector("#plannedDialogTitle");
+  if (titleEl) titleEl.textContent = isIncome ? "Nova entrada planejada" : "Nova saída planejada";
 }
 
 export async function addPlannedPurchase(event) {
@@ -362,15 +369,15 @@ export async function addPlannedPurchase(event) {
   const amount = parseCurrencyInput(form.get("amount"));
   const installments = Math.max(1, Number(form.get("installments") || 1));
   if (kind === "income") {
-    const creditorId = String(form.get("sourceCreditorId") || "");
+    const fonte = String(form.get("fonte") || "").trim();
     const existing = state.plannedEditingKind === "income" && state.plannedEditingId
       ? state.data.incomeLines.find((item) => item.id === state.plannedEditingId)
       : null;
     const item = {
       id: existing?.id || crypto.randomUUID(),
       label: String(form.get("description")).trim(),
-      origin: getCreditorName(creditorId),
-      creditorId,
+      origin: fonte,
+      creditorId: "",
       owner: String(form.get("owner") || "Felipe"),
       date,
       values: { [month]: amount }

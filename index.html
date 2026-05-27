@@ -632,21 +632,26 @@
         <div class="panel-heading">
           <div>
             <p class="eyebrow">Simulação</p>
-            <h2>Lançamento planejado</h2>
+            <h2 id="plannedDialogTitle">Nova saída planejada</h2>
           </div>
           <button class="icon-button" type="button" id="closePlanButton" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
-        <label>Tipo<select name="kind">
-          <option value="expense">Saída</option>
-          <option value="income">Entrada</option>
-        </select></label>
+        <input type="hidden" name="kind" value="expense">
+        <div class="segmented">
+          <button type="button" class="segment active" id="plannedKindExpense">Saída</button>
+          <button type="button" class="segment" id="plannedKindIncome">Entrada</button>
+        </div>
         <label>Descrição<input name="description" required placeholder="Ex.: 13º, compras gerais"></label>
-        <div class="form-row">
-          <label id="plannedCredorField">Credor<select name="creditorId" data-creditor-select></select></label>
-          <label id="plannedFonteField" hidden>Destino<select name="sourceCreditorId" data-creditor-select></select></label>
-          <label>Parcelas<input name="installments" type="number" min="1" step="1" value="1" required></label>
+        <div id="plannedCredorField">
+          <div class="form-row">
+            <label>Credor<select name="creditorId" data-creditor-select></select></label>
+            <label>Parcelas<input name="installments" type="number" min="1" step="1" value="1" required></label>
+          </div>
+        </div>
+        <div id="plannedFonteField" hidden>
+          <label>Fonte<input name="fonte" type="text" placeholder="Ex.: ATP, empresa"></label>
         </div>
         <label>Data<input name="date" type="date" required></label>
         <label>Dono<select name="owner" data-owner-select></select></label>
