@@ -53,7 +53,8 @@ export function createDefaultData() {
         { upTo: 8475.55, rate: 14 }
       ],
       irrf: {
-        simplifiedDeduction: 2571.20,
+        exemptionLimit: 5000,
+        partialLimit: 7350,
         brackets: [
           { upTo: 2428.80, rate: 0, deduction: 0 },
           { upTo: 2826.65, rate: 7.5, deduction: 182.16 },
@@ -181,7 +182,11 @@ export function normalizeData(data) {
     fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) },
     taxes: {
       inss: data.taxes?.inss?.length ? data.taxes.inss : defaults.taxes.inss,
-      irrf: data.taxes?.irrf ?? defaults.taxes.irrf
+      irrf: {
+        exemptionLimit: Number(data.taxes?.irrf?.exemptionLimit ?? defaults.taxes.irrf.exemptionLimit),
+        partialLimit: Number(data.taxes?.irrf?.partialLimit ?? defaults.taxes.irrf.partialLimit),
+        brackets: data.taxes?.irrf?.brackets?.length ? data.taxes.irrf.brackets : defaults.taxes.irrf.brackets
+      }
     }
   };
   if (!normalized.fgts.contracts.length) {

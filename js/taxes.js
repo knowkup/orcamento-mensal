@@ -8,7 +8,8 @@ const FALLBACK_TAXES = {
     { upTo: 8475.55, rate: 14 }
   ],
   irrf: {
-    simplifiedDeduction: 2571.20,
+    exemptionLimit: 5000,
+    partialLimit: 7350,
     brackets: [
       { upTo: 2428.80, rate: 0, deduction: 0 },
       { upTo: 2826.65, rate: 7.5, deduction: 182.16 },
@@ -38,22 +39,29 @@ export function calcInss(gross) {
 
 export function calcIrrf(gross, inss) {
   const cfg = currentTaxes().irrf ?? FALLBACK_TAXES.irrf;
-  const simplDeduction = Number(cfg.simplifiedDeduction ?? 2571.20);
+  const exemptionLimit = Number(cfg.exemptionLimit ?? 5000);
+  const partialLimit = Number(cfg.partialLimit ?? 7350);
   const brackets = cfg.brackets ?? FALLBACK_TAXES.irrf.brackets;
-  const taxable = gross - inss - simplDeduction;
+  if (gross <= exemptionLimit) return 0;
+  const taxable = gross - inss;
   if (taxable <= 0) return 0;
+  let irrf = 0;
   for (const b of brackets) {
     if (b.upTo === null || taxable <= Number(b.upTo)) {
-      return Math.max(0, Math.round((taxable * (Number(b.rate) / 100) - Number(b.deduction || 0)) * 100) / 100);
+      irrf = Math.max(0, taxable * (Number(b.rate) / 100) - Number(b.deduction || 0));
+      break;
     }
   }
-  return 0;
+  if (gross <= partialLimit) {
+    irrf = irrf * (gross - exemptionLimit) / (partialLimit - exemptionLimit);
+  }
+  return Math.round(irrf * 100) / 100;
 }
 
 export function calcNetClt(gross, consignado, alimentacaoPercent) {
   const inss = calcInss(gross);
   const irrf = calcIrrf(gross, inss);
-  const alimentacao = Math.round(gross * ((alimentacaoPercent ?? 1) / 100) * 100) / 100;
+  const alimentacao = Math.round(gross * ((alimentacaoPercent ?? 1) / 100));
   const total = Math.round((inss + irrf + alimentacao + Number(consignado || 0)) * 100) / 100;
   return Math.round((gross - total) * 100) / 100;
 }

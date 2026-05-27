@@ -521,10 +521,10 @@ export function renderTaxTables() {
         <strong>IRRF &mdash; faixas e alíquotas</strong>
         <button class="small-button" type="button" id="addIrrfRowBtn">+ Faixa</button>
       </div>
-      <label class="tax-simpl-label">
-        Dedução simplificada mensal (R$)
-        <input type="number" id="irrfSimplifiedDeduction" step="0.01" min="0" value="${irrf.simplifiedDeduction ?? 2571.20}">
-      </label>
+      <div class="form-row">
+        <label class="tax-simpl-label">Isenção total até (R$ bruto)<input type="number" id="irrfExemptionLimit" step="0.01" min="0" value="${irrf.exemptionLimit ?? 5000}"></label>
+        <label class="tax-simpl-label">Desconto parcial até (R$ bruto)<input type="number" id="irrfPartialLimit" step="0.01" min="0" value="${irrf.partialLimit ?? 7350}"></label>
+      </div>
       <div class="table-wrap">
         <table class="data-table clean-table">
           <thead><tr><th>Até (R$) &mdash; vazio = acima</th><th>Alíquota (%)</th><th>Dedução (R$)</th><th></th></tr></thead>
@@ -602,12 +602,12 @@ async function saveTaxTables() {
     return a.upTo - b.upTo;
   });
 
-  const simplVal = parseFloat(document.querySelector("#irrfSimplifiedDeduction")?.value ?? "2571.20");
-  const simplifiedDeduction = isNaN(simplVal) ? 2571.20 : simplVal;
+  const exemptionLimit = parseFloat(document.querySelector("#irrfExemptionLimit")?.value ?? "5000") || 5000;
+  const partialLimit = parseFloat(document.querySelector("#irrfPartialLimit")?.value ?? "7350") || 7350;
 
   if (!state.data.taxes) state.data.taxes = {};
   state.data.taxes.inss = inss;
-  state.data.taxes.irrf = { simplifiedDeduction, brackets };
+  state.data.taxes.irrf = { exemptionLimit, partialLimit, brackets };
 
   if (state.saveStateFn) await state.saveStateFn("Tabelas tributárias salvas.");
 }

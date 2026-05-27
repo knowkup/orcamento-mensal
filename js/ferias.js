@@ -22,7 +22,7 @@ function calcSalario(baseSalary, days, alimentacaoPercent, consignado) {
   const prop = Math.round(baseSalary / 30 * days * 100) / 100;
   const inss = calcInss(prop);
   const irrf = calcIrrf(prop, inss);
-  const alimentacao = Math.round(prop * (alimentacaoPercent / 100) * 100) / 100;
+  const alimentacao = Math.round(prop * (alimentacaoPercent / 100));
   const consignadoDiscount = consignado > 0 ? Math.round(consignado / 30 * days * 100) / 100 : 0;
   const totalDeductions = Math.round((inss + irrf + alimentacao + consignadoDiscount) * 100) / 100;
   const net = Math.round((prop - totalDeductions) * 100) / 100;
