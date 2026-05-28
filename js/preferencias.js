@@ -102,7 +102,7 @@ export function renderCreditCards() {
 
 export function renderRecurringIncomes() {
   el.incomeList.innerHTML = `
-    <thead><tr><th>Renda</th><th>Fonte</th><th>Titular</th><th>Dia</th><th>Valor atual</th><th>Vale desde</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Renda</th><th>Fonte</th><th>Titular</th><th>Dia</th><th>Valor atual</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.recurringIncomes.map((income) => {
         const current = latestIncomeChange(income);
@@ -124,7 +124,6 @@ export function renderRecurringIncomes() {
             <td><span class="owner-pill">${escapeHtml(income.owner || "Felipe")}</span></td>
             <td style="text-align:center">${income.receiveDay || 1}</td>
             <td>${currency.format(gross)}${netHtml}</td>
-            <td>${current.month ? formatMonth(current.month) : "-"}</td>
             <td class="row-actions">
               <button class="income-act-btn" type="button" data-edit-income="${income.id}" data-tip="Editar / Reajustar">${icon("pencil")}</button>
               ${cltButtons}
@@ -132,7 +131,7 @@ export function renderRecurringIncomes() {
             </td>
           </tr>
         `;
-      }).join("") || `<tr><td colspan="7" class="muted-cell">Nenhuma renda recorrente cadastrada.</td></tr>`}
+      }).join("") || `<tr><td colspan="6" class="muted-cell">Nenhuma renda recorrente cadastrada.</td></tr>`}
     </tbody>
   `;
 
