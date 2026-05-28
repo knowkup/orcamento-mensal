@@ -323,7 +323,7 @@ export function openPlannedDialog(id = null, kind = null) {
   const item = income || expense;
   const submitLabel = el.plannedForm.querySelector("button[type='submit'] span");
   if (submitLabel) submitLabel.textContent = item ? "Salvar lançamento" : "Adicionar ao planejamento";
-  el.plannedForm.elements.kind.value = income ? "income" : "expense";
+  el.plannedForm.elements.kind.value = income ? "income" : kind === "income" ? "income" : "expense";
   el.plannedForm.elements.description.value = income?.label || expense?.description || "";
   el.plannedForm.elements.creditorId.value = expense?.creditorId || el.plannedForm.elements.creditorId.value;
   if (el.plannedForm.elements.fonte) el.plannedForm.elements.fonte.value = income?.origin || "";
