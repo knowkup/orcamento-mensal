@@ -4,6 +4,7 @@ import { calcNetClt } from "./taxes.js";
 import { getCreditorName, getCreditor, getCreditCard, sortedCreditors, sortedCreditCards, creditorLogoHtml, sourceLogoHtml, initials, isCreditCardInUse, creditorUsageCount, cardOpenBalance } from "./creditors.js";
 import { createDefaultData, normalizedIncomeChanges } from "./data.js";
 import { latestIncomeChange, upsertIncomeChange } from "./planejamento.js";
+import { openFeriasDialog, openDecimoTerceiroDialog } from "./ferias.js";
 
 export function renderSettings() {
   el.settingsForm.elements.kahLimit.value = formatCurrencyInput(state.data.kahLimit || "");
@@ -459,15 +460,8 @@ export async function deleteRecurringIncome(id) {
   if (state.saveStateFn) await state.saveStateFn("Renda recorrente excluída.");
 }
 
-export function openFeriasDialog(incomeId) {
-  // TODO: implementar modal de férias
-  void incomeId;
-}
-
-export function openDecimoTerceiroDialog(incomeId) {
-  // TODO: implementar modal de 13º salário
-  void incomeId;
-}
+// openFeriasDialog e openDecimoTerceiroDialog implementados em ferias.js, re-exportados para app.js
+export { openFeriasDialog, openDecimoTerceiroDialog };
 
 function _prefillExceptionAmount(income, month) {
   if (!income || !month) return;

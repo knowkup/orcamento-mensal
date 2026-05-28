@@ -18,6 +18,7 @@ export function createDefaultData() {
     creditors: [],
     creditCards: [],
     incomeLines: [],
+    vacations: [],
     recurringIncomes: [],
     projectionLines: [],
     installments: [],
@@ -143,6 +144,7 @@ export function normalizeData(data) {
     creditCards,
     paymentMethods: data.paymentMethods?.length ? data.paymentMethods : defaults.paymentMethods,
     incomeLines: data.incomeLines || defaults.incomeLines,
+    vacations: data.vacations || defaults.vacations,
     recurringIncomes: (data.recurringIncomes || defaults.recurringIncomes).map((income) => {
       const isClt = income.isClt || false;
       return {

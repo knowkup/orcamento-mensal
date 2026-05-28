@@ -1,8 +1,9 @@
 import { state, el, currency } from "./state.js";
-import { parseCurrencyInput, formatCurrencyInput, nextMonths } from "./utils.js";
+import { parseCurrencyInput, formatCurrencyInput, nextMonths, escapeHtml, formatMonth, addMonthsToDate, icon, refreshIcons } from "./utils.js";
 import { calcInss, calcIrrf } from "./taxes.js";
 import { normalizedIncomeChanges } from "./data.js";
 import { openPlannedDialog } from "./controle.js";
+import { upsertIncomeChange, latestIncomeChange } from "./planejamento.js";
 
 let _mode = "ferias";
 let _prefilled = false;
@@ -293,4 +294,463 @@ function _payslipDecimo(r, baseSalary, days, fmt) {
       </div>
     </div>
   `;
+}
+
+// ── Modal de Gestão de Férias ─────────────────────────────────────────────────
+
+let _feriasIncomeId = null;
+
+function _currentMonth() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+/**
+ * Abre o modal de férias para uma renda CLT específica.
+ */
+export function openFeriasDialog(incomeId) {
+  _feriasIncomeId = incomeId;
+  applyFeriasAutoCleanup();
+  _renderFeriasDialog("list");
+  document.querySelector("#feriasDialog")?.showModal();
+  refreshIcons();
+}
+
+export function closeFeriasDialog() {
+  document.querySelector("#feriasDialog")?.close();
+  _feriasIncomeId = null;
+}
+
+/**
+ * Renderiza o conteúdo do modal de férias (estado lista ou estado registrar).
+ */
+function _renderFeriasDialog(view) {
+  const inner = document.querySelector("#feriasDialogInner");
+  if (!inner) return;
+  const income = state.data.recurringIncomes?.find((i) => i.id === _feriasIncomeId);
+  if (!view || view === "list") inner.innerHTML = _feriasListHtml(income);
+  else inner.innerHTML = _feriasFormHtml(income);
+  _bindFeriasDialogEvents(view);
+  refreshIcons();
+}
+
+function _feriasListHtml(income) {
+  const vacations = (state.data.vacations || []).filter((v) => v.incomeId === _feriasIncomeId);
+  const cur = _currentMonth();
+  const fmt = (v) => currency.format(v);
+
+  const listHtml = vacations.length === 0
+    ? `<div class="fd-empty">Nenhuma férias cadastrada</div>`
+    : vacations.map((v) => {
+        const pastVacation = v.vacationMonth < cur;
+        const pastSalary = v.salaryMonth < cur;
+        const ended = pastVacation && pastSalary;
+        const badge = ended
+          ? `<span class="ferias-badge badge-passed">Encerrada</span>`
+          : `<span class="ferias-badge badge-upcoming">Próxima</span>`;
+        const editBtn = !ended
+          ? `<button class="fd-act-btn" type="button" data-ferias-edit="${escapeHtml(v.id)}" title="Editar">${icon("pencil")}</button>`
+          : "";
+        const vacLancTag = pastVacation
+          ? `<span class="lanc-tag">Removido automaticamente</span>`
+          : `<span class="lanc-tag">Nova renda</span>`;
+        const salLancTag = pastSalary
+          ? `<span class="lanc-tag">Removido automaticamente</span>`
+          : `<span class="lanc-tag">Exceção</span>`;
+        return `
+          <div class="ferias-item${ended ? " ferias-item-ended" : ""}">
+            <div class="ferias-item-head">
+              ${badge}
+              <span class="ferias-item-title">${escapeHtml(_formatDate(v.startDate))}</span>
+              <span class="ferias-item-days">${v.days} dias</span>
+              ${editBtn}
+              <button class="fd-act-btn danger" type="button" data-ferias-delete="${escapeHtml(v.id)}" title="Excluir">${icon("trash-2")}</button>
+            </div>
+            <div class="ferias-item-body">
+              <div class="ferias-lancamento">
+                <span class="lanc-label">Pagamento de férias</span>
+                <span class="lanc-mes">${formatMonth(v.vacationMonth)}</span>
+                <span class="lanc-valor gold">${fmt(v.vacationNet)}</span>
+                ${vacLancTag}
+              </div>
+              <div class="ferias-lancamento">
+                <span class="lanc-label">Salário proporcional</span>
+                <span class="lanc-mes">${formatMonth(v.salaryMonth)} · ${30 - v.days} dias</span>
+                <span class="lanc-valor green">${fmt(v.salaryNet)}</span>
+                ${salLancTag}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+
+  return `
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">${escapeHtml(income?.label || "CLT")}</p>
+        <h2>Férias</h2>
+      </div>
+      <button class="icon-button" type="button" id="closeFeriasButton" title="Fechar">${icon("x")}</button>
+    </div>
+    <div class="stack-form">
+      <div class="ferias-list">${listHtml}</div>
+      <p class="fd-auto-hint">
+        ${icon("info")} Lançamentos são removidos automaticamente após o mês passar
+      </p>
+      <button class="secondary-button full" type="button" id="feriasNovaBtn">
+        ${icon("plus")} Registrar novas férias
+      </button>
+    </div>
+  `;
+}
+
+function _feriasFormHtml(income) {
+  return `
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">${escapeHtml(income?.label || "CLT")}</p>
+        <h2>Registrar férias</h2>
+      </div>
+      <button class="icon-button" type="button" id="closeFeriasButton" title="Fechar">${icon("x")}</button>
+    </div>
+    <div class="stack-form">
+      <div class="form-row">
+        <label>Início das férias<input type="date" id="feriasStartDate" required></label>
+        <label>Dias de férias<input type="number" id="feriasDaysModal" min="1" max="30" placeholder="Ex: 16"></label>
+      </div>
+      <div id="feriasPreviewCards" hidden></div>
+      <button class="primary-button full" type="button" id="feriasConfirmBtn" disabled>
+        ${icon("save")} Confirmar e lançar
+      </button>
+      <button class="secondary-button full" type="button" id="feriasVoltarBtn">
+        ${icon("arrow-left")} Voltar
+      </button>
+    </div>
+  `;
+}
+
+function _bindFeriasDialogEvents(view) {
+  document.querySelector("#closeFeriasButton")?.addEventListener("click", closeFeriasDialog);
+  if (view === "list") {
+    document.querySelector("#feriasNovaBtn")?.addEventListener("click", () => {
+      _renderFeriasDialog("form");
+    });
+    document.querySelectorAll("[data-ferias-delete]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.feriasDelete;
+        if (confirm("Excluir este registro de férias?")) deleteFeriasEntry(id);
+      });
+    });
+    document.querySelectorAll("[data-ferias-edit]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        _feriasEditId = btn.dataset.feriasEdit;
+        _renderFeriasDialog("form");
+      });
+    });
+  } else {
+    // Preenche campos se for edição
+    if (_feriasEditId) {
+      const v = (state.data.vacations || []).find((x) => x.id === _feriasEditId);
+      if (v) {
+        const sd = document.querySelector("#feriasStartDate");
+        const dd = document.querySelector("#feriasDaysModal");
+        if (sd) sd.value = v.startDate;
+        if (dd) dd.value = v.days;
+        _updateFeriasPreview();
+      }
+    }
+    document.querySelector("#feriasStartDate")?.addEventListener("input", _updateFeriasPreview);
+    document.querySelector("#feriasDaysModal")?.addEventListener("input", _updateFeriasPreview);
+    document.querySelector("#feriasConfirmBtn")?.addEventListener("click", () => saveFeriasEntry());
+    document.querySelector("#feriasVoltarBtn")?.addEventListener("click", () => {
+      _feriasEditId = null;
+      _renderFeriasDialog("list");
+    });
+  }
+}
+
+let _feriasEditId = null;
+
+function _updateFeriasPreview() {
+  const income = state.data.recurringIncomes?.find((i) => i.id === _feriasIncomeId);
+  if (!income) return;
+
+  const startDate = document.querySelector("#feriasStartDate")?.value || "";
+  const days = parseInt(document.querySelector("#feriasDaysModal")?.value || "0", 10);
+  const previewEl = document.querySelector("#feriasPreviewCards");
+  const confirmBtn = document.querySelector("#feriasConfirmBtn");
+
+  if (!startDate || !days || days < 1 || days > 30) {
+    if (previewEl) previewEl.hidden = true;
+    if (confirmBtn) confirmBtn.disabled = true;
+    return;
+  }
+
+  const gross = latestIncomeChange(income)?.amount || 0;
+  const consignado = income.clt?.consignado || 0;
+  const alimentacao = income.clt?.alimentacao ?? 1;
+  const remainDays = 30 - days;
+
+  const rv = calcFerias(gross, days, consignado);
+  const rs = calcSalario(gross, remainDays, alimentacao, consignado);
+
+  const vacMonth = startDate.slice(0, 7);
+  const salMonth = addMonthsToDate(`${vacMonth}-01`, 1).slice(0, 7);
+  const fmt = (v) => currency.format(v);
+
+  if (previewEl) {
+    previewEl.hidden = false;
+    previewEl.innerHTML = `
+      <div class="preview-card card-ferias">
+        <div class="card-icon">🏖️</div>
+        <div class="card-body">
+          <div class="card-title">Pagamento de férias</div>
+          <div class="card-sub">${escapeHtml(_formatDate(startDate))} · ${days} dias</div>
+          <span class="card-tag tag-nova-renda">Nova renda — ${formatMonth(vacMonth)}</span>
+        </div>
+        <div class="card-value">${fmt(rv.net)}</div>
+      </div>
+      <div class="preview-card card-salario">
+        <div class="card-icon">📅</div>
+        <div class="card-body">
+          <div class="card-title">Salário proporcional — ${remainDays} dias</div>
+          <div class="card-sub">Período ${formatMonth(vacMonth)}</div>
+          <span class="card-tag tag-excecao">Exceção — ${formatMonth(salMonth)}</span>
+        </div>
+        <div class="card-value">${fmt(rs.net)}</div>
+      </div>
+    `;
+  }
+  if (confirmBtn) {
+    confirmBtn.disabled = false;
+    confirmBtn._vacData = { startDate, days, vacMonth, salMonth, vacationNet: rv.net, salaryNet: rs.net };
+  }
+}
+
+export async function saveFeriasEntry() {
+  const confirmBtn = document.querySelector("#feriasConfirmBtn");
+  const vacData = confirmBtn?._vacData;
+  if (!vacData) return;
+
+  const income = state.data.recurringIncomes?.find((i) => i.id === _feriasIncomeId);
+  if (!income) return;
+
+  // Se for edição, remove a entrada anterior primeiro
+  if (_feriasEditId) {
+    _removeFeriasLancamentos(_feriasEditId);
+    state.data.vacations = (state.data.vacations || []).filter((v) => v.id !== _feriasEditId);
+    _feriasEditId = null;
+  }
+
+  // Cria entrada de renda avulsa para o mês das férias
+  if (!state.data.incomeLines) state.data.incomeLines = [];
+  const incomeLineId = crypto.randomUUID();
+  state.data.incomeLines.push({
+    id: incomeLineId,
+    label: `Férias — ${income.label}`,
+    origin: income.origin || income.label,
+    creditorId: "",
+    owner: income.owner || "Felipe",
+    date: vacData.startDate,
+    values: { [vacData.vacMonth]: vacData.vacationNet }
+  });
+
+  // Pega salário normal ANTES de inserir a exceção (último valor anterior ao mês da exceção)
+  const priorChanges = normalizedIncomeChanges(income);
+  const priorChange = [...priorChanges].reverse().find((c) => c.month < vacData.salMonth);
+  const normalAmount = priorChange?.amount || 0;
+
+  // Cria exceção de salário proporcional para o mês seguinte
+  income.changes = upsertIncomeChange(income.changes || [], vacData.salMonth, vacData.salaryNet);
+  // Revert para o mês seguinte ao proporcional (restaura salário normal)
+  const revertMonth = addMonthsToDate(`${vacData.salMonth}-01`, 1).slice(0, 7);
+  if (normalAmount > 0 && !income.changes.find((c) => c.month === revertMonth)) {
+    income.changes = upsertIncomeChange(income.changes, revertMonth, normalAmount);
+  }
+
+  // Registra na lista de férias
+  if (!state.data.vacations) state.data.vacations = [];
+  state.data.vacations.push({
+    id: crypto.randomUUID(),
+    incomeId: _feriasIncomeId,
+    startDate: vacData.startDate,
+    days: vacData.days,
+    vacationNet: vacData.vacationNet,
+    salaryNet: vacData.salaryNet,
+    vacationMonth: vacData.vacMonth,
+    salaryMonth: vacData.salMonth,
+    incomeLineId
+  });
+
+  _renderFeriasDialog("list");
+  if (state.saveStateFn) await state.saveStateFn("Férias registradas.");
+}
+
+function _removeFeriasLancamentos(vacId) {
+  const v = (state.data.vacations || []).find((x) => x.id === vacId);
+  if (!v) return;
+  // Remove renda avulsa
+  if (v.incomeLineId) {
+    state.data.incomeLines = (state.data.incomeLines || []).filter((l) => l.id !== v.incomeLineId);
+  }
+  // Remove exceção de salário proporcional
+  const income = state.data.recurringIncomes?.find((i) => i.id === v.incomeId);
+  if (income) {
+    income.changes = (income.changes || []).filter((c) => c.month !== v.salaryMonth);
+  }
+}
+
+export async function deleteFeriasEntry(id) {
+  _removeFeriasLancamentos(id);
+  state.data.vacations = (state.data.vacations || []).filter((v) => v.id !== id);
+  _renderFeriasDialog("list");
+  if (state.saveStateFn) await state.saveStateFn("Férias excluídas.");
+}
+
+/**
+ * Remove lançamentos de férias cujos meses já passaram.
+ * Chamado automaticamente ao abrir o modal.
+ */
+export function applyFeriasAutoCleanup() {
+  const cur = _currentMonth();
+  if (!state.data.vacations) return;
+
+  state.data.vacations = state.data.vacations.filter((v) => {
+    const pastVacation = v.vacationMonth < cur;
+    const pastSalary = v.salaryMonth < cur;
+
+    if (pastVacation && v.incomeLineId) {
+      state.data.incomeLines = (state.data.incomeLines || []).filter((l) => l.id !== v.incomeLineId);
+      v.incomeLineId = null;
+    }
+    if (pastSalary) {
+      const income = state.data.recurringIncomes?.find((i) => i.id === v.incomeId);
+      if (income) {
+        income.changes = (income.changes || []).filter((c) => c.month !== v.salaryMonth);
+      }
+    }
+    // Remover da lista quando ambos os meses passaram
+    return !(pastVacation && pastSalary);
+  });
+}
+
+function _formatDate(isoDate) {
+  if (!isoDate) return "";
+  const [y, m, d] = isoDate.split("-");
+  return `${d}/${m}/${y}`;
+}
+
+// ── Modal de 13º Salário ──────────────────────────────────────────────────────
+
+let _decimoIncomeId = null;
+
+export function openDecimoTerceiroDialog(incomeId) {
+  _decimoIncomeId = incomeId;
+  _renderDecimoDialog();
+  document.querySelector("#decimoTerceiroDialog")?.showModal();
+  refreshIcons();
+}
+
+export function closeDecimoTerceiroDialog() {
+  document.querySelector("#decimoTerceiroDialog")?.close();
+  _decimoIncomeId = null;
+}
+
+function _renderDecimoDialog() {
+  const inner = document.querySelector("#decimoTerceiroDialogInner");
+  if (!inner) return;
+  const income = state.data.recurringIncomes?.find((i) => i.id === _decimoIncomeId);
+  if (!income) { inner.innerHTML = ""; return; }
+
+  const gross = latestIncomeChange(income)?.amount || 0;
+  const year = new Date().getFullYear();
+  const fmt = (v) => currency.format(v);
+
+  // Cálculos do 13º (30 dias = base completa)
+  const r = calcDecimo(gross, 30);
+
+  inner.innerHTML = `
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">${escapeHtml(income.label)}</p>
+        <h2>13º Salário</h2>
+      </div>
+      <button class="icon-button" type="button" id="closeDecimoButton" title="Fechar">${icon("x")}</button>
+    </div>
+    <div class="stack-form">
+      <div class="payslip">
+        <div class="payslip-header">
+          <div>
+            <strong>Demonstrativo do 13º Salário</strong>
+            <span>Salário bruto ${fmt(gross)}</span>
+          </div>
+        </div>
+        <div class="payslip-section">
+          <p class="payslip-section-title">1ª Parcela — Adiantamento · 20/nov/${year}</p>
+          <div class="payslip-row">
+            <span>50% do bruto (sem descontos)</span>
+            <span class="payslip-pos">${fmt(r.adiantamento)}</span>
+          </div>
+        </div>
+        <div class="payslip-section">
+          <p class="payslip-section-title">2ª Parcela — Saldo · 20/dez/${year}</p>
+          <div class="payslip-row">
+            <span>50% do bruto</span>
+            <span class="payslip-pos">${fmt(r.adiantamento)}</span>
+          </div>
+          <div class="payslip-row">
+            <span>INSS</span>
+            <span class="payslip-neg">&minus;${fmt(r.inss)}</span>
+          </div>
+          <div class="payslip-row">
+            <span>IRRF</span>
+            ${r.irrf > 0 ? `<span class="payslip-neg">&minus;${fmt(r.irrf)}</span>` : `<span class="muted-cell">Isento</span>`}
+          </div>
+          <div class="payslip-row payslip-subtotal">
+            <span>Líquido da 2ª parcela</span>
+            <span>${fmt(r.saldo)}</span>
+          </div>
+        </div>
+        <div class="payslip-net">
+          <span>Total líquido (1ª + 2ª parcela)</span>
+          <strong>${fmt(r.net)}</strong>
+        </div>
+      </div>
+      <button class="primary-button full" type="button" id="decimoLancarBtn">
+        ${icon("save")} Lançar 1ª e 2ª parcela
+      </button>
+    </div>
+  `;
+
+  document.querySelector("#closeDecimoButton")?.addEventListener("click", closeDecimoTerceiroDialog);
+  document.querySelector("#decimoLancarBtn")?.addEventListener("click", () => _saveDecimo(income, r, year));
+  refreshIcons();
+}
+
+async function _saveDecimo(income, r, year) {
+  if (!state.data.incomeLines) state.data.incomeLines = [];
+
+  // 1ª parcela: 20 de novembro
+  state.data.incomeLines.push({
+    id: crypto.randomUUID(),
+    label: `13º Salário — 1ª Parcela`,
+    origin: income.origin || income.label,
+    creditorId: "",
+    owner: income.owner || "Felipe",
+    date: `${year}-11-20`,
+    values: { [`${year}-11`]: r.adiantamento }
+  });
+
+  // 2ª parcela: 20 de dezembro
+  state.data.incomeLines.push({
+    id: crypto.randomUUID(),
+    label: `13º Salário — 2ª Parcela`,
+    origin: income.origin || income.label,
+    creditorId: "",
+    owner: income.owner || "Felipe",
+    date: `${year}-12-20`,
+    values: { [`${year}-12`]: r.saldo }
+  });
+
+  closeDecimoTerceiroDialog();
+  if (state.saveStateFn) await state.saveStateFn("13º salário lançado.");
 }
