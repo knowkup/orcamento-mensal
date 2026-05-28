@@ -2092,6 +2092,79 @@ select {
   font-weight: 500;
 }
 
+/* ── Income dialog — modal nova renda ────────────────── */
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+
+.income-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.logo-info { flex: 1; }
+.logo-info span { font-size: 13px; color: var(--ink); font-weight: 500; display: block; }
+.logo-info small { font-size: 11px; color: var(--muted); }
+
+.trocar-btn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.trocar-btn:hover { background: #edfaf4; }
+
+.form-divider { height: 1px; background: var(--line); margin: 2px 0; }
+
+#incomeCltHeader { display: flex; flex-direction: column; gap: 8px; }
+#incomeCltHeader[hidden] { display: none; }
+#incomeCltFields { display: flex; flex-direction: column; gap: 14px; }
+#incomeCltFields[hidden] { display: none; }
+
+.form-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: -4px;
+}
+
+.liquido-strip {
+  background: #edfaf4;
+  border: 1px solid #b3ecd4;
+  border-radius: var(--r);
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.liq-label { font-size: 13px; color: #1a6b3a; font-weight: 500; }
+.liq-hint { font-size: 11px; color: #4aab7a; display: block; margin-top: 1px; }
+.liq-valor { font-size: 17px; font-weight: 700; color: #1a6b3a; white-space: nowrap; }
+
 /* ── Simulador schedule bar ──────────────────────────── */
 
 .ferias-schedule-bar {

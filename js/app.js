@@ -87,7 +87,16 @@ function bindEvents() {
   el.incomeExceptionForm.addEventListener("submit", saveIncomeException);
   el.closeIncomeExceptionButton.addEventListener("click", closeIncomeExceptionDialog);
   bindFeriasEvents();
-  document.querySelector("#incomeIsClt")?.addEventListener("change", toggleIncomeCltFields);
+  // Label select → atualiza campos condicionais e faixa líquido
+  document.querySelector("#incomeLabelSelect")?.addEventListener("change", toggleIncomeCltFields);
+  // Botão "Trocar" → abre file input oculto
+  document.querySelector("#incomeTrocarBtn")?.addEventListener("click", () => {
+    el.incomeForm.elements.logoFile?.click();
+  });
+  // Campos CLT → atualiza faixa líquido em tempo real
+  el.incomeForm.elements.amount?.addEventListener("input", toggleIncomeCltFields);
+  el.incomeForm.elements.cltAlimentacao?.addEventListener("input", toggleIncomeCltFields);
+  el.incomeForm.elements.cltConsignado?.addEventListener("input", toggleIncomeCltFields);
   el.projectionTopScroll.addEventListener("scroll", () => {
     el.projectionScroll.scrollLeft = el.projectionTopScroll.scrollLeft;
   });

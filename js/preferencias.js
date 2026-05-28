@@ -194,7 +194,7 @@ export function hydrateForms() {
   const start = nextMonths(1)[0];
   if (el.plannedForm.elements.month) el.plannedForm.elements.month.value = start;
   if (el.plannedForm.elements.date && !el.plannedForm.elements.date.value) el.plannedForm.elements.date.value = `${start}-01`;
-  if (el.incomeForm.elements.month && !el.incomeForm.elements.month.value) el.incomeForm.elements.month.value = start;
+  if (el.incomeForm.elements.startDate && !el.incomeForm.elements.startDate.value) el.incomeForm.elements.startDate.value = `${start}-01`;
 }
 
 export function defaultPaymentMethod() {
@@ -341,9 +341,27 @@ export function renderCardLogoPreview(creditorId) {
 }
 
 export function toggleIncomeCltFields() {
-  const checked = document.querySelector("#incomeIsClt")?.checked;
-  const fields = document.querySelector("#incomeCltFields");
-  if (fields) fields.hidden = !checked;
+  const label = el.incomeForm?.elements?.label?.value || "";
+  const isClt = label === "Salário ATP";
+  const cltHeader = document.querySelector("#incomeCltHeader");
+  const cltFields = document.querySelector("#incomeCltFields");
+  const amountLabelText = document.querySelector("#incomeAmountLabelText");
+  if (cltHeader) cltHeader.hidden = !isClt;
+  if (cltFields) cltFields.hidden = !isClt;
+  if (amountLabelText) amountLabelText.textContent = isClt ? "Salário bruto" : "Valor";
+  _updateIncomeLiquidoStrip();
+  renderIncomeLogoPreview(el.incomeForm?.elements?.logoUrl?.value || "");
+}
+
+function _updateIncomeLiquidoStrip() {
+  const valorEl = document.querySelector("#incomeLiquidoValor");
+  if (!valorEl) return;
+  const form = el.incomeForm;
+  const gross = parseCurrencyInput(form?.elements?.amount?.value || "0");
+  const consignado = parseCurrencyInput(form?.elements?.cltConsignado?.value || "0");
+  const alimentacao = parseFloat(form?.elements?.cltAlimentacao?.value || "1") || 1;
+  const net = gross > 0 ? Math.max(0, calcNetClt(gross, consignado, alimentacao)) : 0;
+  valorEl.textContent = currency.format(net);
 }
 
 export function openIncomeDialog(id = null) {
@@ -353,21 +371,31 @@ export function openIncomeDialog(id = null) {
   const income = id ? state.data.recurringIncomes.find((item) => item.id === id) : null;
   const current = income ? latestIncomeChange(income) : { month: nextMonths(1)[0], amount: 0 };
   el.incomeDialogTitle.textContent = income ? "Editar/Reajustar renda" : "Nova renda";
-  el.incomeForm.elements.label.value = income?.label || "";
+
+  // Renda select + Fonte
+  el.incomeForm.elements.label.value = income?.label || "Salário ATP";
   el.incomeForm.elements.origin.value = income?.origin || "";
   el.incomeForm.elements.logoUrl.value = income?.logoUrl || "";
+
+  // Titular
   el.incomeForm.elements.owner.value = income?.owner || "Felipe";
-  el.incomeForm.elements.receiveDay.value = income?.receiveDay || 1;
-  el.incomeForm.elements.month.value = current.month || nextMonths(1)[0];
+
+  // Data inicial: reconstruir a partir de month + receiveDay
+  const month = current.month || nextMonths(1)[0];
+  const day = String(income?.receiveDay || 5).padStart(2, "0");
+  el.incomeForm.elements.startDate.value = `${month}-${day}`;
+
+  // Valor / Salário bruto
   el.incomeForm.elements.amount.value = current.amount ? formatCurrencyInput(current.amount) : "";
-  const isClt = income?.isClt || false;
-  el.incomeForm.elements.isClt.checked = isClt;
-  const cltFields = document.querySelector("#incomeCltFields");
-  if (cltFields) cltFields.hidden = !isClt;
-  if (isClt && income?.clt) {
+
+  // Campos CLT
+  if (income?.clt) {
     el.incomeForm.elements.cltConsignado.value = income.clt.consignado ? formatCurrencyInput(income.clt.consignado) : "";
     el.incomeForm.elements.cltAlimentacao.value = income.clt.alimentacao ?? 1;
   }
+
+  // Mostrar/ocultar campos condicionais + label + faixa líquido
+  toggleIncomeCltFields();
   renderIncomeLogoPreview(income?.logoUrl || "");
   el.incomeDialog.showModal();
   refreshIcons();
@@ -383,32 +411,40 @@ export function closeIncomeDialog() {
 export async function saveRecurringIncome(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
-  const month = String(form.get("month"));
+
+  // startDate → month (YYYY-MM) + receiveDay (dia do mês)
+  const startDate = String(form.get("startDate") || "");
+  const month = startDate.slice(0, 7) || nextMonths(1)[0];
+  const receiveDay = parseInt(startDate.split("-")[2], 10) || 5;
+
+  const label = String(form.get("label")).trim();
   const amount = parseCurrencyInput(form.get("amount"));
-  const isClt = form.get("isClt") === "on";
+  // isClt é automático pelo label
+  const isClt = label === "Salário ATP";
   const cltConsignado = parseCurrencyInput(form.get("cltConsignado") || "0");
   const cltAlimentacao = parseFloat(form.get("cltAlimentacao") || "1") || 1;
   const clt = isClt ? { consignado: cltConsignado, alimentacao: cltAlimentacao } : null;
+
   const existing = state.incomeEditingId
     ? state.data.recurringIncomes.find((item) => item.id === state.incomeEditingId)
     : null;
   if (existing) {
-    existing.label = String(form.get("label")).trim();
+    existing.label = label;
     existing.origin = String(form.get("origin")).trim();
     existing.logoUrl = String(form.get("logoUrl") || "");
     existing.owner = String(form.get("owner") || "Felipe");
-    existing.receiveDay = Number(form.get("receiveDay") || 1);
+    existing.receiveDay = receiveDay;
     existing.changes = upsertIncomeChange(existing.changes || [], month, amount);
     existing.isClt = isClt;
     existing.clt = clt;
   } else {
     state.data.recurringIncomes.push({
       id: crypto.randomUUID(),
-      label: String(form.get("label")).trim(),
+      label,
       origin: String(form.get("origin")).trim(),
       logoUrl: String(form.get("logoUrl") || ""),
       owner: String(form.get("owner") || "Felipe"),
-      receiveDay: Number(form.get("receiveDay") || 1),
+      receiveDay,
       changes: [{ month, amount }],
       isClt,
       clt
@@ -547,7 +583,12 @@ export function handleIncomeLogoUpload(event) {
 }
 
 export function renderIncomeLogoPreview(src) {
-  el.incomeLogoPreview.innerHTML = src ? `<img alt="Logo" src="${escapeHtml(src)}">` : "RD";
+  if (src) {
+    el.incomeLogoPreview.innerHTML = `<img alt="Logo" src="${escapeHtml(src)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+  } else {
+    const label = el.incomeForm?.elements?.label?.value || "";
+    el.incomeLogoPreview.textContent = initials(label) || "RD";
+  }
 }
 
 export function renderTaxTables() {
