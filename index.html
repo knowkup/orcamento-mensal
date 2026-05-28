@@ -109,7 +109,7 @@
               </div>
               <button class="primary-button accent-button" type="button" id="addPlanButton">
                 <i data-lucide="calendar-plus"></i>
-                <span>Lançamento planejado</span>
+                <span>Novo lançamento</span>
               </button>
             </div>
             <div id="projMonthlySummary"></div>
@@ -133,7 +133,7 @@
           <div class="monthly-toolbar">
             <button class="primary-button accent-button" type="button" id="addMonthlyPlanButton">
               <i data-lucide="calendar-plus"></i>
-              <span>Lançamento planejado</span>
+              <span>Novo lançamento</span>
             </button>
             <button class="primary-button close-month-btn" type="button" id="closeMonthButton">
               <i data-lucide="lock"></i>
@@ -673,7 +673,7 @@
           </div>
         </div>
         <div id="plannedFonteField" hidden>
-          <label>Fonte<input name="fonte" type="text" placeholder="Ex.: ATP, empresa"></label>
+          <label>Fonte<select name="fonte"></select></label>
         </div>
         <label>Data<input name="date" type="date" required></label>
         <label>Dono<select name="owner" data-owner-select></select></label>

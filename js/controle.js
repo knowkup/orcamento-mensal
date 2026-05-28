@@ -66,7 +66,7 @@ export function renderMonthlyControl() {
     </section>
     <section class="monthly-column realized-column">
       <div class="monthly-column-head">
-        <span>Realizado no mÃªs</span>
+        <span>Realizado no mês</span>
         <strong>${currency.format(received - paid)}</strong>
       </div>
       ${monthlyRealizedItems(realizedEntries, realizedExits, month)}
@@ -163,7 +163,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
 }
 
 export function monthlyRealizedItems(entries, exits, month) {
-  if (!entries.length && !exits.length) return `<div class="empty-state compact">Nada realizado neste mÃªs.</div>`;
+  if (!entries.length && !exits.length) return `<div class="empty-state compact">Nada realizado neste mês.</div>`;
   const entryRows = entries.length
     ? `<div class="realized-group"><span>Recebimentos</span>${monthlyItems(entries, month, "income", "realized")}</div>`
     : "";
@@ -313,6 +313,25 @@ export function monthReferenceCard(month, isClosed) {
   `;
 }
 
+function populateFonteSelect(selectedValue = "") {
+  const sel = el.plannedForm.elements.fonte;
+  if (!sel || sel.tagName !== "SELECT") return;
+  sel.innerHTML = "";
+  const outros = (state.data.creditors || []).find((c) => c.name?.toLowerCase() === "outros");
+  const outrosLabel = outros?.name || "Outros";
+  const opt = document.createElement("option");
+  opt.value = outrosLabel;
+  opt.textContent = outrosLabel;
+  sel.appendChild(opt);
+  (state.data.recurringIncomes || []).forEach((inc) => {
+    const o = document.createElement("option");
+    o.value = inc.label;
+    o.textContent = inc.label;
+    sel.appendChild(o);
+  });
+  if (selectedValue) sel.value = selectedValue;
+}
+
 export function openPlannedDialog(id = null, kind = null) {
   if (state.hydrateFn) state.hydrateFn();
   state.plannedEditingId = id;
@@ -326,7 +345,7 @@ export function openPlannedDialog(id = null, kind = null) {
   el.plannedForm.elements.kind.value = income ? "income" : kind === "income" ? "income" : "expense";
   el.plannedForm.elements.description.value = income?.label || expense?.description || "";
   el.plannedForm.elements.creditorId.value = expense?.creditorId || el.plannedForm.elements.creditorId.value;
-  if (el.plannedForm.elements.fonte) el.plannedForm.elements.fonte.value = income?.origin || "";
+  populateFonteSelect(income?.origin || "");
   el.plannedForm.elements.date.value = item?.date || todayIsoDate();
   el.plannedForm.elements.installments.value = expense?.installments || 1;
   el.plannedForm.elements.owner.value = item?.owner || "Felipe";
@@ -357,7 +376,7 @@ export function updatePlannedFields() {
   if (expBtn) expBtn.disabled = editing;
   if (incBtn) incBtn.disabled = editing;
   const titleEl = document.querySelector("#plannedDialogTitle");
-  if (titleEl) titleEl.textContent = isIncome ? "Nova entrada planejada" : "Nova saída planejada";
+  if (titleEl) titleEl.textContent = isIncome ? "Nova entrada" : "Nova saída";
 }
 
 export async function addPlannedPurchase(event) {
@@ -403,7 +422,7 @@ export async function addPlannedPurchase(event) {
   }
   const editing = Boolean(state.plannedEditingId);
   closePlannedDialog();
-  if (state.saveStateFn) await state.saveStateFn(editing ? "Lançamento planejado atualizado." : "Lançamento planejado adicionado.");
+  if (state.saveStateFn) await state.saveStateFn(editing ? "Lançamento atualizado." : "Lançamento adicionado.");
 }
 
 export async function deleteManualPlanned(id) {
@@ -422,7 +441,7 @@ export async function deleteManualPlanned(id) {
       if (key.startsWith(`${id}:`)) delete state.data[field][key];
     });
   });
-  if (state.saveStateFn) await state.saveStateFn("Lançamento planejado excluído.");
+  if (state.saveStateFn) await state.saveStateFn("Lançamento excluído.");
 }
 
 export async function togglePaidOccurrence(key) {

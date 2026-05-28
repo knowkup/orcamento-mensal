@@ -1746,6 +1746,7 @@ select {
   vertical-align: middle;
 }
 
+
 .creditor-logo.large {
   width: 58px;
   height: 58px;
@@ -2115,6 +2116,7 @@ select {
   border: 1px solid var(--line);
   border-radius: var(--r);
 }
+
 
 .income-avatar {
   width: 34px;
