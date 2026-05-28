@@ -439,6 +439,15 @@ export async function deleteRecurringIncome(id) {
   if (state.saveStateFn) await state.saveStateFn("Renda recorrente excluída.");
 }
 
+function _prefillExceptionAmount(income, month) {
+  if (!income || !month) return;
+  const changes = normalizedIncomeChanges(income);
+  const active = [...changes].reverse().find((c) => c.month <= month);
+  el.incomeExceptionForm.elements.amount.value = active?.amount
+    ? formatCurrencyInput(active.amount)
+    : "";
+}
+
 export function openIncomeExceptionDialog(id) {
   state.incomeExceptionId = id;
   const income = state.data.recurringIncomes.find((item) => item.id === id);
@@ -446,14 +455,18 @@ export function openIncomeExceptionDialog(id) {
   el.incomeExceptionForm.reset();
   const defaultMonth = nextMonths(1)[0];
   el.incomeExceptionForm.elements.month.value = defaultMonth;
-  // Pre-fill with the salary currently in effect for that month
-  if (income) {
-    const changes = normalizedIncomeChanges(income);
-    const active = [...changes].reverse().find((c) => c.month <= defaultMonth);
-    if (active?.amount) {
-      el.incomeExceptionForm.elements.amount.value = formatCurrencyInput(active.amount);
-    }
-  }
+  _prefillExceptionAmount(income, defaultMonth);
+
+  // Re-prefill amount whenever the month changes
+  const monthEl = el.incomeExceptionForm.elements.month;
+  const onMonthChange = () => {
+    const inc = state.data.recurringIncomes.find((item) => item.id === state.incomeExceptionId);
+    _prefillExceptionAmount(inc, monthEl.value);
+  };
+  monthEl.removeEventListener("change", monthEl._exceptionMonthHandler);
+  monthEl._exceptionMonthHandler = onMonthChange;
+  monthEl.addEventListener("change", onMonthChange);
+
   el.incomeExceptionDialog.showModal();
 }
 
@@ -470,6 +483,7 @@ export async function saveIncomeException(event) {
   const amount = parseCurrencyInput(form.get("amount"));
   const income = state.data.recurringIncomes.find((item) => item.id === state.incomeExceptionId);
   if (!income) { closeIncomeExceptionDialog(); return; }
+  if (!amount) { showToast("Informe o valor do salário para o mês de exceção."); return; }
 
   const changes = normalizedIncomeChanges(income);
   const nextMonth = addMonthsToDate(`${month}-01`, 1).slice(0, 7);
