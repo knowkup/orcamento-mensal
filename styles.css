@@ -1261,7 +1261,7 @@ svg {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  min-width: 140px;
+  width: 160px;
   justify-content: flex-end;
 }
 

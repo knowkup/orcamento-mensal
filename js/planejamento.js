@@ -1,5 +1,5 @@
 import { state, el, currency } from "./state.js";
-import { nextMonths, formatMonth, formatMonthLong, escapeHtml, icon, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
+import { nextMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
 
 let _expandedSummaryMonth = null;
 import { calcNetClt } from "./taxes.js";
@@ -208,6 +208,7 @@ function _renderMonthlySummary(totals, months, rows) {
       ${rowsHtml}
     </div>
   `;
+  refreshIcons();
 
   summaryEl.querySelectorAll("[data-summary-month]").forEach((rowEl) => {
     rowEl.querySelector(".mst-row-main").addEventListener("click", () => {
