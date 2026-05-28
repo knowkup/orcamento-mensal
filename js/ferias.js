@@ -554,14 +554,33 @@ export async function saveFeriasEntry() {
     values: { [vacData.vacMonth]: vacData.vacationNet }
   });
 
-  // Pega salário normal ANTES de inserir a exceção (último valor anterior ao mês da exceção)
+  // --- Salário proporcional ---
+  // NÃO armazenar como income.changes pois recurringIncomeValues re-aplica calcNetClt (que usa
+  // consignado cheio), resultando em valor errado/negativo. Em vez disso:
+  // 1. Cria incomeLine separada com o líquido proporcional correto
+  // 2. Exceção 0 no income.changes para suprimir o salário regular naquele mês
+  // 3. Revert no mês seguinte para restaurar salário normal
+
+  // Cria incomeLine com o líquido proporcional
+  const salaryIncomeLineId = crypto.randomUUID();
+  state.data.incomeLines.push({
+    id: salaryIncomeLineId,
+    label: `Salário proporcional — ${income.label}`,
+    origin: income.origin || income.label,
+    creditorId: "",
+    owner: income.owner || "Felipe",
+    date: `${vacData.salMonth}-05`,
+    values: { [vacData.salMonth]: vacData.salaryNet }
+  });
+
+  // Pega salário bruto normal ANTES de criar exceção (para o revert)
   const priorChanges = normalizedIncomeChanges(income);
   const priorChange = [...priorChanges].reverse().find((c) => c.month < vacData.salMonth);
   const normalAmount = priorChange?.amount || 0;
 
-  // Cria exceção de salário proporcional para o mês seguinte
-  income.changes = upsertIncomeChange(income.changes || [], vacData.salMonth, vacData.salaryNet);
-  // Revert para o mês seguinte ao proporcional (restaura salário normal)
+  // Exceção 0: suprime o salário recorrente para não duplicar (a incomeLine já mostra o proporcional)
+  income.changes = upsertIncomeChange(income.changes || [], vacData.salMonth, 0);
+  // Revert: restaura salário normal no mês seguinte ao proporcional
   const revertMonth = addMonthsToDate(`${vacData.salMonth}-01`, 1).slice(0, 7);
   if (normalAmount > 0 && !income.changes.find((c) => c.month === revertMonth)) {
     income.changes = upsertIncomeChange(income.changes, revertMonth, normalAmount);
@@ -578,7 +597,8 @@ export async function saveFeriasEntry() {
     salaryNet: vacData.salaryNet,
     vacationMonth: vacData.vacMonth,
     salaryMonth: vacData.salMonth,
-    incomeLineId
+    incomeLineId,
+    salaryIncomeLineId
   });
 
   _renderFeriasDialog("list");
@@ -588,14 +608,21 @@ export async function saveFeriasEntry() {
 function _removeFeriasLancamentos(vacId) {
   const v = (state.data.vacations || []).find((x) => x.id === vacId);
   if (!v) return;
-  // Remove renda avulsa
+  // Remove renda de férias (incomeLine)
   if (v.incomeLineId) {
     state.data.incomeLines = (state.data.incomeLines || []).filter((l) => l.id !== v.incomeLineId);
   }
-  // Remove exceção de salário proporcional
+  // Remove salário proporcional (incomeLine)
+  if (v.salaryIncomeLineId) {
+    state.data.incomeLines = (state.data.incomeLines || []).filter((l) => l.id !== v.salaryIncomeLineId);
+  }
+  // Remove exceção 0 do salário recorrente (e o revert do mês seguinte)
   const income = state.data.recurringIncomes?.find((i) => i.id === v.incomeId);
   if (income) {
-    income.changes = (income.changes || []).filter((c) => c.month !== v.salaryMonth);
+    const revertMonth = addMonthsToDate(`${v.salaryMonth}-01`, 1).slice(0, 7);
+    income.changes = (income.changes || []).filter(
+      (c) => c.month !== v.salaryMonth && c.month !== revertMonth
+    );
   }
 }
 
@@ -618,14 +645,24 @@ export function applyFeriasAutoCleanup() {
     const pastVacation = v.vacationMonth < cur;
     const pastSalary = v.salaryMonth < cur;
 
+    // Remove renda de férias quando o mês das férias passou
     if (pastVacation && v.incomeLineId) {
       state.data.incomeLines = (state.data.incomeLines || []).filter((l) => l.id !== v.incomeLineId);
       v.incomeLineId = null;
     }
+    // Remove salário proporcional + exceção 0 quando o mês do salário passou
     if (pastSalary) {
+      if (v.salaryIncomeLineId) {
+        state.data.incomeLines = (state.data.incomeLines || []).filter((l) => l.id !== v.salaryIncomeLineId);
+        v.salaryIncomeLineId = null;
+      }
       const income = state.data.recurringIncomes?.find((i) => i.id === v.incomeId);
       if (income) {
-        income.changes = (income.changes || []).filter((c) => c.month !== v.salaryMonth);
+        // Remove tanto a exceção 0 quanto o revert do mês seguinte
+        const revertMonth = addMonthsToDate(`${v.salaryMonth}-01`, 1).slice(0, 7);
+        income.changes = (income.changes || []).filter(
+          (c) => c.month !== v.salaryMonth && c.month !== revertMonth
+        );
       }
     }
     // Remover da lista quando ambos os meses passaram

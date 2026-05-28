@@ -280,8 +280,9 @@ h2 {
 
 .row-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  flex-wrap: nowrap;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .full {
@@ -2066,8 +2067,9 @@ select {
 .income-act-btn::after {
   content: attr(data-tip);
   position: absolute;
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
   left: 50%;
+  z-index: 200;
   transform: translateX(-50%);
   background: var(--ink);
   color: #fff;
