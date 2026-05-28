@@ -146,7 +146,9 @@ export function monthlyItems(items, month, kind, scope = "pending") {
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
     const chevron = hasBreakdown
       ? `<button class="monthly-chevron" type="button" title="Expandir contas" data-toggle-monthly-details>${icon("chevron-down")}</button>`
-      : `<span class="monthly-chevron placeholder"></span>`;
+      : isManualPlannedRow(row)
+        ? deleteButton
+        : `<span class="monthly-chevron placeholder"></span>`;
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""} ${kind === "income" ? "income-item" : "expense-item"}">
         <div class="entity-cell monthly-entity">
@@ -162,7 +164,6 @@ export function monthlyItems(items, month, kind, scope = "pending") {
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
           ${actionButton}
-          ${deleteButton}
         </div>
         ${chevron}
         ${breakdown}
