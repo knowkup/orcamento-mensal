@@ -2064,12 +2064,14 @@ select {
 .income-act-btn:hover { background: var(--surface-soft); color: var(--ink); }
 .income-act-btn.danger:hover { background: #fdf2f2; color: var(--red); border-color: rgba(182,61,56,.3); }
 
-.income-act-btn::after {
+/* Tooltip só para botões que têm data-tip definido */
+.income-act-btn:not([data-tip])::after { display: none; }
+.income-act-btn[data-tip]::after {
   content: attr(data-tip);
   position: absolute;
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   left: 50%;
-  z-index: 200;
+  z-index: 2000;
   transform: translateX(-50%);
   background: var(--ink);
   color: #fff;
@@ -2079,10 +2081,9 @@ select {
   padding: 4px 8px;
   border-radius: 5px;
   pointer-events: none;
-  opacity: 0;
-  transition: opacity .15s;
+  visibility: hidden;
 }
-.income-act-btn:hover::after { opacity: 1; }
+.income-act-btn[data-tip]:hover::after { visibility: visible; }
 
 .owner-pill {
   display: inline-block;
