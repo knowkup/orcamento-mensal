@@ -101,7 +101,7 @@ export function renderCreditCards() {
 
 export function renderRecurringIncomes() {
   el.incomeList.innerHTML = `
-    <thead><tr><th>Renda</th><th>Fonte</th><th>Dono</th><th>Receb.</th><th>Valor atual</th><th>Vale desde</th><th>Acoes</th></tr></thead>
+    <thead><tr><th>Renda</th><th>Fonte</th><th>Dono</th><th>Receb.</th><th>Valor atual</th><th>Vale desde</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.recurringIncomes.map((income) => {
         const current = latestIncomeChange(income);
@@ -109,6 +109,24 @@ export function renderRecurringIncomes() {
         const netHtml = income.isClt && gross > 0
           ? `<br><small class="muted-cell">líq. ${currency.format(calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1))}</small>`
           : "";
+        const sortedChanges = [...(income.changes || [])].sort((a, b) => a.month.localeCompare(b.month));
+        const baseMonth = sortedChanges[0]?.month;
+        const historyRow = sortedChanges.length > 1 ? `
+          <tr class="income-changes-row">
+            <td colspan="7">
+              <div class="income-changes-list">
+                <span class="income-changes-label">Histórico de mudanças:</span>
+                ${sortedChanges.map((c) => {
+                  const isBase = c.month === baseMonth;
+                  const delBtn = !isBase
+                    ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir esta entrada" data-delete-income-change="${income.id}:${c.month}">${icon("x")}</button>`
+                    : "";
+                  return `<span class="income-change-chip${isBase ? " base" : ""}">${formatMonth(c.month)}: ${currency.format(c.amount)}${delBtn}</span>`;
+                }).join("")}
+              </div>
+            </td>
+          </tr>
+        ` : "";
         return `
           <tr>
             <td><div class="entity-cell">${sourceLogoHtml(income.logoUrl, income.label)}<strong>${escapeHtml(income.label)}</strong></div></td>
@@ -123,6 +141,7 @@ export function renderRecurringIncomes() {
               <button class="small-button danger-mini" type="button" data-delete-income="${income.id}">Excluir</button>
             </td>
           </tr>
+          ${historyRow}
         `;
       }).join("") || `<tr><td colspan="7" class="muted-cell">Nenhuma renda recorrente cadastrada.</td></tr>`}
     </tbody>
@@ -137,6 +156,30 @@ export function renderRecurringIncomes() {
   el.incomeList.querySelectorAll("[data-delete-income]").forEach((button) => {
     button.addEventListener("click", () => deleteRecurringIncome(button.dataset.deleteIncome));
   });
+  el.incomeList.querySelectorAll("[data-delete-income-change]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const parts = button.dataset.deleteIncomeChange.split(":");
+      const month = parts.slice(1).join(":"); // handles YYYY-MM
+      deleteIncomeChange(parts[0], month);
+    });
+  });
+}
+
+export async function deleteIncomeChange(incomeId, month) {
+  const income = state.data.recurringIncomes.find((i) => i.id === incomeId);
+  if (!income) return;
+  const sorted = [...(income.changes || [])].sort((a, b) => a.month.localeCompare(b.month));
+  if (sorted.length <= 1) {
+    showToast("Não é possível excluir a entrada base.");
+    return;
+  }
+  if (sorted[0]?.month === month) {
+    showToast("Não é possível excluir a entrada base. Use Editar/Reajustar para alterar o valor inicial.");
+    return;
+  }
+  income.changes = income.changes.filter((c) => c.month !== month);
+  if (state.renderFn) state.renderFn();
+  if (state.saveStateFn) await state.saveStateFn("Entrada de renda excluída.");
 }
 
 export function hydrateForms() {
@@ -401,8 +444,16 @@ export function openIncomeExceptionDialog(id) {
   const income = state.data.recurringIncomes.find((item) => item.id === id);
   el.incomeExceptionDialogTitle.textContent = income ? `Exceção: ${income.label}` : "Exceção de mês";
   el.incomeExceptionForm.reset();
-  el.incomeExceptionForm.elements.month.value = nextMonths(1)[0];
-  el.incomeExceptionForm.elements.amount.value = "";
+  const defaultMonth = nextMonths(1)[0];
+  el.incomeExceptionForm.elements.month.value = defaultMonth;
+  // Pre-fill with the salary currently in effect for that month
+  if (income) {
+    const changes = normalizedIncomeChanges(income);
+    const active = [...changes].reverse().find((c) => c.month <= defaultMonth);
+    if (active?.amount) {
+      el.incomeExceptionForm.elements.amount.value = formatCurrencyInput(active.amount);
+    }
+  }
   el.incomeExceptionDialog.showModal();
 }
 

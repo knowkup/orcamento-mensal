@@ -2032,6 +2032,79 @@ select {
   text-align: center;
 }
 
+/* ── Income changes history (Preferências) ──────────────── */
+
+.income-changes-row td {
+  padding: 8px 10px 10px;
+  background: var(--surface-warm);
+  border-bottom: 1px solid var(--line);
+}
+
+.income-changes-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.income-changes-label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+
+.income-change-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 2px 8px 2px 10px;
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.income-change-chip.base {
+  background: rgba(53, 184, 121, 0.08);
+  border-color: rgba(53, 184, 121, 0.3);
+  color: var(--green);
+}
+
+/* ── Simulador schedule bar ──────────────────────────── */
+
+.ferias-schedule-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.ferias-schedule-month-label {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.ferias-schedule-month-label input {
+  display: block;
+  margin-top: 4px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+  background: var(--surface);
+}
+
 /* ── Simulador de Férias ─────────────────────────────── */
 
 .ferias-inputs {

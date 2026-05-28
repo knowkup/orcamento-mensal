@@ -1,10 +1,12 @@
-import { state, currency } from "./state.js";
-import { parseCurrencyInput, formatCurrencyInput } from "./utils.js";
+import { state, el, currency } from "./state.js";
+import { parseCurrencyInput, formatCurrencyInput, nextMonths } from "./utils.js";
 import { calcInss, calcIrrf } from "./taxes.js";
 import { normalizedIncomeChanges } from "./data.js";
+import { openPlannedDialog } from "./controle.js";
 
 let _mode = "ferias";
 let _prefilled = false;
+let _lastCalc = null; // stores last calculated result for scheduling
 
 function calcFerias(baseSalary, days, consignado) {
   const prop = Math.round(baseSalary / 30 * days * 100) / 100;
@@ -71,6 +73,29 @@ export function bindFeriasEvents() {
   document.querySelector("#feriaModeFerias")?.addEventListener("click", () => _setMode("ferias"));
   document.querySelector("#feriaModeSalario")?.addEventListener("click", () => _setMode("salario"));
   document.querySelector("#feriasModeDecimo")?.addEventListener("click", () => _setMode("decimo"));
+
+  // Init schedule month to next month
+  const scheduleMonthEl = document.querySelector("#feriasScheduleMonth");
+  if (scheduleMonthEl && !scheduleMonthEl.value) {
+    scheduleMonthEl.value = nextMonths(1)[0];
+  }
+
+  document.querySelector("#feriasScheduleButton")?.addEventListener("click", () => {
+    if (!_lastCalc) return;
+    const month = document.querySelector("#feriasScheduleMonth")?.value || nextMonths(1)[0];
+    const modeLabels = { ferias: "Férias", decimo: "13º Salário", salario: "Salário" };
+    const label = modeLabels[_lastCalc.mode] || "Simulador";
+    openPlannedDialog(null, "income");
+    // openPlannedDialog resets and shows the dialog; now pre-fill with our values
+    if (el.plannedForm) {
+      el.plannedForm.elements.description.value = label;
+      el.plannedForm.elements.date.value = `${month}-01`;
+      el.plannedForm.elements.amount.value = formatCurrencyInput(_lastCalc.net);
+      if (el.plannedForm.elements.fonte) {
+        el.plannedForm.elements.fonte.value = "Simulador CLT";
+      }
+    }
+  });
 }
 
 function _setMode(mode) {
@@ -113,11 +138,17 @@ function _recalc() {
 
   if (_mode === "salario") {
     const alimentacaoPercent = parseFloat(alimentacaoEl?.value ?? "1") || 1;
-    resultEl.innerHTML = _payslipSalario(calcSalario(baseSalary, days, alimentacaoPercent, consignado), baseSalary, days, fmt);
+    const r = calcSalario(baseSalary, days, alimentacaoPercent, consignado);
+    resultEl.innerHTML = _payslipSalario(r, baseSalary, days, fmt);
+    _lastCalc = { mode: "salario", net: r.net, baseSalary, days };
   } else if (_mode === "decimo") {
-    resultEl.innerHTML = _payslipDecimo(calcDecimo(baseSalary, days), baseSalary, days, fmt);
+    const r = calcDecimo(baseSalary, days);
+    resultEl.innerHTML = _payslipDecimo(r, baseSalary, days, fmt);
+    _lastCalc = { mode: "decimo", net: r.net, adiantamento: r.adiantamento, baseSalary, days };
   } else {
-    resultEl.innerHTML = _payslipFerias(calcFerias(baseSalary, days, consignado), baseSalary, days, fmt);
+    const r = calcFerias(baseSalary, days, consignado);
+    resultEl.innerHTML = _payslipFerias(r, baseSalary, days, fmt);
+    _lastCalc = { mode: "ferias", net: r.net, baseSalary, days };
   }
 }
 
