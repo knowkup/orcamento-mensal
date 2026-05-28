@@ -360,8 +360,11 @@
                   <p class="eyebrow">Simulador de Férias</p>
                   <h2>Tabelas tributárias INSS e IRRF</h2>
                 </div>
+                <button class="primary-button" type="button" id="openTaxTablesButton">
+                  <i data-lucide="table-2"></i>
+                  <span>Editar tabelas</span>
+                </button>
               </div>
-              <div id="taxTablesBlock"></div>
               </div>
             </section>
           </div>
@@ -806,6 +809,19 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <dialog class="dialog dialog--wide" id="taxTablesDialog">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">Simulador de Férias</p>
+          <h2>Tabelas tributárias INSS e IRRF</h2>
+        </div>
+        <button class="icon-button" type="button" id="closeTaxTablesButton" title="Fechar">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+      <div id="taxTablesBlock"></div>
+    </dialog>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module" src="js/app.js"></script>

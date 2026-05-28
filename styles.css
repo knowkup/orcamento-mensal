@@ -2019,6 +2019,10 @@ select {
   background: rgba(17, 27, 22, 0.38);
 }
 
+.dialog--wide {
+  width: min(720px, calc(100vw - 30px));
+}
+
 .toast {
   position: fixed;
   right: 18px;

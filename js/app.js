@@ -86,6 +86,8 @@ function bindEvents() {
   el.closeFixedCostAmountButton.addEventListener("click", () => el.fixedCostAmountDialog.close());
   el.incomeExceptionForm.addEventListener("submit", saveIncomeException);
   el.closeIncomeExceptionButton.addEventListener("click", closeIncomeExceptionDialog);
+  document.querySelector("#openTaxTablesButton")?.addEventListener("click", () => document.querySelector("#taxTablesDialog")?.showModal());
+  document.querySelector("#closeTaxTablesButton")?.addEventListener("click", () => document.querySelector("#taxTablesDialog")?.close());
   bindFeriasEvents();
   // Label select → atualiza campos condicionais e faixa líquido
   document.querySelector("#incomeLabelSelect")?.addEventListener("change", toggleIncomeCltFields);

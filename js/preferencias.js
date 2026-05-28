@@ -707,4 +707,5 @@ async function saveTaxTables() {
   state.data.taxes.irrf = { exemptionLimit, partialLimit, brackets };
 
   if (state.saveStateFn) await state.saveStateFn("Tabelas tributárias salvas.");
+  document.querySelector("#taxTablesDialog")?.close();
 }
