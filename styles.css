@@ -281,6 +281,7 @@ h2 {
 .row-actions {
   display: flex;
   flex-wrap: nowrap;
+  justify-content: flex-end;
   gap: 5px;
   white-space: nowrap;
 }
