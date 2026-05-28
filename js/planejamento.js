@@ -148,11 +148,8 @@ function _renderMonthlySummary(totals, months, rows) {
                 : "";
               return `
                 <div class="mst-detail-row">
-                  <span>${escapeHtml(r.label)}</span>
-                  <span class="mst-detail-row-right">
-                    <span class="positive">+${fmt(r.values[t.month])}</span>
-                    ${editBtn}${delBtn}
-                  </span>
+                  <span class="mst-detail-row-left">${escapeHtml(r.label)}${editBtn}${delBtn}</span>
+                  <span class="positive">+${fmt(r.values[t.month])}</span>
                 </div>`;
             }).join("")}
           </div>` : ""}
@@ -165,11 +162,8 @@ function _renderMonthlySummary(totals, months, rows) {
                 : "";
               return `
                 <div class="mst-detail-row">
-                  <span>${escapeHtml(r.label)}</span>
-                  <span class="mst-detail-row-right">
-                    <span class="negative">-${fmt(r.values[t.month])}</span>
-                    ${delBtn}
-                  </span>
+                  <span class="mst-detail-row-left">${escapeHtml(r.label)}${delBtn}</span>
+                  <span class="negative">-${fmt(r.values[t.month])}</span>
                 </div>`;
             }).join("")}
           </div>` : ""}

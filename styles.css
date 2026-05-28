@@ -1256,13 +1256,18 @@ svg {
   font-size: 16px;
 }
 
+.mst-detail-row-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
 .mst-detail-row-right {
   display: flex;
   align-items: center;
-  gap: 4px;
   flex-shrink: 0;
-  width: 160px;
-  justify-content: flex-end;
 }
 
 /* KPI: trend label */
