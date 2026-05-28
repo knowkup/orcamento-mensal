@@ -458,7 +458,7 @@ export function recurringIncomeValues(income, months) {
     const current = [...changes].reverse().find((change) => change.month <= month);
     const gross = current ? Number(current.amount || 0) : 0;
     values[month] = income.isClt && gross > 0
-      ? calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1)
+      ? Math.max(0, calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1))
       : gross;
   });
   return values;

@@ -101,47 +101,35 @@ export function renderCreditCards() {
 
 export function renderRecurringIncomes() {
   el.incomeList.innerHTML = `
-    <thead><tr><th>Renda</th><th>Fonte</th><th>Dono</th><th>Receb.</th><th>Valor atual</th><th>Vale desde</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Renda</th><th>Fonte</th><th>Titular</th><th>Dia</th><th>Valor atual</th><th>Vale desde</th><th>Ações</th></tr></thead>
     <tbody>
       ${state.data.recurringIncomes.map((income) => {
         const current = latestIncomeChange(income);
         const gross = current.amount || 0;
-        const netHtml = income.isClt && gross > 0
-          ? `<br><small class="muted-cell">líq. ${currency.format(calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1))}</small>`
+        const net = income.isClt && gross > 0
+          ? Math.max(0, calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1))
+          : null;
+        const netHtml = net !== null
+          ? `<br><small class="income-net">líq. ${currency.format(net)}</small>`
           : "";
-        const sortedChanges = [...(income.changes || [])].sort((a, b) => a.month.localeCompare(b.month));
-        const baseMonth = sortedChanges[0]?.month;
-        const historyRow = sortedChanges.length > 1 ? `
-          <tr class="income-changes-row">
-            <td colspan="7">
-              <div class="income-changes-list">
-                <span class="income-changes-label">Histórico de mudanças:</span>
-                ${sortedChanges.map((c) => {
-                  const isBase = c.month === baseMonth;
-                  const delBtn = !isBase
-                    ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir esta entrada" data-delete-income-change="${income.id}:${c.month}">${icon("x")}</button>`
-                    : "";
-                  return `<span class="income-change-chip${isBase ? " base" : ""}">${formatMonth(c.month)}: ${currency.format(c.amount)}${delBtn}</span>`;
-                }).join("")}
-              </div>
-            </td>
-          </tr>
+        const cltButtons = income.isClt ? `
+          <button class="income-act-btn" type="button" data-ferias-income="${income.id}" data-tip="Férias">${icon("palmtree")}</button>
+          <button class="income-act-btn" type="button" data-decimo-income="${income.id}" data-tip="13º salário">13º</button>
         ` : "";
         return `
           <tr>
             <td><div class="entity-cell">${sourceLogoHtml(income.logoUrl, income.label)}<strong>${escapeHtml(income.label)}</strong></div></td>
             <td>${escapeHtml(income.origin || "-")}</td>
-            <td>${escapeHtml(income.owner || "Felipe")}</td>
-            <td>${income.receiveDay || 1}</td>
+            <td><span class="owner-pill">${escapeHtml(income.owner || "Felipe")}</span></td>
+            <td style="text-align:center">${income.receiveDay || 1}</td>
             <td>${currency.format(gross)}${netHtml}</td>
             <td>${current.month ? formatMonth(current.month) : "-"}</td>
             <td class="row-actions">
-              <button class="small-button" type="button" data-edit-income="${income.id}">Editar/Reajustar</button>
-              <button class="small-button" type="button" data-exception-income="${income.id}">Exceção de mês</button>
-              <button class="small-button danger-mini" type="button" data-delete-income="${income.id}">Excluir</button>
+              <button class="income-act-btn" type="button" data-edit-income="${income.id}" data-tip="Editar / Reajustar">${icon("pencil")}</button>
+              ${cltButtons}
+              <button class="income-act-btn danger" type="button" data-delete-income="${income.id}" data-tip="Excluir">${icon("trash-2")}</button>
             </td>
           </tr>
-          ${historyRow}
         `;
       }).join("") || `<tr><td colspan="7" class="muted-cell">Nenhuma renda recorrente cadastrada.</td></tr>`}
     </tbody>
@@ -150,18 +138,14 @@ export function renderRecurringIncomes() {
   el.incomeList.querySelectorAll("[data-edit-income]").forEach((button) => {
     button.addEventListener("click", () => openIncomeDialog(button.dataset.editIncome));
   });
-  el.incomeList.querySelectorAll("[data-exception-income]").forEach((button) => {
-    button.addEventListener("click", () => openIncomeExceptionDialog(button.dataset.exceptionIncome));
+  el.incomeList.querySelectorAll("[data-ferias-income]").forEach((button) => {
+    button.addEventListener("click", () => openFeriasDialog(button.dataset.feriasIncome));
+  });
+  el.incomeList.querySelectorAll("[data-decimo-income]").forEach((button) => {
+    button.addEventListener("click", () => openDecimoTerceiroDialog(button.dataset.decimoIncome));
   });
   el.incomeList.querySelectorAll("[data-delete-income]").forEach((button) => {
     button.addEventListener("click", () => deleteRecurringIncome(button.dataset.deleteIncome));
-  });
-  el.incomeList.querySelectorAll("[data-delete-income-change]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const parts = button.dataset.deleteIncomeChange.split(":");
-      const month = parts.slice(1).join(":"); // handles YYYY-MM
-      deleteIncomeChange(parts[0], month);
-    });
   });
 }
 
@@ -437,6 +421,16 @@ export async function saveRecurringIncome(event) {
 export async function deleteRecurringIncome(id) {
   state.data.recurringIncomes = state.data.recurringIncomes.filter((item) => item.id !== id);
   if (state.saveStateFn) await state.saveStateFn("Renda recorrente excluída.");
+}
+
+export function openFeriasDialog(incomeId) {
+  // TODO: implementar modal de férias
+  void incomeId;
+}
+
+export function openDecimoTerceiroDialog(incomeId) {
+  // TODO: implementar modal de 13º salário
+  void incomeId;
 }
 
 function _prefillExceptionAmount(income, month) {

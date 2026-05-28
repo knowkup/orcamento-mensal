@@ -2032,47 +2032,64 @@ select {
   text-align: center;
 }
 
-/* ── Income changes history (Preferências) ──────────────── */
+/* ── Income table — ações ──────────────────────────────── */
 
-.income-changes-row td {
-  padding: 8px 10px 10px;
-  background: var(--surface-warm);
-  border-bottom: 1px solid var(--line);
-}
-
-.income-changes-list {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.income-changes-label {
+.income-act-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
   color: var(--muted);
-  font-size: 11px;
-  font-weight: 850;
-  text-transform: uppercase;
-  margin-right: 4px;
-  flex-shrink: 0;
-}
-
-.income-change-chip {
+  cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: inherit;
+  transition: background .12s, color .12s, border-color .12s;
+  flex-shrink: 0;
+  position: relative;
+}
+.income-act-btn:hover { background: var(--surface-soft); color: var(--ink); }
+.income-act-btn.danger:hover { background: #fdf2f2; color: var(--red); border-color: rgba(182,61,56,.3); }
+
+.income-act-btn::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 5px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.income-act-btn:hover::after { opacity: 1; }
+
+.owner-pill {
+  display: inline-block;
+  background: var(--surface-soft);
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 2px 8px 2px 10px;
-  background: var(--surface);
+  padding: 2px 9px;
   font-size: 12px;
-  font-weight: 700;
-  color: var(--ink);
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.income-change-chip.base {
-  background: rgba(53, 184, 121, 0.08);
-  border-color: rgba(53, 184, 121, 0.3);
+.income-net {
+  font-size: 11px;
   color: var(--green);
+  font-weight: 500;
 }
 
 /* ── Simulador schedule bar ──────────────────────────── */
