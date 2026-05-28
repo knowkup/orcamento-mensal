@@ -122,7 +122,16 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const actionButton = scope === "realized" && kind === "expense" && !done
       ? ""
       : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
-    const marker = row.creditorId ? creditorLogoHtml(row.creditorId) : sourceLogoHtml(row.logoUrl, row.origin || row.label);
+    const marker = (() => {
+      if (row.creditorId) return creditorLogoHtml(row.creditorId);
+      if (row.manualType === "planned-income") {
+        const matchIncome = (state.data.recurringIncomes || []).find((i) => i.label === row.origin);
+        if (matchIncome) return sourceLogoHtml(matchIncome.logoUrl, matchIncome.label);
+        const matchCreditor = (state.data.creditors || []).find((c) => c.name === row.origin);
+        if (matchCreditor) return creditorLogoHtml(matchCreditor.id);
+      }
+      return sourceLogoHtml(row.logoUrl, row.origin || row.label);
+    })();
     const deleteButton = isManualPlannedRow(row)
       ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
       : "";
