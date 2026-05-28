@@ -75,28 +75,6 @@ export function bindFeriasEvents() {
   document.querySelector("#feriaModeSalario")?.addEventListener("click", () => _setMode("salario"));
   document.querySelector("#feriasModeDecimo")?.addEventListener("click", () => _setMode("decimo"));
 
-  // Init schedule month to next month
-  const scheduleMonthEl = document.querySelector("#feriasScheduleMonth");
-  if (scheduleMonthEl && !scheduleMonthEl.value) {
-    scheduleMonthEl.value = nextMonths(1)[0];
-  }
-
-  document.querySelector("#feriasScheduleButton")?.addEventListener("click", () => {
-    if (!_lastCalc) return;
-    const month = document.querySelector("#feriasScheduleMonth")?.value || nextMonths(1)[0];
-    const modeLabels = { ferias: "Férias", decimo: "13º Salário", salario: "Salário" };
-    const label = modeLabels[_lastCalc.mode] || "Simulador";
-    openPlannedDialog(null, "income");
-    // openPlannedDialog resets and shows the dialog; now pre-fill with our values
-    if (el.plannedForm) {
-      el.plannedForm.elements.description.value = label;
-      el.plannedForm.elements.date.value = `${month}-01`;
-      el.plannedForm.elements.amount.value = formatCurrencyInput(_lastCalc.net);
-      if (el.plannedForm.elements.fonte) {
-        el.plannedForm.elements.fonte.value = "Simulador CLT";
-      }
-    }
-  });
 }
 
 function _setMode(mode) {

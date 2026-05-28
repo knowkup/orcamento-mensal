@@ -281,7 +281,7 @@ h2 {
 .row-actions {
   display: flex;
   flex-wrap: nowrap;
-  justify-content: flex-end;
+  justify-content: center;
   gap: 5px;
   white-space: nowrap;
 }
@@ -551,6 +551,12 @@ svg {
   vertical-align: top;
   white-space: nowrap;
 }
+
+.data-table th.col-center,
+.data-table td.col-center { text-align: center; }
+
+.data-table th.col-right,
+.data-table td.col-right { text-align: right; }
 
 .projection-table thead th,
 .data-table thead th {
@@ -2284,35 +2290,6 @@ select {
 #feriasPreviewCards { display: flex; flex-direction: column; gap: 8px; }
 #feriasPreviewCards[hidden] { display: none; }
 
-/* ── Simulador schedule bar ──────────────────────────── */
-
-.ferias-schedule-bar {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  margin-top: 16px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-  flex-wrap: wrap;
-}
-
-.ferias-schedule-month-label {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.ferias-schedule-month-label input {
-  display: block;
-  margin-top: 4px;
-  padding: 6px 10px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  font: inherit;
-  font-size: 13px;
-  background: var(--surface);
-}
 
 /* ── Simulador de Férias ─────────────────────────────── */
 

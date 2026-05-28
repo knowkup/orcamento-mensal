@@ -31,7 +31,7 @@ export function renderOrigins() {
 
 export function renderOriginsV2() {
   el.creditorList.innerHTML = `
-    <thead><tr><th>Credor</th><th>Formas</th><th>Vínculos</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Credor</th><th>Formas</th><th class="col-center">Vínculos</th><th class="col-center">Ações</th></tr></thead>
     <tbody>
       ${sortedCreditors().map((creditor) => {
         const inUse = isCreditorInUse(creditor.id);
@@ -44,8 +44,8 @@ export function renderOriginsV2() {
               </div>
             </td>
             <td>${escapeHtml((creditor.paymentForms || [creditor.type]).filter(Boolean).join(", ") || "-")}</td>
-            <td>${creditorUsageCount(creditor.id)}</td>
-            <td class="row-actions">
+            <td class="col-center">${creditorUsageCount(creditor.id)}</td>
+            <td class="row-actions col-center">
               <button class="icon-button mini-icon" type="button" title="Editar" data-edit-creditor="${creditor.id}">${icon("pencil")}</button>
               <button class="icon-button mini-icon danger-mini" type="button" title="${inUse ? "Credor vinculado" : "Excluir"}" data-delete-creditor="${creditor.id}">${icon(inUse ? "ban" : "trash-2")}</button>
             </td>
@@ -65,7 +65,7 @@ export function renderOriginsV2() {
 
 export function renderCreditCards() {
   el.cardList.innerHTML = `
-    <thead><tr><th>Cartao/Crediario</th><th>Credor</th><th>Dono</th><th>Venc.</th><th>Total comprometido</th><th>Acoes</th></tr></thead>
+    <thead><tr><th>Cartão/Crediário</th><th>Credor</th><th class="col-center">Titular</th><th class="col-center">Venc.</th><th class="col-right">Total comprometido</th><th class="col-center">Ações</th></tr></thead>
     <tbody>
       ${sortedCreditCards().map((card) => {
         const inUse = isCreditCardInUse(card.id);
@@ -78,10 +78,10 @@ export function renderCreditCards() {
               </div>
             </td>
             <td>${escapeHtml(getCreditorName(card.creditorId))}</td>
-            <td>${escapeHtml(card.owner || "Felipe")}</td>
-            <td>${card.dueDay || "-"}</td>
-            <td>${currency.format(cardOpenBalance(card.id))}</td>
-            <td class="row-actions">
+            <td class="col-center"><span class="owner-pill">${escapeHtml(card.owner || "Felipe")}</span></td>
+            <td class="col-center">${card.dueDay || "-"}</td>
+            <td class="col-right">${currency.format(cardOpenBalance(card.id))}</td>
+            <td class="row-actions col-center">
               <button class="icon-button mini-icon" type="button" title="Editar" data-edit-card="${card.id}">${icon("pencil")}</button>
               <button class="icon-button mini-icon danger-mini" type="button" title="${inUse ? "Cartão vinculado" : "Excluir"}" data-delete-card="${card.id}">${icon(inUse ? "ban" : "trash-2")}</button>
             </td>
@@ -102,7 +102,7 @@ export function renderCreditCards() {
 
 export function renderRecurringIncomes() {
   el.incomeList.innerHTML = `
-    <thead><tr><th>Renda</th><th>Fonte</th><th>Titular</th><th>Dia</th><th>Valor atual</th><th>Ações</th></tr></thead>
+    <thead><tr><th>Renda</th><th>Fonte</th><th class="col-center">Titular</th><th class="col-center">Dia</th><th class="col-right">Valor atual</th><th class="col-center">Ações</th></tr></thead>
     <tbody>
       ${state.data.recurringIncomes.map((income) => {
         const current = latestIncomeChange(income);
@@ -121,10 +121,10 @@ export function renderRecurringIncomes() {
           <tr>
             <td><div class="entity-cell">${sourceLogoHtml(income.logoUrl, income.label)}<strong>${escapeHtml(income.label)}</strong></div></td>
             <td>${escapeHtml(income.origin || "-")}</td>
-            <td><span class="owner-pill">${escapeHtml(income.owner || "Felipe")}</span></td>
-            <td style="text-align:center">${income.receiveDay || 1}</td>
-            <td>${currency.format(gross)}${netHtml}</td>
-            <td class="row-actions">
+            <td class="col-center"><span class="owner-pill">${escapeHtml(income.owner || "Felipe")}</span></td>
+            <td class="col-center">${income.receiveDay || 1}</td>
+            <td class="col-right">${currency.format(gross)}${netHtml}</td>
+            <td class="row-actions col-center">
               <button class="income-act-btn" type="button" data-edit-income="${income.id}" data-tip="Editar / Reajustar">${icon("pencil")}</button>
               ${cltButtons}
               <button class="income-act-btn danger" type="button" data-delete-income="${income.id}" data-tip="Excluir">${icon("trash-2")}</button>
