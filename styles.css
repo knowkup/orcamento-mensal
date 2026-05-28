@@ -896,11 +896,17 @@ svg {
   overflow-x: auto;
 }
 
-.acc-svg {
-  display: block;
-  width: 100%;
+.acc-chart-area {
+  position: relative;
+  height: 150px;
   min-width: 600px;
-  height: auto;
+}
+
+.acc-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 .acc-zero-line {
@@ -956,7 +962,7 @@ svg {
 .acc-months-row {
   display: flex;
   min-width: 600px;
-  padding: 4px 12px 0;
+  padding: 4px 0 0;
 }
 
 .acc-month-btn {
@@ -986,6 +992,40 @@ svg {
 
 .acc-month-btn.negative {
   color: var(--red);
+}
+
+/* Value labels over the chart (percent-positioned to match SVG dots) */
+.acc-val-lbl {
+  position: absolute;
+  transform: translate(-50%, -130%);
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+  pointer-events: none;
+  background: rgba(255, 255, 255, 0.82);
+  border-radius: 4px;
+  padding: 1px 4px;
+}
+
+.acc-val-pos {
+  color: var(--green);
+}
+
+.acc-val-neg {
+  color: var(--red);
+}
+
+.acc-val-active {
+  font-weight: 850;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 1px 4px rgba(6, 35, 58, 0.1);
+}
+
+.acc-chart-hint {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
 }
 
 .acc-chart-legend {
@@ -1177,6 +1217,7 @@ svg {
 .mst-detail-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   padding: 5px 0;
   font-size: 13px;
@@ -1199,6 +1240,19 @@ svg {
 
 .mst-detail-footer strong {
   font-size: 16px;
+}
+
+.mst-detail-row-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* KPI: trend label */
+.kpi-trend {
+  font-size: 18px;
+  letter-spacing: -0.01em;
 }
 
 /* Collapsible projection table */

@@ -423,13 +423,17 @@ export async function saveIncomeException(event) {
   const changes = normalizedIncomeChanges(income);
   const nextMonth = addMonthsToDate(`${month}-01`, 1).slice(0, 7);
 
-  // amount to revert to in month+1 (latest change at or before nextMonth, excluding exception month)
-  const revertAmount = [...changes].reverse().find((c) => c.month <= nextMonth && c.month !== month)?.amount ?? 0;
+  // Revert target: if the exception month already had a permanent salary change,
+  // revert to that salary; otherwise revert to the latest change BEFORE the exception.
+  // This avoids zeroing out subsequent months when the income started on the exception month.
+  const existingChangeForMonth = changes.find((c) => c.month === month);
+  const priorChange = [...changes].reverse().find((c) => c.month < month);
+  const revertAmount = existingChangeForMonth?.amount ?? priorChange?.amount ?? 0;
 
   income.changes = upsertIncomeChange(income.changes || [], month, amount);
 
-  // only add the revert if there's no explicit change already defined for nextMonth
-  if (!changes.find((c) => c.month === nextMonth)) {
+  // Only add the revert if there is no explicit change already defined for nextMonth
+  if (!changes.find((c) => c.month === nextMonth) && revertAmount > 0) {
     income.changes = upsertIncomeChange(income.changes, nextMonth, revertAmount);
   }
 

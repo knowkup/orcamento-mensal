@@ -26,33 +26,41 @@ function _renderKpis(totals) {
   const last = totals[totals.length - 1];
   const minT = totals.reduce((a, b) => (b.accumulated < a.accumulated ? b : a));
   const maxT = totals.reduce((a, b) => (b.accumulated > a.accumulated ? b : a));
-  const totalBalance = totals.reduce((s, t) => s + t.balance, 0);
+  const trendDelta = last.accumulated - totals[0].accumulated;
+  const totalIncome = totals.reduce((s, t) => s + t.income, 0);
+  const trendRatio = totalIncome > 0 ? trendDelta / totalIncome : 0;
+  const trendLabel = trendDelta > 500 ? "Em alta" : trendDelta < -500 ? "Em queda" : "Estável";
+  const trendSub = trendDelta > 500 ? "crescimento consistente" : trendDelta < -500 ? "saldo declinando" : "leve variação";
+  const trendIcon = trendDelta > 500 ? "↗" : trendDelta < -500 ? "↘" : "→";
+  const trendTone = trendDelta >= 0 ? "positive" : "negative";
   const negativeMonths = totals.filter((t) => t.accumulated < 0).length;
   const fmt = (v) => currency.format(v);
 
   el.monthSummary.innerHTML = `
     <article class="metric ${last.accumulated >= 0 ? "positive" : "negative"}">
-      <span>Saldo ao final do período</span>
+      <span>Saldo previsto ao final de ${formatMonthLong(last.month)}</span>
       <strong>${fmt(last.accumulated)}</strong>
+      <small>considerando os próximos 12 meses</small>
     </article>
     <article class="metric ${minT.accumulated >= 0 ? "positive" : "negative"}">
-      <span>Menor saldo</span>
+      <span>Menor saldo previsto</span>
       <strong>${fmt(minT.accumulated)}</strong>
       <small>${formatMonthLong(minT.month)}</small>
     </article>
     <article class="metric ${maxT.accumulated >= 0 ? "positive" : "negative"}">
-      <span>Maior saldo</span>
+      <span>Maior saldo previsto</span>
       <strong>${fmt(maxT.accumulated)}</strong>
       <small>${formatMonthLong(maxT.month)}</small>
     </article>
-    <article class="metric ${totalBalance >= 0 ? "positive" : "negative"}">
+    <article class="metric ${trendTone}">
       <span>Tendência do período</span>
-      <strong>${totalBalance >= 0 ? "+" : ""}${fmt(totalBalance)}</strong>
+      <strong class="kpi-trend">${trendIcon} ${trendLabel}</strong>
+      <small>${trendSub}</small>
     </article>
     <article class="metric ${negativeMonths === 0 ? "positive" : "negative"}">
       <span>Meses negativos</span>
-      <strong>${negativeMonths === 0 ? "Nenhum" : String(negativeMonths)}</strong>
-      ${negativeMonths > 0 ? `<small>de ${totals.length} meses</small>` : ""}
+      <strong>${negativeMonths === 0 ? "0" : String(negativeMonths)}</strong>
+      <small>${negativeMonths === 0 ? "ótimo!" : `de ${totals.length} meses`}</small>
     </article>
   `;
 }
@@ -77,18 +85,24 @@ function _renderEvents(totals, months, rows) {
   const maxExT = totals.reduce((a, b) => (b.expense > a.expense ? b : a));
   events.push({ ic: "receipt", label: "Maior saída", detail: `${formatMonthLong(maxExT.month)}: -${fmt(maxExT.expense)}`, cls: "event-negative" });
 
-  const keywords = [
-    { re: /f[eé]rias/i, label: "Férias", ic: "umbrella" },
-    { re: /13|d[eé]cimo/i, label: "13º Salário", ic: "gift" },
-    { re: /ipva/i, label: "IPVA", ic: "car" },
-    { re: /seguro/i, label: "Seguro", ic: "shield" },
-  ];
+  const today = new Date().toISOString().slice(0, 7); // current month YYYY-MM
   const allPlanned = [...(state.data.incomeLines || []), ...(state.data.plannedPurchases || [])];
-  keywords.forEach(({ re, label, ic }) => {
-    const found = allPlanned.find((p) => re.test(p.label || p.description || ""));
+
+  const keywords = [
+    { re: /f[eé]rias/i, label: "Férias", ic: "umbrella", nextOnly: true },
+    { re: /13|d[eé]cimo/i, label: "13º Salário", ic: "gift", nextOnly: false },
+    { re: /ipva/i, label: "IPVA", ic: "car", nextOnly: false },
+    { re: /seguro/i, label: "Seguro", ic: "shield", nextOnly: false },
+  ];
+  keywords.forEach(({ re, label, ic, nextOnly }) => {
+    const matches = allPlanned
+      .filter((p) => re.test(p.label || p.description || ""))
+      .map((p) => ({ p, month: p.date ? String(p.date).slice(0, 7) : p.month || "" }))
+      .filter(({ month }) => !nextOnly || month >= today)
+      .sort((a, b) => a.month.localeCompare(b.month));
+    const found = matches[0];
     if (found) {
-      const month = found.date ? String(found.date).slice(0, 7) : found.month || "";
-      events.push({ ic, label, detail: month ? formatMonthLong(month) : "previsto", cls: "event-info" });
+      events.push({ ic, label, detail: found.month ? formatMonthLong(found.month) : "previsto", cls: "event-info" });
     }
   });
 
@@ -125,20 +139,39 @@ function _renderMonthlySummary(totals, months, rows) {
         ${incomeRows.length ? `
           <div class="mst-detail-group">
             <p class="mst-detail-group-title">Entradas</p>
-            ${incomeRows.map((r) => `
-              <div class="mst-detail-row">
-                <span>${escapeHtml(r.label)}</span>
-                <span class="positive">+${fmt(r.values[t.month])}</span>
-              </div>`).join("")}
+            ${incomeRows.map((r) => {
+              const editBtn = isPlannedIncome(r.id)
+                ? `<button class="icon-button mini-icon row-edit" type="button" title="Editar" data-mst-edit-income="${r.id}">${icon("pencil")}</button>`
+                : "";
+              const delBtn = isManualPlannedRow(r)
+                ? `<button class="icon-button mini-icon danger-mini row-edit" type="button" title="Excluir" data-mst-delete-plan="${r.id}">${icon("trash-2")}</button>`
+                : "";
+              return `
+                <div class="mst-detail-row">
+                  <span>${escapeHtml(r.label)}</span>
+                  <span class="mst-detail-row-right">
+                    <span class="positive">+${fmt(r.values[t.month])}</span>
+                    ${editBtn}${delBtn}
+                  </span>
+                </div>`;
+            }).join("")}
           </div>` : ""}
         ${expenseRows.length ? `
           <div class="mst-detail-group">
             <p class="mst-detail-group-title">Saídas</p>
-            ${expenseRows.map((r) => `
-              <div class="mst-detail-row">
-                <span>${escapeHtml(r.label)}</span>
-                <span class="negative">-${fmt(r.values[t.month])}</span>
-              </div>`).join("")}
+            ${expenseRows.map((r) => {
+              const delBtn = isManualPlannedRow(r)
+                ? `<button class="icon-button mini-icon danger-mini row-edit" type="button" title="Excluir" data-mst-delete-plan="${r.id}">${icon("trash-2")}</button>`
+                : "";
+              return `
+                <div class="mst-detail-row">
+                  <span>${escapeHtml(r.label)}</span>
+                  <span class="mst-detail-row-right">
+                    <span class="negative">-${fmt(r.values[t.month])}</span>
+                    ${delBtn}
+                  </span>
+                </div>`;
+            }).join("")}
           </div>` : ""}
         <div class="mst-detail-footer">
           Saldo acumulado após ${formatMonthLong(t.month)}:
@@ -177,10 +210,23 @@ function _renderMonthlySummary(totals, months, rows) {
   `;
 
   summaryEl.querySelectorAll("[data-summary-month]").forEach((rowEl) => {
-    rowEl.addEventListener("click", () => {
+    rowEl.querySelector(".mst-row-main").addEventListener("click", () => {
       const month = rowEl.dataset.summaryMonth;
       _expandedSummaryMonth = _expandedSummaryMonth === month ? null : month;
       _renderMonthlySummary(totals, months, rows);
+    });
+  });
+
+  summaryEl.querySelectorAll("[data-mst-edit-income]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      openPlannedDialog(btn.dataset.mstEditIncome, "income");
+    });
+  });
+  summaryEl.querySelectorAll("[data-mst-delete-plan]").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      deleteManualPlanned(btn.dataset.mstDeletePlan);
     });
   });
 }
@@ -255,10 +301,11 @@ export function renderPlanningChart(totals, months) {
   const maxVal = Math.max(0, ...accValues);
   const range = Math.max(1, maxVal - minVal);
 
+  // SVG viewport
   const W = 960;
-  const SVG_H = 130;
-  const PAD_L = 12; const PAD_R = 12;
-  const PAD_T = 18; const PAD_B = 12;
+  const SVG_H = 150; // CSS height of chart area (px)
+  const PAD_L = 0; const PAD_R = 0;
+  const PAD_T = 22; const PAD_B = 10;
   const chartW = W - PAD_L - PAD_R;
   const chartH = SVG_H - PAD_T - PAD_B;
   const n = totals.length;
@@ -286,26 +333,35 @@ export function renderPlanningChart(totals, months) {
     return `<circle class="acc-dot${posClass}${activeClass}" cx="${x}" cy="${y}" r="5.5" data-month="${t.month}"><title>${formatMonthLong(t.month)}: ${currency.format(t.accumulated)}</title></circle>`;
   }).join("");
 
+  // Value labels positioned by percentage (works with preserveAspectRatio="none")
+  const valLabels = totals.map((t, i) => {
+    const xPct = (xPos(i) / W * 100).toFixed(2);
+    const yPct = (yPos(t.accumulated) / SVG_H * 100).toFixed(2);
+    const cls = t.accumulated >= 0 ? "acc-val-pos" : "acc-val-neg";
+    const active = _expandedSummaryMonth === t.month ? " acc-val-active" : "";
+    return `<span class="acc-val-lbl ${cls}${active}" style="left:${xPct}%;top:${yPct}%">${compactCurrency(t.accumulated)}</span>`;
+  }).join("");
+
   el.planningChart.innerHTML = `
     <div class="acc-chart-wrap">
-      <svg class="acc-svg" viewBox="0 0 ${W} ${SVG_H}" preserveAspectRatio="none" aria-hidden="true">
-        <line x1="${PAD_L}" y1="${zeroY.toFixed(1)}" x2="${(W - PAD_R).toFixed(1)}" y2="${zeroY.toFixed(1)}" class="acc-zero-line"/>
-        <path d="${areaD}" class="acc-area ${areaClass}"/>
-        <path d="${lineD}" class="acc-line"/>
-        ${dotsHtml}
-      </svg>
+      <div class="acc-chart-area">
+        <svg class="acc-svg" viewBox="0 0 ${W} ${SVG_H}" preserveAspectRatio="none" aria-hidden="true">
+          <line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" class="acc-zero-line"/>
+          <path d="${areaD}" class="acc-area ${areaClass}"/>
+          <path d="${lineD}" class="acc-line"/>
+          ${dotsHtml}
+        </svg>
+        ${valLabels}
+      </div>
       <div class="acc-months-row">
-        ${totals.map((t, i) => {
+        ${totals.map((t) => {
           const active = _expandedSummaryMonth === t.month ? " acc-lbl-active" : "";
           const neg = t.accumulated < 0 ? " negative" : "";
           return `<button class="acc-month-btn${neg}${active}" type="button" data-chart-month="${t.month}" title="${currency.format(t.accumulated)}">${formatMonth(t.month)}</button>`;
         }).join("")}
       </div>
     </div>
-    <div class="acc-chart-legend">
-      <span class="acc-legend-line"></span>Saldo acumulado &nbsp;
-      <span class="acc-legend-zero"></span>Zero
-    </div>
+    <p class="acc-chart-hint">Clique em um mês no gráfico ou na tabela para ver os detalhes</p>
   `;
 
   el.planningChart.querySelectorAll("[data-chart-month]").forEach((btn) => {
@@ -317,7 +373,6 @@ export function renderPlanningChart(totals, months) {
       const totals12 = buildTotals(rows12, months12);
       renderPlanningChart(totals12, months12);
       _renderMonthlySummary(totals12, months12, rows12);
-      // scroll to monthly summary
       document.querySelector("#projMonthlySummary")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
   });
