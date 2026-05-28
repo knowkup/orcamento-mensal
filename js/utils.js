@@ -57,7 +57,7 @@ export function formatMonth(month) {
 
 export function formatMonthLong(month) {
   const [year, value] = month.split("-").map(Number);
-  const text = monthLabelLong.format(new Date(year, value - 1, 1));
+  const text = monthLabelLong.format(new Date(year, value - 1, 1)).toLowerCase();
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 

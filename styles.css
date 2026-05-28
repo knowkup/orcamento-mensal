@@ -915,7 +915,6 @@ svg {
 .acc-chart-area {
   position: relative;
   height: 150px;
-  min-width: 600px;
 }
 
 .acc-svg {
@@ -977,7 +976,6 @@ svg {
 
 .acc-months-row {
   display: flex;
-  min-width: 600px;
   padding: 4px 0 0;
 }
 
@@ -1263,6 +1261,8 @@ svg {
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  min-width: 140px;
+  justify-content: flex-end;
 }
 
 /* KPI: trend label */

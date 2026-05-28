@@ -1,5 +1,5 @@
 import { state, el, currency } from "./state.js";
-import { nextMonths, formatMonth, formatMonthLong, compactCurrency, escapeHtml, icon, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
+import { nextMonths, formatMonth, formatMonthLong, escapeHtml, icon, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
 
 let _expandedSummaryMonth = null;
 import { calcNetClt } from "./taxes.js";
@@ -303,14 +303,12 @@ export function renderPlanningChart(totals, months) {
 
   // SVG viewport
   const W = 960;
-  const SVG_H = 150; // CSS height of chart area (px)
-  const PAD_L = 0; const PAD_R = 0;
+  const SVG_H = 150;
   const PAD_T = 22; const PAD_B = 10;
-  const chartW = W - PAD_L - PAD_R;
   const chartH = SVG_H - PAD_T - PAD_B;
   const n = totals.length;
 
-  const xPos = (i) => PAD_L + (n > 1 ? (i / (n - 1)) * chartW : chartW / 2);
+  const xPos = (i) => (i + 0.5) * (W / n);
   const yPos = (v) => PAD_T + (1 - (v - minVal) / range) * chartH;
   const zeroY = yPos(0);
 
@@ -339,7 +337,7 @@ export function renderPlanningChart(totals, months) {
     const yPct = (yPos(t.accumulated) / SVG_H * 100).toFixed(2);
     const cls = t.accumulated >= 0 ? "acc-val-pos" : "acc-val-neg";
     const active = _expandedSummaryMonth === t.month ? " acc-val-active" : "";
-    return `<span class="acc-val-lbl ${cls}${active}" style="left:${xPct}%;top:${yPct}%">${compactCurrency(t.accumulated)}</span>`;
+    return `<span class="acc-val-lbl ${cls}${active}" style="left:${xPct}%;top:${yPct}%">${currency.format(t.accumulated)}</span>`;
   }).join("");
 
   el.planningChart.innerHTML = `
@@ -357,7 +355,10 @@ export function renderPlanningChart(totals, months) {
         ${totals.map((t) => {
           const active = _expandedSummaryMonth === t.month ? " acc-lbl-active" : "";
           const neg = t.accumulated < 0 ? " negative" : "";
-          return `<button class="acc-month-btn${neg}${active}" type="button" data-chart-month="${t.month}" title="${currency.format(t.accumulated)}">${formatMonth(t.month)}</button>`;
+          const [y, m] = t.month.split("-").map(Number);
+          const mName = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date(y, m - 1, 1));
+          const mLabel = mName.charAt(0).toUpperCase() + mName.slice(1) + "/" + y;
+          return `<button class="acc-month-btn${neg}${active}" type="button" data-chart-month="${t.month}" title="${currency.format(t.accumulated)}">${mLabel}</button>`;
         }).join("")}
       </div>
     </div>
