@@ -563,23 +563,6 @@
               </div>
               </div>
             </section>
-            <section class="panel preference-block">
-              <div class="block-marker">6</div>
-              <div class="preference-content">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Credores das dívidas</p>
-                  <h2>Rota Financeira</h2>
-                </div>
-                <button class="primary-button" type="button" onclick="window.openCreditorModal()">
-                  <i data-lucide="plus"></i>
-                  <span>Novo credor</span>
-                </button>
-              </div>
-              <div class="debt-metrics" id="creditorMetrics"></div>
-              <div id="creditorsList"></div>
-              </div>
-            </section>
           </div>
         </section>
       </main>
@@ -1179,38 +1162,6 @@
         <label>Observações<textarea id="debtNotes" rows="2" placeholder="Opcional"></textarea></label>
         <button class="primary-button full" type="button" onclick="window.saveDebt()">
           <i data-lucide="save"></i><span>Salvar dívida</span>
-        </button>
-      </div>
-    </dialog>
-
-    <!-- Credor de dívida -->
-    <dialog class="dialog" id="divCreditorDialog">
-      <div class="stack-form">
-        <div class="panel-heading">
-          <div><p class="eyebrow">Credor</p><h2 id="creditorFormTitle">Novo credor</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeCreditorModal()" title="Fechar">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-        <div class="logo-row">
-          <div class="creditor-logo" id="creditorLogoPreview">RF</div>
-          <div class="logo-info"><span>Logo do credor</span><small>URL ou upload · opcional</small></div>
-        </div>
-        <label>Nome<input id="creditorName" type="text" required placeholder="Ex.: Nubank, Casas Bahia"></label>
-        <label>Tipo
-          <select id="creditorType">
-            <option value="Banco">Banco</option>
-            <option value="Financeira">Financeira</option>
-            <option value="Loja">Loja</option>
-            <option value="Cartão de crédito">Cartão de crédito</option>
-            <option value="Outros">Outros</option>
-          </select>
-        </label>
-        <label>URL da logo<input id="creditorLogoUrl" type="url" placeholder="https://... (opcional)"></label>
-        <label>Upload de logo<input id="creditorLogoFile" type="file" accept="image/*" onchange="window.handleCreditorLogoUpload(event)"></label>
-        <label>Observações<textarea id="creditorNotes" rows="2" placeholder="Opcional"></textarea></label>
-        <button class="primary-button full" type="button" onclick="window.saveCreditor()">
-          <i data-lucide="save"></i><span>Salvar credor</span>
         </button>
       </div>
     </dialog>

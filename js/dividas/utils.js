@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { state as appState } from '../state.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -67,12 +68,13 @@ export function compareText(a, b) {
 }
 
 export function getCreditorName(id) {
-  const creditor = state.creditors.find(c => c.id === id);
+  const creditors = appState.data?.creditors || [];
+  const creditor = creditors.find(c => c.id === id);
   return creditor ? creditor.name : 'Credor não informado';
 }
 
 export function sortedCreditors() {
-  return [...state.creditors].sort((a, b) => compareText(a.name, b.name));
+  return [...(appState.data?.creditors || [])].sort((a, b) => compareText(a.name, b.name));
 }
 
 export function creditorDomain(name) {
@@ -127,7 +129,7 @@ export function initials(value) {
 }
 
 export function creditorLogoHtml(creditorId) {
-  const creditor = state.creditors.find(c => c.id === creditorId);
+  const creditor = (appState.data?.creditors || []).find(c => c.id === creditorId);
   const name = getCreditorName(creditorId);
   const customLogo = String(creditor?.logoUrl || '').trim();
   if (customLogo) {
