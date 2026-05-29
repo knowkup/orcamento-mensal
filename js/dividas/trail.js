@@ -164,7 +164,7 @@ export function renderTrail() {
     nextTarget.innerHTML = '<div class="next-target-card complete"><div class="next-target-main"><div class="target-icon">✓</div><div><div class="eyebrow">Rota sem pressão</div><h2>Nenhuma dívida ativa com saldo em aberto</h2><div class="debt-meta">A frente atual fica vazia até você cadastrar ou reativar uma dívida.</div></div></div></div>';
   }
 
-  road.innerHTML = route.map((debt, index) => {
+  road.innerHTML = '<div class="route-panel"><div class="route-list">' + route.map((debt, index) => {
     const balance = debtBalance(debt);
     const done = debt.status === 'Quitada' || balance === 0;
     const current = !done && debt.id === next?.id;
@@ -192,7 +192,7 @@ export function renderTrail() {
       '<div class="route-actions">' + reorderActions + '<button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
       (isExpanded ? debtExpandedDetail(debt) : '') +
     '</div>';
-  }).join('');
+  }).join('') + '</div></div>';
 }
 
 // --- Ordenação ---

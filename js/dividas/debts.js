@@ -358,9 +358,9 @@ export function renderDebts() {
   renderHiddenDebtMetrics(hiddenAll);
   renderPaidOffCreditorFilters(paidOffAll);
   renderPaidOffDebtMetrics(paidOff);
-  $('waitingDebts').innerHTML = waiting.length ? waiting.map((debt, index) => debtRouteGridRow(debt, index, 'waiting')).join('') : emptyCard('Nenhuma dívida em espera', state.selectedWaitingCreditorFilter === 'all' ? 'As dívidas fora da frente atual aparecerão aqui.' : 'Não há dívidas em espera para este credor.');
-  $('hiddenDebts').innerHTML = hidden.length ? hidden.map((debt, index) => debtRouteGridRow(debt, index, 'hidden')).join('') : emptyCard('Nada fora do radar', state.selectedHiddenCreditorFilter === 'all' ? 'As dívidas que você não quer acompanhar aparecerão aqui.' : 'Não há dívidas fora do radar para este credor.');
-  $('paidOffDebts').innerHTML = paidOff.length ? paidOff.map((debt, index) => paidOffDebtRow(debt, index)).join('') : emptyCard('Nenhuma dívida quitada', state.selectedPaidOffCreditorFilter === 'all' ? 'Quando uma dívida ficar sem parcelas abertas, ela aparecerá aqui.' : 'Não há dívidas quitadas para este credor.');
+  $('waitingDebts').innerHTML = waiting.length ? '<div class="route-panel"><div class="route-list">' + waiting.map((debt, index) => debtRouteGridRow(debt, index, 'waiting')).join('') + '</div></div>' : emptyCard('Nenhuma dívida em espera', state.selectedWaitingCreditorFilter === 'all' ? 'As dívidas fora da frente atual aparecerão aqui.' : 'Não há dívidas em espera para este credor.');
+  $('hiddenDebts').innerHTML = hidden.length ? '<div class="route-panel"><div class="route-list">' + hidden.map((debt, index) => debtRouteGridRow(debt, index, 'hidden')).join('') + '</div></div>' : emptyCard('Nada fora do radar', state.selectedHiddenCreditorFilter === 'all' ? 'As dívidas que você não quer acompanhar aparecerão aqui.' : 'Não há dívidas fora do radar para este credor.');
+  $('paidOffDebts').innerHTML = paidOff.length ? '<div class="route-panel"><div class="route-list">' + paidOff.map((debt, index) => paidOffDebtRow(debt, index)).join('') + '</div></div>' : emptyCard('Nenhuma dívida quitada', state.selectedPaidOffCreditorFilter === 'all' ? 'Quando uma dívida ficar sem parcelas abertas, ela aparecerá aqui.' : 'Não há dívidas quitadas para este credor.');
   renderDashboard();
 }
 
