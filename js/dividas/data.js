@@ -1,8 +1,9 @@
 import { state } from './state.js';
+import { state as appState } from '../state.js';
 import { $, showToast, getCreditorName } from './utils.js';
 import { debtBalance } from './calc.js';
 import { reactivateDebtIfOpen } from './payment.js';
-import { debtsColl, debtDoc, installmentsColl, installmentDoc, paymentsColl, paymentDoc, debtCreditorsColl, debtCreditorDoc, addDoc, getDocs, doc, deleteDoc, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
+import { debtsColl, debtDoc, installmentsColl, installmentDoc, paymentsColl, paymentDoc, debtCreditorsColl, addDoc, getDocs, doc, deleteDoc, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
 
 const DIVIDAS_PREFS_KEY = 'dividas-preferences';
 
@@ -38,10 +39,11 @@ function toCsv(headers, rows) {
 }
 
 window.exportDividasJson = function() {
+  const linkedIds = new Set(state.debts.map(d => d.creditorId).filter(Boolean));
   const backup = {
     exportedAt: new Date().toISOString(),
     app: 'Rota Financeira - Orçamento Mensal',
-    creditors: state.creditors.map(serializable),
+    creditors: (appState.data?.creditors || []).filter(c => linkedIds.has(c.id)).map(serializable),
     debts: state.debts.map(serializable),
     installments: state.installments.map(serializable),
     payments: state.payments.map(serializable)
@@ -125,10 +127,18 @@ async function importJsonBackup(payload) {
   const importedPayments = Array.isArray(payload.payments) ? payload.payments : [];
   const idMap = { creditors: new Map(), debts: new Map(), installments: new Map() };
 
+  const orcCreditors = appState.data?.creditors || [];
   for (const item of importedCreditors) {
-    const created = await addDoc(debtCreditorsColl(), cleanImportedPayload(item, idMap));
-    if (item.id) idMap.creditors.set(item.id, created.id);
+    const match = orcCreditors.find(c => c.name.trim().toLowerCase() === (item.name || '').trim().toLowerCase());
+    if (match) {
+      if (item.id) idMap.creditors.set(item.id, match.id);
+    } else {
+      const newId = crypto.randomUUID();
+      orcCreditors.push({ id: newId, name: item.name || '', paymentForms: item.type ? [item.type] : ['Cartão de crédito'], logoUrl: item.logoUrl || '' });
+      if (item.id) idMap.creditors.set(item.id, newId);
+    }
   }
+  if (appState.saveStateFn) await appState.saveStateFn();
   for (const item of importedDebts) {
     const created = await addDoc(debtsColl(), cleanImportedPayload(item, idMap));
     if (item.id) idMap.debts.set(item.id, created.id);
@@ -171,12 +181,6 @@ window.openDeleteModal = function(type, id) {
     $('deleteModalTitle').textContent = 'Excluir pagamento';
     $('deleteModalText').textContent = 'Deseja excluir o pagamento da parcela ' + inst.number + '/' + inst.total + (debt ? ' de ' + getCreditorName(debt.creditorId) + ' · ' + debt.name : '') + '?';
     $('deleteModalWarning').textContent = 'A parcela voltará para pendente e o registro de pagamento será removido.';
-  } else {
-    const creditor = state.creditors.find(c => c.id === id);
-    if (!creditor) return;
-    $('deleteModalTitle').textContent = 'Excluir credor';
-    $('deleteModalText').textContent = 'Deseja excluir definitivamente ' + creditor.name + '?';
-    $('deleteModalWarning').textContent = 'Só exclua credores que não estejam vinculados a dívidas.';
   }
   document.getElementById('divDeleteDialog').showModal();
 };
@@ -235,7 +239,6 @@ window.confirmDelete = async function() {
       }
     }
     if (operations) await batch.commit();
-    state.creditors = [];
     state.debts = [];
     state.installments = [];
     state.payments = [];
@@ -245,13 +248,5 @@ window.confirmDelete = async function() {
     if (state.renderFn) state.renderFn();
     showToast('Todos os dados foram removidos.');
 
-  } else {
-    const hasDebt = state.debts.some(d => d.creditorId === ctx.id);
-    if (hasDebt) { window.closeDeleteModal(); return showToast('Este credor está vinculado a dívidas.'); }
-    await deleteDoc(debtCreditorDoc(ctx.id));
-    state.creditors = state.creditors.filter(c => c.id !== ctx.id);
-    window.closeDeleteModal();
-    if (state.renderFn) state.renderFn();
-    showToast('Credor removido com sucesso.');
   }
 };

@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { state as appState } from '../state.js';
 import { $, brl, parseMoney, escapeHtml, showToast, sortedCreditors, addMonths } from './utils.js';
 import { nextInstallment } from './calc.js';
 import { nextPayoffOrder, nextActiveRouteOrder } from './debts.js';
@@ -51,7 +52,7 @@ window.closeDebtForm = function() {
 };
 
 window.saveDebt = async function() {
-  if (!state.creditors.length) return showToast('Cadastre um credor antes da dívida.');
+  if (!(appState.data?.creditors?.length)) return showToast('Cadastre um credor em Preferências antes de criar uma dívida.');
   const creditorId = $('debtCreditorSelect').value;
   const name = $('debtName').value.trim();
   const firstDue = $('debtFirstDue').value;
