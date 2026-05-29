@@ -249,8 +249,74 @@ export function openCreditorDialog(id = null) {
     input.checked = creditor ? forms.includes(input.value) : input.value === "Cartão de crédito";
   });
   renderCreditorLogoPreview(creditor?.logoUrl || "");
+  renderLinkedCards(id);
+  const addBtn = document.getElementById("addInlineCardButton");
+  if (addBtn) {
+    const fresh = addBtn.cloneNode(true);
+    addBtn.parentNode.replaceChild(fresh, addBtn);
+    fresh.addEventListener("click", addCardInline);
+  }
   el.creditorDialog.showModal();
   refreshIcons();
+}
+
+function renderLinkedCards(creditorId) {
+  const container = document.getElementById("creditorLinkedCards");
+  if (!container) return;
+  const addBtn = document.getElementById("addInlineCardButton");
+  if (!creditorId) {
+    container.innerHTML = `<p class="muted-hint inline-cards-hint">Salve o credor primeiro para vincular cartões/crediários.</p>`;
+    if (addBtn) addBtn.disabled = true;
+    return;
+  }
+  if (addBtn) addBtn.disabled = false;
+  const linked = state.data.creditCards.filter((c) => c.creditorId === creditorId);
+  if (!linked.length) {
+    container.innerHTML = `<p class="muted-hint inline-cards-hint">Nenhum cartão/crediário vinculado ainda.</p>`;
+    return;
+  }
+  container.innerHTML = linked.map((card) => {
+    const inUse = isCreditCardInUse(card.id);
+    return `<div class="inline-card-row">
+      <div class="inline-card-info">
+        <span class="inline-card-name">${escapeHtml(card.name)}</span>
+        <span class="inline-card-meta"><span class="owner-pill">${escapeHtml(card.owner || "Felipe")}</span> · Vence dia ${card.dueDay || "-"}</span>
+      </div>
+      <button class="icon-button mini-icon${inUse ? " danger-mini" : ""}" type="button" title="${inUse ? "Vinculado a parcelamentos" : "Excluir"}" data-inline-delete-card="${card.id}">${icon(inUse ? "ban" : "trash-2")}</button>
+    </div>`;
+  }).join("");
+  container.querySelectorAll("[data-inline-delete-card]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const cardId = btn.dataset.inlineDeleteCard;
+      if (isCreditCardInUse(cardId)) { showToast("Este cartão está vinculado a parcelamentos."); return; }
+      state.data.creditCards = state.data.creditCards.filter((c) => c.id !== cardId);
+      renderLinkedCards(creditorId);
+      if (state.saveStateFn) await state.saveStateFn("Cartão/crediário excluído.");
+    });
+  });
+  refreshIcons();
+}
+
+async function addCardInline() {
+  const creditorId = state.creditorEditingId;
+  if (!creditorId) { showToast("Salve o credor primeiro."); return; }
+  const nameEl = document.getElementById("inlineCardName");
+  const ownerEl = document.getElementById("inlineCardOwner");
+  const dueDayEl = document.getElementById("inlineCardDueDay");
+  const name = nameEl?.value.trim() || "";
+  if (!name) { showToast("Informe o nome do cartão/crediário."); return; }
+  const payload = {
+    id: crypto.randomUUID(),
+    name,
+    creditorId,
+    owner: ownerEl?.value || "Felipe",
+    dueDay: Number(dueDayEl?.value || 1)
+  };
+  state.data.creditCards.push(payload);
+  if (nameEl) nameEl.value = "";
+  if (dueDayEl) dueDayEl.value = "";
+  renderLinkedCards(creditorId);
+  if (state.saveStateFn) await state.saveStateFn("Cartão/crediário cadastrado.");
 }
 
 export function closeCreditorDialog() {

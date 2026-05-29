@@ -699,6 +699,20 @@
           <label><input type="checkbox" name="paymentForms" value="PIX"> PIX</label>
           <label><input type="checkbox" name="paymentForms" value="Boleto"> Boleto</label>
         </fieldset>
+        <div class="inline-cards-section">
+          <div class="inline-cards-head">
+            <span>Cartões / crediários vinculados</span>
+          </div>
+          <div id="creditorLinkedCards"></div>
+          <div class="inline-card-form">
+            <div class="form-row">
+              <label>Nome<input type="text" id="inlineCardName" placeholder="Ex.: Inter Black Felipe"></label>
+              <label class="inline-card-owner-label">Titular<select id="inlineCardOwner"><option value="Felipe">Felipe</option><option value="Kah">Kah</option></select></label>
+              <label class="inline-card-day-label">Venc.<input type="number" id="inlineCardDueDay" min="1" max="31" placeholder="Dia"></label>
+            </div>
+            <button class="ghost-button inline-card-add-btn" type="button" id="addInlineCardButton">+ Adicionar cartão/crediário</button>
+          </div>
+        </div>
         <button class="primary-button full" type="submit">
           <i data-lucide="save"></i>
           <span>Salvar credor</span>
