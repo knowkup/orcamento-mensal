@@ -1,17 +1,25 @@
 :root {
-  --bg: #eef4f3;
+  --bg: #eef3f7;
   --surface: #ffffff;
-  --surface-soft: #f5f8f7;
-  --surface-warm: #fbfaf7;
-  --ink: #131b17;
-  --muted: #66736d;
-  --line: #d7e0dc;
-  --green: #35b879;
-  --red: #b63d38;
-  --gold: #b88732;
-  --blue: #265d73;
-  --sidebar: #06233a;
-  --shadow: 0 16px 42px rgba(6, 35, 58, 0.07);
+  --surface-soft: #f3f6f9;
+  --surface-warm: #f8f9fb;
+  --ink: #0d2038;
+  --muted: #5d7086;
+  --line: #d4dce6;
+  --green: #3fb985;
+  --red: #d86464;
+  --gold: #d8a441;
+  --blue: #4d8df7;
+  --sidebar: #eef3f7;
+  --shadow: 0 4px 24px rgba(13, 32, 56, 0.08);
+  --green-soft: rgba(63, 185, 133, 0.12);
+  --blue-soft: rgba(77, 141, 247, 0.12);
+  --amber-soft: rgba(216, 164, 65, 0.12);
+  --danger-soft: rgba(216, 100, 100, 0.12);
+  --border: rgba(13, 32, 56, 0.10);
+  --border-strong: rgba(13, 32, 56, 0.16);
+  --radius-lg: 20px;
+  --radius-md: 14px;
 }
 
 * {
@@ -55,7 +63,8 @@ button:disabled {
   gap: 26px;
   padding: 24px 18px;
   background: var(--sidebar);
-  color: #f7faf8;
+  border-right: 1px solid var(--line);
+  color: var(--ink);
 }
 
 .brand {
@@ -93,13 +102,26 @@ button:disabled {
 
 .brand span,
 .sync-panel span {
-  color: rgba(247, 250, 248, 0.68);
+  color: var(--muted);
   font-size: 12px;
 }
 
 .nav-tabs {
   display: grid;
-  gap: 7px;
+  gap: 4px;
+}
+
+.nav-group-label {
+  margin: 14px 4px 2px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.nav-group-label:first-child {
+  margin-top: 0;
 }
 
 .nav-tab {
@@ -107,18 +129,25 @@ button:disabled {
   align-items: center;
   gap: 10px;
   min-height: 44px;
-  border: 0;
-  border-radius: 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
   padding: 0 12px;
   background: transparent;
-  color: rgba(247, 250, 248, 0.74);
+  color: var(--muted);
   text-align: left;
+  font-size: 14px;
 }
 
 .nav-tab.active,
 .nav-tab:hover {
-  background: rgba(255, 255, 255, 0.09);
-  color: #ffffff;
+  background: rgba(13, 32, 56, 0.07);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.nav-tab:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
 }
 
 .sync-panel {
@@ -126,8 +155,8 @@ button:disabled {
   gap: 10px;
   margin-top: auto;
   padding: 13px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
 }
 
 .sync-dot {
@@ -640,7 +669,7 @@ svg {
 }
 
 .group-row th {
-  background: var(--sidebar) !important;
+  background: #0d2038 !important;
   color: #ffffff;
   font-size: 12px;
   text-transform: uppercase;
@@ -2021,7 +2050,7 @@ select {
 }
 
 .dialog::backdrop {
-  background: rgba(17, 27, 22, 0.38);
+  background: rgba(0, 0, 0, 0.50);
 }
 
 .dialog--wide {
