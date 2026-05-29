@@ -10,7 +10,7 @@
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
+  <body data-theme="light">
     <div class="app-shell">
       <aside class="sidebar" aria-label="Navegação principal">
         <div class="brand">
@@ -53,27 +53,27 @@
           </button>
 
           <p class="nav-group-label">Dívidas</p>
-          <button class="nav-tab" type="button" disabled>
+          <button class="nav-tab" type="button" data-view="divdashboard">
             <i data-lucide="layout-dashboard"></i>
             <span>Dashboard</span>
           </button>
-          <button class="nav-tab" type="button" disabled>
+          <button class="nav-tab" type="button" data-view="divrota">
             <i data-lucide="route"></i>
             <span>Rota Financeira</span>
           </button>
-          <button class="nav-tab" type="button" disabled>
+          <button class="nav-tab" type="button" data-view="divespera">
             <i data-lucide="pause-circle"></i>
             <span>Em Espera</span>
           </button>
-          <button class="nav-tab" type="button" disabled>
+          <button class="nav-tab" type="button" data-view="divradar">
             <i data-lucide="eye-off"></i>
             <span>Fora do Radar</span>
           </button>
-          <button class="nav-tab" type="button" disabled>
+          <button class="nav-tab" type="button" data-view="divquitadas">
             <i data-lucide="check-circle"></i>
             <span>Quitadas</span>
           </button>
-          <button class="nav-tab" type="button" disabled>
+          <button class="nav-tab" type="button" data-view="divrenegociacao">
             <i data-lucide="refresh-ccw"></i>
             <span>Renegociação</span>
           </button>
@@ -303,6 +303,184 @@
             </section>
             <section class="panel" id="feriasResultPanel" hidden>
               <div id="feriasResult"></div>
+            </section>
+          </div>
+        </section>
+
+        <!-- ── DÍVIDAS — Dashboard ─────────────────────────── -->
+        <section class="view" id="divdashboardView" data-title="Dashboard Dívidas">
+          <div class="vertical-stack">
+            <div id="dashboardNextAction"></div>
+            <div id="dashboardSummary"></div>
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Prazo</p><h2>Pressão por horizonte</h2></div>
+              </div>
+              <div class="pressure-grid" id="deadlinePressure"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Próximos vencimentos</p><h2>Frente de pagamento</h2></div>
+                <button class="primary-button" type="button" onclick="window.openDebtForm()">
+                  <i data-lucide="plus"></i><span>Nova dívida</span>
+                </button>
+              </div>
+              <div id="dashboardUpcoming"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Estratégia</p><h2>Frente sugerida de pagamento</h2></div>
+              </div>
+              <div id="paymentFront"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Análise</p><h2>Insights</h2></div>
+              </div>
+              <div class="insights-grid" id="dashboardInsights"></div>
+            </section>
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Histórico</p><h2>Dívidas renegociadas</h2></div>
+              </div>
+              <div id="renegotiatedHistoryList"></div>
+            </section>
+          </div>
+        </section>
+
+        <!-- ── DÍVIDAS — Rota Financeira ──────────────────── -->
+        <section class="view" id="divrotaView" data-title="Rota Financeira">
+          <div class="vertical-stack">
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Frente ativa</p><h2 id="trailPositionTitle">Rota de quitação</h2></div>
+                <div class="action-group">
+                  <select class="ghost-btn" id="trailDebtSort" onchange="window.setTrailDebtSort(this.value)">
+                    <option value="trail">Ordem da Rota</option>
+                    <option value="priority">Prioridade</option>
+                    <option value="due">Vencimento</option>
+                    <option value="balance">Saldo</option>
+                    <option value="name">Nome</option>
+                  </select>
+                  <button class="primary-button" type="button" onclick="window.openDebtForm()">
+                    <i data-lucide="plus"></i><span>Nova dívida</span>
+                  </button>
+                </div>
+              </div>
+              <div class="route-summary-bar" id="trailMetrics"></div>
+            </section>
+            <div id="nextTarget"></div>
+            <div id="trailRoad"></div>
+          </div>
+        </section>
+
+        <!-- ── DÍVIDAS — Em Espera ────────────────────────── -->
+        <section class="view" id="divesperaView" data-title="Em Espera">
+          <div class="vertical-stack">
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Dívidas pausadas</p><h2>Em Espera</h2></div>
+                <div class="action-group">
+                  <select class="ghost-btn" id="waitingDebtSort" onchange="window.setWaitingDebtSort(this.value)">
+                    <option value="priority">Prioridade</option>
+                    <option value="trail">Ordem manual</option>
+                    <option value="due">Vencimento</option>
+                    <option value="balance">Saldo</option>
+                  </select>
+                  <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Em espera')">
+                    <i data-lucide="plus"></i><span>Nova dívida</span>
+                  </button>
+                </div>
+              </div>
+              <div class="debt-metrics-row" id="waitingDebtMetrics"></div>
+              <div class="filter-chips" id="waitingCreditorFilters"></div>
+            </section>
+            <div id="waitingDebts"></div>
+          </div>
+        </section>
+
+        <!-- ── DÍVIDAS — Fora do Radar ────────────────────── -->
+        <section class="view" id="divradarView" data-title="Fora do Radar">
+          <div class="vertical-stack">
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Dívidas arquivadas</p><h2>Fora do Radar</h2></div>
+                <div class="action-group">
+                  <select class="ghost-btn" id="hiddenDebtSort" onchange="window.setHiddenDebtSort(this.value)">
+                    <option value="priority">Prioridade</option>
+                    <option value="trail">Ordem manual</option>
+                    <option value="due">Vencimento</option>
+                    <option value="balance">Saldo</option>
+                  </select>
+                  <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Fora do radar')">
+                    <i data-lucide="plus"></i><span>Nova dívida</span>
+                  </button>
+                </div>
+              </div>
+              <div class="debt-metrics-row" id="hiddenDebtMetrics"></div>
+              <div class="filter-chips" id="hiddenCreditorFilters"></div>
+            </section>
+            <div id="hiddenDebts"></div>
+          </div>
+        </section>
+
+        <!-- ── DÍVIDAS — Quitadas ─────────────────────────── -->
+        <section class="view" id="divquitadasView" data-title="Quitadas">
+          <div class="vertical-stack">
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Dívidas encerradas</p><h2>Quitadas</h2></div>
+              </div>
+              <div class="debt-metrics-row" id="paidOffDebtMetrics"></div>
+              <div class="filter-chips" id="paidOffCreditorFilters"></div>
+            </section>
+            <div id="paidOffDebts"></div>
+          </div>
+        </section>
+
+        <!-- ── DÍVIDAS — Renegociação ─────────────────────── -->
+        <section class="view" id="divrenegociacaoView" data-title="Renegociação">
+          <div class="vertical-stack">
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Consolidar dívidas</p><h2>Renegociação</h2></div>
+                <div class="action-group">
+                  <button class="ghost-btn" type="button" onclick="window.clearRenegotiationSelection()">Limpar seleção</button>
+                  <button class="primary-button" type="button" onclick="window.openRenegotiationModal()">
+                    <i data-lucide="refresh-ccw"></i><span>Criar acordo</span>
+                  </button>
+                </div>
+              </div>
+              <div class="debt-metrics-row" id="renegotiationMetrics"></div>
+              <p class="muted-hint" id="renegotiationSelectionText">Nenhuma dívida selecionada.</p>
+            </section>
+            <div id="renegotiationList"></div>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Credores</p><h2>Credores das dívidas</h2></div>
+                <button class="primary-button" type="button" onclick="window.openCreditorModal()">
+                  <i data-lucide="plus"></i><span>Novo credor</span>
+                </button>
+              </div>
+              <div class="debt-metrics-row" id="creditorMetrics"></div>
+              <div id="creditorsList"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Dados</p><h2>Exportar e importar</h2></div>
+              </div>
+              <div class="action-group" style="flex-wrap:wrap;gap:8px;">
+                <button class="ghost-btn" type="button" onclick="window.exportDividasJson()">Exportar JSON (backup)</button>
+                <button class="ghost-btn" type="button" onclick="window.exportDebtsCsv()">Exportar dívidas CSV</button>
+                <button class="ghost-btn" type="button" onclick="window.exportDebtPaymentsCsv()">Exportar pagamentos CSV</button>
+                <label class="ghost-btn" style="cursor:pointer;">
+                  Importar JSON
+                  <input type="file" id="dividasJsonImportFile" accept="application/json" style="display:none" onchange="window.handleDividasJsonImport(event)">
+                </label>
+                <button class="ghost-btn danger-btn" type="button" onclick="window.openClearAllModal()">Limpar todos os dados</button>
+              </div>
             </section>
           </div>
         </section>
@@ -835,6 +1013,257 @@
           <span>Cadastrar exceção</span>
         </button>
       </form>
+    </dialog>
+
+    <!-- ═══════════════════════════════════════════════════════
+         DIÁLOGOS — DÍVIDAS
+    ══════════════════════════════════════════════════════════ -->
+
+    <!-- Registrar pagamento de parcela -->
+    <dialog class="dialog" id="divPaymentDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Parcela</p><h2>Registrar pagamento</h2></div>
+          <button class="icon-button" type="button" onclick="window.closePaymentForm()" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Dívida<input id="payDebtName" type="text" readonly></label>
+        <label>Parcela<input id="payInstallmentLabel" type="text" readonly></label>
+        <label>Data do pagamento<input id="payDate" type="date" required></label>
+        <label class="money-label">Valor pago<input id="payValue" type="text" inputmode="decimal" data-money-input required></label>
+        <button class="primary-button full" type="button" onclick="window.savePayment()">
+          <i data-lucide="check"></i><span>Confirmar pagamento</span>
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Quitar dívida -->
+    <dialog class="dialog" id="divPayoffDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Encerramento</p><h2>Quitar dívida</h2></div>
+          <button class="icon-button" type="button" onclick="window.closePayoffModal()" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label class="money-label">Valor de quitação<input id="payoffValue" type="text" inputmode="decimal" data-money-input oninput="window.updatePayoffSummary()"></label>
+        <label>Data do pagamento<input id="payoffDate" type="date"></label>
+        <label>Forma de pagamento
+          <select id="payoffMethod">
+            <option value="">Não informada</option>
+            <option value="Pix">Pix</option>
+            <option value="Boleto">Boleto</option>
+            <option value="Débito automático">Débito automático</option>
+            <option value="TED">TED</option>
+          </select>
+        </label>
+        <label>Observações<textarea id="payoffNotes" rows="2" placeholder="Opcional"></textarea></label>
+        <div id="payoffSummary"></div>
+        <button class="primary-button full" type="button" onclick="window.confirmPayoffDebt()">
+          <i data-lucide="check-circle"></i><span>Confirmar quitação</span>
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Editar parcela -->
+    <dialog class="dialog" id="divInstallmentDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Parcela</p><h2>Editar parcela</h2></div>
+          <button class="icon-button" type="button" onclick="window.closeInstallmentModal()" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Vencimento<input id="editInstallmentDue" type="date" required></label>
+        <label class="money-label">Valor previsto<input id="editInstallmentValue" type="text" inputmode="decimal" data-money-input required></label>
+        <label>Status
+          <select id="editInstallmentStatus">
+            <option value="Pendente">Pendente</option>
+            <option value="Paga">Paga</option>
+            <option value="Renegociada">Renegociada</option>
+            <option value="Cancelada">Cancelada</option>
+          </select>
+        </label>
+        <button class="primary-button full" type="button" onclick="window.saveInstallmentEdit()">
+          <i data-lucide="save"></i><span>Salvar parcela</span>
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Nova / editar dívida -->
+    <dialog class="dialog dialog--wide" id="divDebtDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Dívida</p><h2 id="debtFormTitle">Nova dívida</h2></div>
+          <button class="icon-button" type="button" onclick="window.closeDebtForm()" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="form-row">
+          <label>Credor<select id="debtCreditorSelect"></select></label>
+          <label>Status
+            <select id="debtStatus">
+              <option value="Ativa">Ativa (Rota Financeira)</option>
+              <option value="Em espera">Em espera</option>
+              <option value="Fora do radar">Fora do radar</option>
+            </select>
+          </label>
+        </div>
+        <label>Nome da dívida<input id="debtName" type="text" required placeholder="Ex.: Cartão Nubank, Empréstimo Caixa"></label>
+        <div class="form-row">
+          <label>Tipo
+            <select id="debtType">
+              <option value="Cartão">Cartão</option>
+              <option value="Empréstimo">Empréstimo</option>
+              <option value="Financiamento">Financiamento</option>
+              <option value="Crediário">Crediário</option>
+              <option value="Cheque especial">Cheque especial</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </label>
+          <label>Pagamento
+            <select id="debtPaymentMethod">
+              <option value="Boleto">Boleto</option>
+              <option value="Débito automático">Débito automático</option>
+              <option value="Pix">Pix</option>
+              <option value="Débito em conta">Débito em conta</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>Criticidade
+            <select id="debtCriticality">
+              <option value="Normal">Normal</option>
+              <option value="Alta">Alta</option>
+              <option value="Máxima">Máxima</option>
+            </select>
+          </label>
+          <label>Comportamento
+            <select id="debtBehavior">
+              <option value="Parcelada">Parcelada</option>
+              <option value="Rolagem">Rolagem</option>
+              <option value="Acordo">Acordo</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>1ª parcela<input id="debtFirstDue" type="date" required></label>
+          <label>Qtd. parcelas<input id="debtInstallmentsQty" type="number" min="1" step="1" required></label>
+        </div>
+        <div class="form-row">
+          <label class="money-label">Valor da parcela<input id="debtInstallmentValue" type="text" inputmode="decimal" data-money-input required></label>
+          <label class="money-label">Quitação hoje<input id="debtPayoffToday" type="text" inputmode="decimal" data-money-input></label>
+        </div>
+        <label>Ordem na rota<input id="debtPayoffOrder" type="number" min="1" step="1" placeholder="Deixe em branco para calcular"></label>
+        <label>Observações<textarea id="debtNotes" rows="2" placeholder="Opcional"></textarea></label>
+        <button class="primary-button full" type="button" onclick="window.saveDebt()">
+          <i data-lucide="save"></i><span>Salvar dívida</span>
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Credor de dívida -->
+    <dialog class="dialog" id="divCreditorDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Credor</p><h2 id="creditorFormTitle">Novo credor</h2></div>
+          <button class="icon-button" type="button" onclick="window.closeCreditorModal()" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="logo-row">
+          <div class="creditor-logo" id="creditorLogoPreview">RF</div>
+          <div class="logo-info"><span>Logo do credor</span><small>URL ou upload · opcional</small></div>
+        </div>
+        <label>Nome<input id="creditorName" type="text" required placeholder="Ex.: Nubank, Casas Bahia"></label>
+        <label>Tipo
+          <select id="creditorType">
+            <option value="Banco">Banco</option>
+            <option value="Financeira">Financeira</option>
+            <option value="Loja">Loja</option>
+            <option value="Cartão de crédito">Cartão de crédito</option>
+            <option value="Outros">Outros</option>
+          </select>
+        </label>
+        <label>URL da logo<input id="creditorLogoUrl" type="url" placeholder="https://... (opcional)"></label>
+        <label>Upload de logo<input id="creditorLogoFile" type="file" accept="image/*" onchange="window.handleCreditorLogoUpload(event)"></label>
+        <label>Observações<textarea id="creditorNotes" rows="2" placeholder="Opcional"></textarea></label>
+        <button class="primary-button full" type="button" onclick="window.saveCreditor()">
+          <i data-lucide="save"></i><span>Salvar credor</span>
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Criar acordo / renegociação -->
+    <dialog class="dialog dialog--wide" id="divRenegotiationDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Renegociação</p><h2>Criar acordo</h2></div>
+          <button class="icon-button" type="button" onclick="window.closeRenegotiationModal()" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div id="renegotiationSummary"></div>
+        <label>Credor do novo acordo<select id="renCreditorSelect"></select></label>
+        <label>Nome do acordo<input id="renDebtName" type="text" required></label>
+        <div class="form-row">
+          <label>Tipo
+            <select id="renDebtType">
+              <option value="Empréstimo">Empréstimo</option>
+              <option value="Financiamento">Financiamento</option>
+              <option value="Cartão">Cartão</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </label>
+          <label>Pagamento
+            <select id="renPaymentMethod">
+              <option value="Boleto">Boleto</option>
+              <option value="Débito automático">Débito automático</option>
+              <option value="Pix">Pix</option>
+            </select>
+          </label>
+        </div>
+        <div class="form-row">
+          <label>1ª parcela<input id="renFirstDue" type="date" required></label>
+          <label>Qtd. parcelas<input id="renInstallmentsQty" type="number" min="1" step="1" required></label>
+        </div>
+        <div class="form-row">
+          <label class="money-label">Valor da parcela<input id="renInstallmentValue" type="text" inputmode="decimal" data-money-input required></label>
+          <label class="money-label">Quitação hoje<input id="renPayoffToday" type="text" inputmode="decimal" data-money-input></label>
+        </div>
+        <label>Criticidade
+          <select id="renCriticality">
+            <option value="Normal">Normal</option>
+            <option value="Alta">Alta</option>
+            <option value="Máxima">Máxima</option>
+          </select>
+        </label>
+        <label>Observações<textarea id="renNotes" rows="2"></textarea></label>
+        <button class="primary-button full" type="button" onclick="window.saveRenegotiation()">
+          <i data-lucide="save"></i><span>Salvar acordo</span>
+        </button>
+      </div>
+    </dialog>
+
+    <!-- Confirmar exclusão / limpar dados -->
+    <dialog class="dialog" id="divDeleteDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Atenção</p><h2 id="deleteModalTitle">Excluir</h2></div>
+          <button class="icon-button" type="button" onclick="window.closeDeleteModal()" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <p id="deleteModalText"></p>
+        <p class="danger-hint" id="deleteModalWarning"></p>
+        <div class="action-group">
+          <button class="ghost-btn" type="button" onclick="window.closeDeleteModal()">Cancelar</button>
+          <button class="primary-button danger-btn" type="button" onclick="window.confirmDelete()">
+            <i data-lucide="trash-2"></i><span>Confirmar exclusão</span>
+          </button>
+        </div>
+      </div>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

@@ -11,6 +11,7 @@ import { renderCar, updateCar, openCarContractDialog, ensureCarPayments, updateS
 import { renderFgts, openFgtsDialog, closeFgtsDialog, addFgtsContract, renderFgtsInstallmentValueFields } from "./fgts.js";
 import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException, toggleIncomeCltFields } from "./preferencias.js";
 import { renderFerias, bindFeriasEvents } from "./ferias.js";
+import { loadDividas } from "./dividas/boot.js";
 
 boot();
 
@@ -19,6 +20,7 @@ async function boot() {
   state.renderFn = render;
   state.hydrateFn = hydrateForms;
   state.saveStateFn = saveState;
+  state.loadDividasFn = loadDividas;
   bindEvents();
   hydrateForms();
   render();
@@ -116,6 +118,7 @@ function showView(name) {
   });
   refreshIcons();
 }
+window.showView = showView;
 
 function render() {
   renderProjection();

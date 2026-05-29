@@ -39,6 +39,7 @@ export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
       }
       el.loginButton.innerHTML = icon("log-out") + "<span>Sair</span>";
       listenCloudState();
+      if (state.loadDividasFn) state.loadDividasFn().catch(console.error);
       refreshIcons();
     });
   } catch (error) {
