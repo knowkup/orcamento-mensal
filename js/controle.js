@@ -28,7 +28,7 @@ export function renderMonthlyControl() {
   const expectedIncome = pendingEntries.reduce((total, item) => total + item.value, 0);
   const expectedExpense = pendingExits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
   const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
-  const projectedBalance = accountBalance + received + expectedIncome - paid - expectedExpense;
+  const projectedBalance = accountBalance + expectedIncome - expectedExpense;
   const hasPending = pendingEntries.length > 0 || pendingExits.length > 0;
   const isClosed = (state.data.closedMonths || []).includes(month);
 
