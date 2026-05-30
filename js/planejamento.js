@@ -10,10 +10,47 @@ import { openPlannedDialog, deleteManualPlanned, rowOutstanding, rowIncomeOutsta
 import { normalizedIncomeChanges } from "./data.js";
 import { getDebtInstallmentsForMonth } from "./dividas/boot.js";
 
+function _debugCompareWithControle(rowsPlan, month) {
+  const rowsCtrl = buildProjectionRows([month], true);
+  const bal = Number(state.data.accountBalance || state.data.initialBalance || 0);
+  const expPlan = rowsPlan.filter(r => r.kind === "expense").reduce((s, r) => s + rowOutstanding(r, month, r.values[month] || 0), 0);
+  const expCtrl = rowsCtrl.filter(r => r.kind === "expense").reduce((s, r) => s + rowOutstanding(r, month, r.values[month] || 0), 0);
+  const incPlan = rowsPlan.filter(r => r.kind === "income").reduce((s, r) => s + rowIncomeOutstanding(r, month, r.values[month] || 0), 0);
+  const incCtrl = rowsCtrl.filter(r => r.kind === "income").reduce((s, r) => s + rowIncomeOutstanding(r, month, r.values[month] || 0), 0);
+  console.group("[DEBUG detalhamento vs controle] " + month);
+  console.log("Saldo conta:", bal.toFixed(2));
+  console.log("income  plan/ctrl:", incPlan.toFixed(2), "/", incCtrl.toFixed(2), "  diff:", (incPlan - incCtrl).toFixed(2));
+  console.log("expense plan/ctrl:", expPlan.toFixed(2), "/", expCtrl.toFixed(2), "  diff:", (expPlan - expCtrl).toFixed(2));
+  console.log("accumulated (plan):", (bal + incPlan - expPlan).toFixed(2));
+  console.log("projectedBalance (ctrl):", (bal + incCtrl - expCtrl).toFixed(2));
+  const diffs = [];
+  rowsPlan.filter(r => r.kind === "expense").forEach(r => {
+    const rc = rowsCtrl.find(c => c.id === r.id);
+    const vp = rowOutstanding(r, month, r.values[month] || 0);
+    const vc = rc ? rowOutstanding(rc, month, rc.values[month] || 0) : 0;
+    if (Math.abs(vp - vc) > 0.01) diffs.push({ label: r.label, id: r.id, plan: vp, ctrl: vc });
+  });
+  rowsCtrl.filter(r => r.kind === "expense").forEach(r => {
+    if (!rowsPlan.find(p => p.id === r.id)) {
+      const vc = rowOutstanding(r, month, r.values[month] || 0);
+      if (vc > 0.01) diffs.push({ label: r.label, id: r.id, plan: 0, ctrl: vc });
+    }
+  });
+  if (diffs.length) {
+    console.warn("Linhas com diferença:");
+    diffs.forEach(d => console.warn(" ", d.label, "[" + d.id + "]", "plan=" + d.plan.toFixed(2), "ctrl=" + d.ctrl.toFixed(2)));
+  } else {
+    console.log("Nenhuma diferença encontrada nas linhas.");
+  }
+  console.groupEnd();
+}
+
 export function renderProjection() {
   const months = nextMonths(12);
   const rows = buildProjectionRows(months, true);
   const totals = buildTotals(rows, months);
+  // DEBUG TEMPORÁRIO — remover após diagnóstico
+  _debugCompareWithControle(rows, months[0]);
 
   _renderKpis(totals);
   renderPlanningChart(totals, months);
