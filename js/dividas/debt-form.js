@@ -27,6 +27,7 @@ window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa')
     $('debtPayoffToday').value = brl(debt.payoffToday || 0);
     $('debtPayoffOrder').value = debt.payoffOrder || '';
     $('debtNotes').value = debt.notes || '';
+    $('debtIncludeInBudget').checked = !!debt.includeInBudget;
   } else {
     $('debtCreditorSelect').value = sortedCreditors()[0]?.id || '';
     $('debtName').value = '';
@@ -41,6 +42,7 @@ window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa')
     $('debtPayoffToday').value = '';
     $('debtPayoffOrder').value = nextPayoffOrder();
     $('debtNotes').value = '';
+    $('debtIncludeInBudget').checked = false;
   }
   document.getElementById('divDebtDialog').showModal();
 };
@@ -68,6 +70,7 @@ window.saveDebt = async function() {
     payoffToday: parseMoney($('debtPayoffToday').value),
     payoffOrder: Number($('debtPayoffOrder').value || 0),
     notes: $('debtNotes').value.trim(),
+    includeInBudget: $('debtIncludeInBudget').checked,
     updatedAt: serverTimestamp()
   };
 

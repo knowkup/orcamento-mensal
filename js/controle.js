@@ -3,6 +3,7 @@ import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAm
 import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCreditorName } from "./creditors.js";
 import { metric, isManualPlannedRow } from "./components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "./planejamento.js";
+import { getDebtInstallmentsForMonth } from "./dividas/boot.js";
 
 function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
@@ -15,10 +16,13 @@ export function renderMonthlyControl() {
     .filter((row) => row.kind === "income")
     .map((row) => ({ row, value: row.values[month] || 0 }))
     .filter((item) => item.value > 0);
-  const exits = rows
-    .filter((row) => row.kind === "expense")
-    .map((row) => ({ row, value: row.values[month] || 0 }))
-    .filter((item) => item.value > 0 || rowHasAnyPayment(item.row, month));
+  const exits = [
+    ...rows
+      .filter((row) => row.kind === "expense")
+      .map((row) => ({ row, value: row.values[month] || 0 }))
+      .filter((item) => item.value > 0 || rowHasAnyPayment(item.row, month)),
+    ...getDebtInstallmentsForMonth(month).filter((item) => item.value > 0 || rowHasAnyPayment(item.row, month))
+  ];
   const pendingEntries = entries.filter((item) => !isIncomeReceived(`${item.row.id}:${month}`));
   const pendingExits = exits.filter((item) => rowOutstanding(item.row, month, item.value) > 0);
   const realizedEntries = entries.filter((item) => isIncomeReceived(`${item.row.id}:${month}`));
