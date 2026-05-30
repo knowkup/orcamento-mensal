@@ -2871,12 +2871,12 @@ select {
 .payoff-stat strong { color: #087a4e; }
 .payoff-stat .muted-value { color: var(--muted); }
 .payoff-economy { display: inline-flex; width: max-content; max-width: 100%; margin-top: 6px; padding: 3px 7px; border-radius: 999px; background: #ddf5e8; color: #087a4e; font-size: 11px; font-weight: 750; white-space: nowrap; }
-.route-panel { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); box-shadow: var(--shadow); }
+.route-panel { border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; background: var(--surface); box-shadow: 0 6px 32px rgba(13,32,56,0.10); }
 .route-panel-head { display: flex; justify-content: space-between; gap: 14px; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); background: rgba(13,32,56,0.02); }
 .route-panel-head .panel-title { margin: 0 0 4px; }
 .route-panel-head .panel-title span { color: var(--muted); font-size: 14px; font-weight: 600; }
 .route-list { display: grid; }
-.route-item { display: grid; grid-template-columns: 24px 38px minmax(210px, 1.22fr) minmax(140px, 0.78fr) minmax(108px, 0.48fr) minmax(126px, 0.58fr) minmax(108px, 0.48fr) minmax(126px, 0.58fr) minmax(82px, 0.36fr) minmax(112px, 0.48fr); gap: 10px; align-items: center; min-height: 76px; padding: 12px 14px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.72); }
+.route-item { display: grid; grid-template-columns: 24px 38px minmax(210px, 1.22fr) minmax(140px, 0.78fr) minmax(108px, 0.48fr) minmax(126px, 0.58fr) minmax(108px, 0.48fr) minmax(126px, 0.58fr) minmax(82px, 0.36fr) minmax(112px, 0.48fr); gap: 10px; align-items: center; min-height: 76px; padding: 16px 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
 .paid-route-item { grid-template-columns: 38px minmax(260px, 1.22fr) minmax(136px, 0.6fr) minmax(136px, 0.6fr) minmax(168px, 0.72fr) minmax(128px, 0.54fr) minmax(90px, 0.36fr); gap: 14px; min-height: 88px; padding: 14px 18px; }
 .route-item:last-child { border-bottom: 0; }
 .route-item.current { background: linear-gradient(90deg, #fff2cf, #fff8e9); }
