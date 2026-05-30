@@ -252,8 +252,6 @@ h2 {
 .topbar-dropdown-item.danger { color: var(--red); }
 .topbar-dropdown-item input[type="file"] { display: none; }
 .topbar-dropdown-divider { margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
-/* override topbar-actions original left margin:  */
-}
 
 .primary-button,
 .ghost-button,
@@ -273,12 +271,11 @@ h2 {
 }
 
 .primary-button {
-  border: 0;
+  border-color: var(--green);
   background: linear-gradient(135deg, var(--green), #68d3a4);
-  color: #071018;
+  color: #ffffff;
   font-weight: 650;
-  border-radius: 14px;
-  box-shadow: 0 14px 40px rgba(63, 185, 133, 0.22);
+  box-shadow: 0 8px 24px rgba(63, 185, 133, 0.22);
 }
 
 .secondary-button {
