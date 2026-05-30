@@ -2671,7 +2671,7 @@ select {
 
 /* ── Filter / sort bar ── */
 .filter-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }
-.filter-row .ghost-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 5px 10px; font-size: 13px; }
+.filter-row .ghost-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 28px; padding: 3px 8px; font-size: 12px; border-radius: 8px; }
 .filter-row .creditor-logo { width: 20px; height: 20px; border-radius: 6px; font-size: 9px; }
 .filter-row .is-active { background: linear-gradient(135deg, #ffe4a8, #f5c861); color: #24170a; border-color: rgba(150,92,8,0.34); box-shadow: 0 12px 28px rgba(216,164,65,0.18); }
 .filter-row .is-active * { color: #24170a; }
