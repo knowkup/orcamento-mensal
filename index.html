@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="stylesheet" href="styles.css?v=20260530-1330">
+    <link rel="stylesheet" href="styles.css?v=20260530-1400">
   </head>
   <body data-theme="light">
     <div class="app-shell">
@@ -97,8 +97,9 @@
       <main class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Planilha, só que segura</p>
+            <p class="eyebrow" id="viewEyebrow"></p>
             <h1 id="viewTitle">Planejamento</h1>
+            <p class="view-subtitle" id="viewSubtitle"></p>
           </div>
           <div class="topbar-actions">
             <button class="icon-button" type="button" id="exportButton" title="Exportar backup">
@@ -115,7 +116,7 @@
           </div>
         </header>
 
-        <section class="view active" id="planejamentoView" data-title="Planejamento">
+        <section class="view active" id="planejamentoView" data-title="Planejamento" data-eyebrow="Orçamento Mensal">
           <div class="proj-kpis" id="monthSummary"></div>
 
           <section class="panel chart-panel">
@@ -157,7 +158,7 @@
           </details>
         </section>
 
-        <section class="view" id="controleView" data-title="Controle Mensal">
+        <section class="view" id="controleView" data-title="Controle Mensal" data-eyebrow="Orçamento Mensal">
           <div class="month-summary" id="monthlySummary"></div>
           <div class="monthly-toolbar">
             <button class="primary-button accent-button" type="button" id="addMonthlyPlanButton">
@@ -181,7 +182,7 @@
           </section>
         </section>
 
-        <section class="view" id="parcelasView" data-title="Parcelamentos">
+        <section class="view" id="parcelasView" data-title="Parcelamentos" data-eyebrow="Orçamento Mensal">
           <div class="content-grid single">
             <section class="panel wide">
               <div class="panel-heading">
@@ -201,7 +202,7 @@
           </div>
         </section>
 
-        <section class="view" id="custosView" data-title="Custos Fixos">
+        <section class="view" id="custosView" data-title="Custos Fixos" data-eyebrow="Orçamento Mensal">
           <div class="content-grid single">
             <section class="panel wide">
               <div class="panel-heading">
@@ -221,7 +222,7 @@
           </div>
         </section>
 
-        <section class="view" id="carroView" data-title="Carro">
+        <section class="view" id="carroView" data-title="Carro" data-eyebrow="Orçamento Mensal">
           <div class="vertical-stack">
             <section class="panel">
               <div class="panel-heading">
@@ -249,7 +250,7 @@
           </div>
         </section>
 
-        <section class="view" id="fgtsView" data-title="FGTS">
+        <section class="view" id="fgtsView" data-title="FGTS" data-eyebrow="Orçamento Mensal">
           <div class="content-grid single">
             <section class="panel wide">
               <div class="panel-heading">
@@ -268,7 +269,7 @@
           </div>
         </section>
 
-        <section class="view" id="feriasView" data-title="Simulador">
+        <section class="view" id="feriasView" data-title="Simulador" data-eyebrow="Orçamento Mensal">
           <div class="vertical-stack">
             <section class="panel">
               <div class="panel-heading">
@@ -308,7 +309,7 @@
         </section>
 
         <!-- ── DÍVIDAS — Dashboard ─────────────────────────── -->
-        <section class="view" id="divdashboardView" data-title="Dashboard Dívidas">
+        <section class="view" id="divdashboardView" data-title="Dashboard Dívidas" data-eyebrow="Visão Geral">
           <div class="vertical-stack">
             <div id="dashboardNextAction"></div>
             <div id="dashboardSummary"></div>
@@ -349,7 +350,7 @@
         </section>
 
         <!-- ── DÍVIDAS — Rota Financeira ──────────────────── -->
-        <section class="view" id="divrotaView" data-title="Rota Financeira">
+        <section class="view" id="divrotaView" data-title="Rota Financeira" data-eyebrow="Dívidas Priorizadas" data-subtitle="Organize a ordem das dívidas que você pretende quitar.">
           <div class="vertical-stack">
             <div class="route-top-bar">
               <button class="primary-button" type="button" onclick="window.openDebtForm()">
@@ -374,7 +375,7 @@
         </section>
 
         <!-- ── DÍVIDAS — Em Espera ────────────────────────── -->
-        <section class="view" id="divesperaView" data-title="Em Espera">
+        <section class="view" id="divesperaView" data-title="Dívidas em espera" data-eyebrow="Fora da frente atual" data-subtitle="Acompanhe compromissos reconhecidos que ainda não entraram na frente de pagamento principal.">
           <div class="vertical-stack">
             <div class="route-top-bar">
               <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Em espera')">
@@ -397,7 +398,7 @@
         </section>
 
         <!-- ── DÍVIDAS — Fora do Radar ────────────────────── -->
-        <section class="view" id="divradarView" data-title="Fora do Radar">
+        <section class="view" id="divradarView" data-title="Fora do Radar" data-eyebrow="Fora da frente atual" data-subtitle="Dívidas reconhecidas mas que não estão sendo atacadas no momento.">
           <div class="vertical-stack">
             <div class="route-top-bar">
               <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Fora do radar')">
@@ -420,7 +421,7 @@
         </section>
 
         <!-- ── DÍVIDAS — Quitadas ─────────────────────────── -->
-        <section class="view" id="divquitadasView" data-title="Quitadas">
+        <section class="view" id="divquitadasView" data-title="Dívidas quitadas" data-eyebrow="Missão cumprida" data-subtitle="Compromissos encerrados e eliminados do seu orçamento.">
           <div class="vertical-stack">
             <div class="filter-row" id="paidOffCreditorFilters"></div>
             <div class="debt-metrics" id="paidOffDebtMetrics"></div>
@@ -429,7 +430,7 @@
         </section>
 
         <!-- ── DÍVIDAS — Renegociação ─────────────────────── -->
-        <section class="view" id="divrenegociacaoView" data-title="Renegociação">
+        <section class="view" id="divrenegociacaoView" data-title="Renegociação" data-eyebrow="Consolidar dívidas">
           <div class="vertical-stack">
             <section class="panel">
               <div class="panel-heading">
@@ -464,7 +465,7 @@
           </div>
         </section>
 
-        <section class="view" id="ajustesView" data-title="Preferências">
+        <section class="view" id="ajustesView" data-title="Preferências" data-eyebrow="Orçamento Mensal">
           <div class="preferences-stack">
             <section class="panel preference-block">
               <div class="block-marker">1</div>

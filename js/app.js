@@ -114,7 +114,13 @@ function showView(name) {
   el.views.forEach((view) => {
     const active = view.id === `${name}View`;
     view.classList.toggle("active", active);
-    if (active) el.viewTitle.textContent = view.dataset.title;
+    if (active) {
+      el.viewTitle.textContent = view.dataset.title;
+      const eyebrow = document.getElementById("viewEyebrow");
+      const subtitle = document.getElementById("viewSubtitle");
+      if (eyebrow) eyebrow.textContent = view.dataset.eyebrow || "";
+      if (subtitle) subtitle.textContent = view.dataset.subtitle || "";
+    }
   });
   refreshIcons();
 }
