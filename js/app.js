@@ -113,6 +113,31 @@ function bindEvents() {
   el.projectionScroll.addEventListener("scroll", () => {
     el.projectionTopScroll.scrollLeft = el.projectionScroll.scrollLeft;
   });
+  // Mobile bottom nav
+  document.querySelectorAll(".bottom-tab[data-view]").forEach((btn) => {
+    btn.addEventListener("click", () => showView(btn.dataset.view));
+  });
+  const maisBtn = document.getElementById("maisButton");
+  const maisDrawer = document.getElementById("maisDrawer");
+  const maisOverlay = document.getElementById("maisOverlay");
+  if (maisBtn && maisDrawer && maisOverlay) {
+    maisBtn.addEventListener("click", () => {
+      const opening = !maisDrawer.classList.contains("open");
+      maisDrawer.classList.toggle("open", opening);
+      maisOverlay.classList.toggle("open", opening);
+    });
+    maisOverlay.addEventListener("click", () => {
+      maisDrawer.classList.remove("open");
+      maisOverlay.classList.remove("open");
+    });
+    document.querySelectorAll(".mais-item[data-view]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        showView(btn.dataset.view);
+        maisDrawer.classList.remove("open");
+        maisOverlay.classList.remove("open");
+      });
+    });
+  }
 }
 
 function showView(name) {
@@ -128,6 +153,12 @@ function showView(name) {
       if (subtitle) subtitle.textContent = view.dataset.subtitle || "";
     }
   });
+  const bottomPrimary = ["planejamento", "controle", "divdashboard", "divrota"];
+  document.querySelectorAll(".bottom-tab[data-view]").forEach((t) => {
+    t.classList.toggle("active", t.dataset.view === name);
+  });
+  const maisBtn = document.getElementById("maisButton");
+  if (maisBtn) maisBtn.classList.toggle("active", !bottomPrimary.includes(name));
   refreshIcons();
 }
 window.showView = showView;

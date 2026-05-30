@@ -1320,6 +1320,49 @@
       <div id="taxTablesBlock"></div>
     </dialog>
 
+    <nav class="bottom-nav" aria-label="Navegação mobile">
+      <button class="bottom-tab active" type="button" data-view="planejamento">
+        <i data-lucide="chart-column"></i>
+        <span>Planejamento</span>
+      </button>
+      <button class="bottom-tab" type="button" data-view="controle">
+        <i data-lucide="check-square"></i>
+        <span>Controle</span>
+      </button>
+      <button class="bottom-tab" type="button" data-view="divdashboard">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="bottom-tab" type="button" data-view="divrota">
+        <i data-lucide="route"></i>
+        <span>Rota</span>
+      </button>
+      <button class="bottom-tab" type="button" id="maisButton">
+        <i data-lucide="grid-2x2"></i>
+        <span>Mais</span>
+      </button>
+    </nav>
+
+    <div class="mais-overlay" id="maisOverlay"></div>
+    <div class="mais-drawer" id="maisDrawer">
+      <div class="mais-handle"></div>
+      <div class="mais-grid">
+        <p class="mais-group-label">Orçamento</p>
+        <button class="mais-item" type="button" data-view="parcelas"><i data-lucide="credit-card"></i><span>Parcelamentos</span></button>
+        <button class="mais-item" type="button" data-view="custos"><i data-lucide="repeat-2"></i><span>Custos Fixos</span></button>
+        <button class="mais-item" type="button" data-view="carro"><i data-lucide="car"></i><span>Carro</span></button>
+        <button class="mais-item" type="button" data-view="fgts"><i data-lucide="landmark"></i><span>FGTS</span></button>
+        <button class="mais-item" type="button" data-view="ferias"><i data-lucide="sliders"></i><span>Simulador</span></button>
+        <p class="mais-group-label">Dívidas</p>
+        <button class="mais-item" type="button" data-view="divespera"><i data-lucide="pause-circle"></i><span>Em Espera</span></button>
+        <button class="mais-item" type="button" data-view="divradar"><i data-lucide="eye-off"></i><span>Fora do Radar</span></button>
+        <button class="mais-item" type="button" data-view="divquitadas"><i data-lucide="check-circle"></i><span>Quitadas</span></button>
+        <button class="mais-item" type="button" data-view="divrenegociacao"><i data-lucide="refresh-ccw"></i><span>Renegociação</span></button>
+        <p class="mais-group-label">Sistema</p>
+        <button class="mais-item" type="button" data-view="ajustes"><i data-lucide="settings"></i><span>Preferências</span></button>
+      </div>
+    </div>
+
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script type="module" src="js/app.js"></script>
   </body>
