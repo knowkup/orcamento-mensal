@@ -125,6 +125,8 @@ async function importJsonBackup(payload) {
   const importedPayments = Array.isArray(payload.payments) ? payload.payments : [];
   const idMap = { creditors: new Map(), debts: new Map(), installments: new Map() };
 
+  showToast(`Importando: ${importedCreditors.length} credores, ${importedDebts.length} dívidas, ${importedInstallments.length} parcelas...`);
+
   for (const item of importedCreditors) {
     const created = await addDoc(debtCreditorsColl(), cleanImportedPayload(item, idMap));
     if (item.id) idMap.creditors.set(item.id, created.id);
@@ -133,13 +135,28 @@ async function importJsonBackup(payload) {
     const created = await addDoc(debtsColl(), cleanImportedPayload(item, idMap));
     if (item.id) idMap.debts.set(item.id, created.id);
   }
+
+  let instBatch = writeBatch();
+  let instOps = 0;
   for (const item of importedInstallments) {
-    const created = await addDoc(installmentsColl(), cleanImportedPayload(item, idMap));
-    if (item.id) idMap.installments.set(item.id, created.id);
+    const newRef = doc(installmentsColl());
+    instBatch.set(newRef, cleanImportedPayload(item, idMap));
+    if (item.id) idMap.installments.set(item.id, newRef.id);
+    instOps++;
+    if (instOps === 400) { await instBatch.commit(); instBatch = writeBatch(); instOps = 0; }
   }
+  if (instOps) await instBatch.commit();
+
+  let payBatch = writeBatch();
+  let payOps = 0;
   for (const item of importedPayments) {
-    await addDoc(paymentsColl(), cleanImportedPayload(item, idMap));
+    const newRef = doc(paymentsColl());
+    payBatch.set(newRef, cleanImportedPayload(item, idMap));
+    payOps++;
+    if (payOps === 400) { await payBatch.commit(); payBatch = writeBatch(); payOps = 0; }
   }
+  if (payOps) await payBatch.commit();
+
   await state.loadAllFn();
   showToast('JSON importado com sucesso.');
 }

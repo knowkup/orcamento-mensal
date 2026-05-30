@@ -96,6 +96,8 @@ export function monthsToClearDebt(debt) {
 
 export function isPaidOffDebt(debt) {
   const items = debtInstallments(debt.id);
+  const expectedQty = Number(debt.installmentsQty || 0);
+  if (expectedQty > 0 && items.length < expectedQty) return false;
   return items.length > 0 && openInstallmentsForDebt(debt).length === 0;
 }
 
