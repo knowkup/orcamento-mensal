@@ -1,5 +1,6 @@
 export const state = {
   debts: [],
+  creditors: [],
   installments: [],
   payments: [],
   installmentsByDebt: new Map(),
