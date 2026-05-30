@@ -376,24 +376,22 @@
         <!-- ── DÍVIDAS — Em Espera ────────────────────────── -->
         <section class="view" id="divesperaView" data-title="Em Espera">
           <div class="vertical-stack">
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Dívidas pausadas</p><h2>Em Espera</h2></div>
-                <div class="action-group">
-                  <select class="ghost-btn" id="waitingDebtSort" onchange="window.setWaitingDebtSort(this.value)">
-                    <option value="priority">Prioridade</option>
-                    <option value="trail">Ordem manual</option>
-                    <option value="due">Vencimento</option>
-                    <option value="balance">Saldo</option>
-                  </select>
-                  <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Em espera')">
-                    <i data-lucide="plus"></i><span>Nova dívida</span>
-                  </button>
-                </div>
-              </div>
-              <div class="debt-metrics" id="waitingDebtMetrics"></div>
-              <div class="filter-row" id="waitingCreditorFilters"></div>
-            </section>
+            <div class="route-top-bar">
+              <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Em espera')">
+                <i data-lucide="plus"></i><span>Nova dívida</span>
+              </button>
+            </div>
+            <div class="debt-metrics" id="waitingDebtMetrics"></div>
+            <div class="filter-row" id="waitingCreditorFilters"></div>
+            <div class="route-sort-bar">
+              <span>Ordenar</span>
+              <select class="ghost-btn" id="waitingDebtSort" onchange="window.setWaitingDebtSort(this.value)">
+                <option value="priority">Prioridade</option>
+                <option value="trail">Ordem manual</option>
+                <option value="due">Vencimento</option>
+                <option value="balance">Saldo</option>
+              </select>
+            </div>
             <div id="waitingDebts"></div>
           </div>
         </section>
@@ -401,24 +399,22 @@
         <!-- ── DÍVIDAS — Fora do Radar ────────────────────── -->
         <section class="view" id="divradarView" data-title="Fora do Radar">
           <div class="vertical-stack">
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Dívidas arquivadas</p><h2>Fora do Radar</h2></div>
-                <div class="action-group">
-                  <select class="ghost-btn" id="hiddenDebtSort" onchange="window.setHiddenDebtSort(this.value)">
-                    <option value="priority">Prioridade</option>
-                    <option value="trail">Ordem manual</option>
-                    <option value="due">Vencimento</option>
-                    <option value="balance">Saldo</option>
-                  </select>
-                  <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Fora do radar')">
-                    <i data-lucide="plus"></i><span>Nova dívida</span>
-                  </button>
-                </div>
-              </div>
-              <div class="debt-metrics" id="hiddenDebtMetrics"></div>
-              <div class="filter-row" id="hiddenCreditorFilters"></div>
-            </section>
+            <div class="route-top-bar">
+              <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Fora do radar')">
+                <i data-lucide="plus"></i><span>Nova dívida</span>
+              </button>
+            </div>
+            <div class="debt-metrics" id="hiddenDebtMetrics"></div>
+            <div class="filter-row" id="hiddenCreditorFilters"></div>
+            <div class="route-sort-bar">
+              <span>Ordenar</span>
+              <select class="ghost-btn" id="hiddenDebtSort" onchange="window.setHiddenDebtSort(this.value)">
+                <option value="priority">Prioridade</option>
+                <option value="trail">Ordem manual</option>
+                <option value="due">Vencimento</option>
+                <option value="balance">Saldo</option>
+              </select>
+            </div>
             <div id="hiddenDebts"></div>
           </div>
         </section>
@@ -426,13 +422,8 @@
         <!-- ── DÍVIDAS — Quitadas ─────────────────────────── -->
         <section class="view" id="divquitadasView" data-title="Quitadas">
           <div class="vertical-stack">
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Dívidas encerradas</p><h2>Quitadas</h2></div>
-              </div>
-              <div class="debt-metrics" id="paidOffDebtMetrics"></div>
-              <div class="filter-row" id="paidOffCreditorFilters"></div>
-            </section>
+            <div class="debt-metrics" id="paidOffDebtMetrics"></div>
+            <div class="filter-row" id="paidOffCreditorFilters"></div>
             <div id="paidOffDebts"></div>
           </div>
         </section>
