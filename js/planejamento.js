@@ -132,8 +132,8 @@ function _renderMonthlySummary(totals, months, rows) {
     const negAccum = t.accumulated < 0;
     const negBal = t.balance < 0;
 
-    const incomeRows = rows.filter((r) => r.kind === "income" && (r.values[t.month] || 0) > 0);
-    const expenseRows = rows.filter((r) => r.kind === "expense" && (r.values[t.month] || 0) > 0);
+    const incomeRows = rows.filter((r) => r.kind === "income" && rowIncomeOutstanding(r, t.month, r.values[t.month] || 0) > 0);
+    const expenseRows = rows.filter((r) => r.kind === "expense" && rowOutstanding(r, t.month, r.values[t.month] || 0) > 0);
 
     const detailHtml = isExpanded ? `
       <div class="mst-detail">
@@ -150,7 +150,7 @@ function _renderMonthlySummary(totals, months, rows) {
               return `
                 <div class="mst-detail-row">
                   <span class="mst-detail-row-left">${escapeHtml(r.label)}${editBtn}${delBtn}</span>
-                  <span class="positive">+${fmt(r.values[t.month])}</span>
+                  <span class="positive">+${fmt(rowIncomeOutstanding(r, t.month, r.values[t.month] || 0))}</span>
                 </div>`;
             }).join("")}
           </div>` : ""}
@@ -164,7 +164,7 @@ function _renderMonthlySummary(totals, months, rows) {
               return `
                 <div class="mst-detail-row">
                   <span class="mst-detail-row-left">${escapeHtml(r.label)}${delBtn}</span>
-                  <span class="negative">-${fmt(r.values[t.month])}</span>
+                  <span class="negative">-${fmt(rowOutstanding(r, t.month, r.values[t.month] || 0))}</span>
                 </div>`;
             }).join("")}
           </div>` : ""}
