@@ -38,8 +38,11 @@ export function getDebtInstallmentsForMonth(month) {
   return state.debts
     .filter(d => d.includeInBudget && d.status !== 'Quitada')
     .flatMap(debt => {
+      const paidViaControle = (mainState.data?.paidOccurrences || []).includes(`auto-debt-${debt.id}:${month}`);
       const installment = state.installments
-        .filter(i => i.debtId === debt.id && i.status === 'Pendente' && String(i.dueDate || '').startsWith(month))
+        .filter(i => i.debtId === debt.id
+          && String(i.dueDate || '').startsWith(month)
+          && (i.status === 'Pendente' || (i.status === 'Paga' && paidViaControle)))
         .sort((a, b) => Number(a.number || 0) - Number(b.number || 0))[0];
       if (!installment) return [];
       const creditorName = (state.creditors.find(c => c.id === debt.creditorId)
