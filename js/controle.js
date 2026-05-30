@@ -3,7 +3,7 @@ import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAm
 import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCreditorName } from "./creditors.js";
 import { metric, isManualPlannedRow } from "./components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "./planejamento.js";
-import { getDebtInstallmentsForMonth } from "./dividas/boot.js";
+import { getDebtInstallmentsForMonth, markDebtInstallmentPaid } from "./dividas/boot.js";
 
 function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
@@ -494,6 +494,10 @@ export async function registerPaidOccurrence(key, amount, paymentDate) {
   state.data.paidDates[key] = paymentDate || todayIsoDate();
   applyCashMovement(key, -paidAmount(key, value || 0));
   syncExpenseSource(key, true, value, state.data.paidDates[key]);
+  const { rowId: _rId, month: _rMonth } = splitOccurrenceKey(key);
+  if (_rId.startsWith('auto-debt-')) {
+    try { await markDebtInstallmentPaid(_rId.replace('auto-debt-', ''), _rMonth, true, value, paymentDate); } catch (e) { console.error(e); }
+  }
   if (state.saveStateFn) await state.saveStateFn("Pagamento registrado.");
 }
 
@@ -503,6 +507,10 @@ export async function cancelPaidOccurrence(key) {
   if (state.data.paidDates) delete state.data.paidDates[key];
   applyCashMovement(key, 0);
   syncExpenseSource(key, false);
+  const { rowId: _cId, month: _cMonth } = splitOccurrenceKey(key);
+  if (_cId.startsWith('auto-debt-')) {
+    try { await markDebtInstallmentPaid(_cId.replace('auto-debt-', ''), _cMonth, false); } catch (e) { console.error(e); }
+  }
   if (state.saveStateFn) await state.saveStateFn("Pagamento cancelado.");
 }
 

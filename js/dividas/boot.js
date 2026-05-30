@@ -1,6 +1,6 @@
 import { state, rebuildIndexes } from './state.js';
 import { state as mainState } from '../state.js';
-import { getDocs, debtsColl, installmentsColl, paymentsColl, debtCreditorsColl } from './firebase.js';
+import { getDocs, addDoc, updateDoc, deleteDoc, debtsColl, installmentsColl, installmentDoc, paymentsColl, paymentDoc, debtCreditorsColl, serverTimestamp } from './firebase.js';
 import { synchronizePaidOffDebts } from './calc.js';
 import { renderDashboard, renderRenegotiatedHistory } from './dashboard.js';
 import { renderTrail } from './trail.js';
@@ -48,7 +48,7 @@ export function getDebtInstallmentsForMonth(month) {
         id: `auto-debt-${debt.id}`,
         kind: 'expense',
         owner: 'Felipe',
-        creditorId: '',
+        creditorId: debt.creditorId || '',
         fromDebtId: debt.id,
         label: debt.name,
         origin: creditorName,
@@ -58,6 +58,54 @@ export function getDebtInstallmentsForMonth(month) {
       };
       return [{ row, value: Number(installment.expectedValue || 0) }];
     });
+}
+
+export async function markDebtInstallmentPaid(debtId, month, paid, amount, paymentDate) {
+  const installment = state.installments.find(
+    i => i.debtId === debtId
+      && i.status === (paid ? 'Pendente' : 'Paga')
+      && String(i.dueDate || '').startsWith(month)
+  );
+  if (!installment) return;
+
+  if (paid) {
+    await updateDoc(installmentDoc(installment.id), { status: 'Paga', updatedAt: serverTimestamp() });
+    const created = await addDoc(paymentsColl(), {
+      debtId,
+      installmentId: installment.id,
+      expectedValue: Number(installment.expectedValue || 0),
+      paidValue: Number(amount || installment.expectedValue || 0),
+      paymentDate: paymentDate || new Date().toISOString().slice(0, 10),
+      discount: 0,
+      interest: 0,
+      source: 'monthly-control',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    });
+    installment.status = 'Paga';
+    state.payments.push({
+      id: created.id,
+      debtId,
+      installmentId: installment.id,
+      expectedValue: Number(installment.expectedValue || 0),
+      paidValue: Number(amount || installment.expectedValue || 0),
+      paymentDate: paymentDate || new Date().toISOString().slice(0, 10),
+      discount: 0,
+      interest: 0,
+      source: 'monthly-control'
+    });
+  } else {
+    const payment = state.paymentByInstallment.get(installment.id);
+    if (payment) {
+      await deleteDoc(paymentDoc(payment.id));
+      state.payments = state.payments.filter(p => p.id !== payment.id);
+    }
+    await updateDoc(installmentDoc(installment.id), { status: 'Pendente', updatedAt: serverTimestamp() });
+    installment.status = 'Pendente';
+  }
+
+  rebuildIndexes();
+  renderDividas();
 }
 
 // Navigation helper — maps debt view names to Orçamento's unified showView
