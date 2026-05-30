@@ -136,26 +136,18 @@ async function importJsonBackup(payload) {
     if (item.id) idMap.debts.set(item.id, created.id);
   }
 
-  let instBatch = writeBatch();
-  let instOps = 0;
-  for (const item of importedInstallments) {
-    const newRef = doc(installmentsColl());
-    instBatch.set(newRef, cleanImportedPayload(item, idMap));
-    if (item.id) idMap.installments.set(item.id, newRef.id);
-    instOps++;
-    if (instOps === 400) { await instBatch.commit(); instBatch = writeBatch(); instOps = 0; }
+  const CHUNK = 50;
+  for (let i = 0; i < importedInstallments.length; i += CHUNK) {
+    await Promise.all(importedInstallments.slice(i, i + CHUNK).map(async (item) => {
+      const created = await addDoc(installmentsColl(), cleanImportedPayload(item, idMap));
+      if (item.id) idMap.installments.set(item.id, created.id);
+    }));
   }
-  if (instOps) await instBatch.commit();
-
-  let payBatch = writeBatch();
-  let payOps = 0;
-  for (const item of importedPayments) {
-    const newRef = doc(paymentsColl());
-    payBatch.set(newRef, cleanImportedPayload(item, idMap));
-    payOps++;
-    if (payOps === 400) { await payBatch.commit(); payBatch = writeBatch(); payOps = 0; }
+  for (let i = 0; i < importedPayments.length; i += CHUNK) {
+    await Promise.all(importedPayments.slice(i, i + CHUNK).map(async (item) => {
+      await addDoc(paymentsColl(), cleanImportedPayload(item, idMap));
+    }));
   }
-  if (payOps) await payBatch.commit();
 
   await state.loadAllFn();
   showToast('JSON importado com sucesso.');
