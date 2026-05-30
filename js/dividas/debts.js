@@ -279,10 +279,10 @@ function renderWaitingCreditorFilters(waitingDebts) {
   if (!container) return;
   const creditorIds = [...new Set(waitingDebts.map(d => d.creditorId).filter(Boolean))]
     .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = '<button class="ghost-btn ' + (state.selectedWaitingCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterWaitingByCreditor(\'all\')">◌ Todos <span class="filter-count">' + waitingDebts.length + '</span></button>';
+  let html = '<button class="filter-chip ' + (state.selectedWaitingCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterWaitingByCreditor(\'all\')">◌ Todos <span class="filter-count">' + waitingDebts.length + '</span></button>';
   creditorIds.forEach(id => {
     const count = waitingDebts.filter(d => d.creditorId === id).length;
-    html += '<button class="ghost-btn ' + (state.selectedWaitingCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterWaitingByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
+    html += '<button class="filter-chip ' + (state.selectedWaitingCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterWaitingByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
   });
   container.innerHTML = html;
 }
@@ -306,10 +306,10 @@ function renderHiddenCreditorFilters(hiddenDebts) {
   if (!container) return;
   const creditorIds = [...new Set(hiddenDebts.map(d => d.creditorId).filter(Boolean))]
     .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = '<button class="ghost-btn ' + (state.selectedHiddenCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterHiddenByCreditor(\'all\')">◎ Todos <span class="filter-count">' + hiddenDebts.length + '</span></button>';
+  let html = '<button class="filter-chip ' + (state.selectedHiddenCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterHiddenByCreditor(\'all\')">◎ Todos <span class="filter-count">' + hiddenDebts.length + '</span></button>';
   creditorIds.forEach(id => {
     const count = hiddenDebts.filter(d => d.creditorId === id).length;
-    html += '<button class="ghost-btn ' + (state.selectedHiddenCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterHiddenByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
+    html += '<button class="filter-chip ' + (state.selectedHiddenCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterHiddenByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
   });
   container.innerHTML = html;
 }
@@ -319,10 +319,10 @@ function renderPaidOffCreditorFilters(paidOffDebts) {
   if (!container) return;
   const creditorIds = [...new Set(paidOffDebts.map(d => d.creditorId).filter(Boolean))]
     .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = '<button class="ghost-btn ' + (state.selectedPaidOffCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterPaidOffByCreditor(\'all\')">✓ Todos <span class="filter-count">' + paidOffDebts.length + '</span></button>';
+  let html = '<button class="filter-chip ' + (state.selectedPaidOffCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterPaidOffByCreditor(\'all\')">✓ Todos <span class="filter-count">' + paidOffDebts.length + '</span></button>';
   creditorIds.forEach(id => {
     const count = paidOffDebts.filter(d => d.creditorId === id).length;
-    html += '<button class="ghost-btn ' + (state.selectedPaidOffCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterPaidOffByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
+    html += '<button class="filter-chip ' + (state.selectedPaidOffCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterPaidOffByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
   });
   container.innerHTML = html;
 }
