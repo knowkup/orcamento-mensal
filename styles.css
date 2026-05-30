@@ -2609,6 +2609,9 @@ select {
   background: linear-gradient(135deg, var(--blue-soft), var(--amber-soft));
   border: 1px solid var(--border-strong); color: var(--ink); font-weight: 700; font-size: 15px;
 }
+:is(section[id^="div"], dialog[id^="div"]) .filter-chip .creditor-logo {
+  width: 20px; height: 20px; border-radius: 6px; font-size: 9px;
+}
 :is(section[id^="div"], dialog[id^="div"]) .creditor-logo img {
   width: 100%; height: 100%; object-fit: cover;
 }
@@ -2677,8 +2680,8 @@ select {
 .filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
 .filter-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 9px; font: inherit; font-size: 12px; font-weight: 650; border: 1px solid var(--border); border-radius: 10px; background: rgba(13,32,56,0.03); color: var(--muted); cursor: pointer; transition: 160ms ease; }
 .filter-chip:hover { background: rgba(13,32,56,0.07); }
-.filter-chip.is-active { background: linear-gradient(135deg, #ffe4a8, #f5c861); color: #24170a; border-color: rgba(150,92,8,0.34); box-shadow: 0 8px 20px rgba(216,164,65,0.18); }
-.filter-chip.is-active * { color: #24170a; }
+.filter-chip.is-active { background: linear-gradient(135deg, rgba(216,164,65,0.22), rgba(216,164,65,0.10)); color: #6b4200; border-color: rgba(216,164,65,0.52); box-shadow: none; }
+.filter-chip.is-active * { color: #6b4200; }
 .filter-chip .creditor-logo { width: 18px; height: 18px; border-radius: 5px; font-size: 8px; flex: 0 0 auto; }
 .filter-row .ghost-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 28px; padding: 3px 8px; font-size: 12px; border-radius: 8px; }
 .filter-row .creditor-logo { width: 20px; height: 20px; border-radius: 6px; font-size: 9px; }
