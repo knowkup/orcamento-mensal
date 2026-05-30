@@ -351,25 +351,24 @@
         <!-- ── DÍVIDAS — Rota Financeira ──────────────────── -->
         <section class="view" id="divrotaView" data-title="Rota Financeira">
           <div class="vertical-stack">
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Frente ativa</p><h2 id="trailPositionTitle">Rota de quitação</h2></div>
-                <div class="action-group">
-                  <select class="ghost-btn" id="trailDebtSort" onchange="window.setTrailDebtSort(this.value)">
-                    <option value="trail">Ordem da Rota</option>
-                    <option value="priority">Prioridade</option>
-                    <option value="due">Vencimento</option>
-                    <option value="balance">Saldo</option>
-                    <option value="name">Nome</option>
-                  </select>
-                  <button class="primary-button" type="button" onclick="window.openDebtForm()">
-                    <i data-lucide="plus"></i><span>Nova dívida</span>
-                  </button>
-                </div>
-              </div>
-              <div class="route-summary" id="trailMetrics"></div>
-            </section>
+            <div class="route-top-bar">
+              <button class="primary-button" type="button" onclick="window.openDebtForm()">
+                <i data-lucide="plus"></i><span>Nova dívida</span>
+              </button>
+            </div>
+            <h2 id="trailPositionTitle" hidden></h2>
+            <div class="route-summary" id="trailMetrics"></div>
             <div id="nextTarget"></div>
+            <div class="route-sort-bar">
+              <span>Ordenar</span>
+              <select class="ghost-btn" id="trailDebtSort" onchange="window.setTrailDebtSort(this.value)">
+                <option value="trail">Ordem da Rota</option>
+                <option value="priority">Prioridade</option>
+                <option value="due">Vencimento</option>
+                <option value="balance">Saldo</option>
+                <option value="name">Nome</option>
+              </select>
+            </div>
             <div id="trailRoad"></div>
           </div>
         </section>
