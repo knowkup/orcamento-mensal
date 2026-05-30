@@ -217,8 +217,8 @@ p {
 
 h1 {
   margin-bottom: 0;
-  font-size: clamp(30px, 4vw, 44px);
-  line-height: 1;
+  font-size: 34px;
+  line-height: 1.1;
   font-weight: 700;
   letter-spacing: -0.04em;
 }
@@ -243,6 +243,16 @@ h2 {
 .topbar-actions {
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+.topbar-menu { position: relative; }
+.topbar-dropdown { display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow); z-index: 200; overflow: hidden; }
+.topbar-dropdown.is-open { display: block; }
+.topbar-dropdown-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 11px 16px; border: 0; background: transparent; color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; text-align: left; }
+.topbar-dropdown-item:hover { background: rgba(13,32,56,0.05); }
+.topbar-dropdown-item.danger { color: var(--red); }
+.topbar-dropdown-item input[type="file"] { display: none; }
+.topbar-dropdown-divider { margin: 4px 0; border: 0; border-top: 1px solid var(--border); }
+/* override topbar-actions original left margin:  */
 }
 
 .primary-button,

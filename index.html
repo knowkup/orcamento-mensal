@@ -8,7 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
     <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png">
     <link rel="manifest" href="manifest.webmanifest">
-    <link rel="stylesheet" href="styles.css?v=20260530-1400">
+    <link rel="stylesheet" href="styles.css?v=20260530-1430">
   </head>
   <body data-theme="light">
     <div class="app-shell">
@@ -102,17 +102,24 @@
             <p class="view-subtitle" id="viewSubtitle"></p>
           </div>
           <div class="topbar-actions">
-            <button class="icon-button" type="button" id="exportButton" title="Exportar backup">
-              <i data-lucide="download"></i>
-            </button>
-            <label class="icon-button file-action" title="Importar backup">
-              <i data-lucide="upload"></i>
-              <input type="file" id="importInput" accept="application/json">
-            </label>
-            <button class="primary-button" type="button" id="loginButton">
-              <i data-lucide="log-in"></i>
-              <span>Entrar</span>
-            </button>
+            <div class="topbar-menu">
+              <button class="icon-button" type="button" id="topbarMenuButton" title="Menu">
+                <i data-lucide="more-vertical"></i>
+              </button>
+              <div class="topbar-dropdown" id="topbarDropdown">
+                <button class="topbar-dropdown-item" type="button" id="exportButton">
+                  <i data-lucide="download"></i><span>Exportar backup</span>
+                </button>
+                <label class="topbar-dropdown-item file-action">
+                  <i data-lucide="upload"></i><span>Importar backup</span>
+                  <input type="file" id="importInput" accept="application/json">
+                </label>
+                <hr class="topbar-dropdown-divider">
+                <button class="topbar-dropdown-item danger" type="button" id="loginButton">
+                  <i data-lucide="log-in"></i><span>Entrar / Sair</span>
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 

@@ -32,6 +32,12 @@ function bindEvents() {
   el.loginButton.addEventListener("click", handleLoginToggle);
   el.exportButton.addEventListener("click", exportState);
   el.importInput.addEventListener("change", importState);
+  const menuBtn = document.getElementById("topbarMenuButton");
+  const dropdown = document.getElementById("topbarDropdown");
+  if (menuBtn && dropdown) {
+    menuBtn.addEventListener("click", (e) => { e.stopPropagation(); dropdown.classList.toggle("is-open"); });
+    document.addEventListener("click", () => dropdown.classList.remove("is-open"));
+  }
   el.installmentForm.addEventListener("submit", addInstallment);
   el.newInstallmentButton.addEventListener("click", openInstallmentDialog);
   el.closeInstallmentButton.addEventListener("click", closeInstallmentDialog);
