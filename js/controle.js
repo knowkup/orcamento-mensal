@@ -264,7 +264,9 @@ export function rowReceivedAmount(row, month, fallback) {
 }
 
 export function rowIncomeOutstanding(row, month, value) {
-  return Math.max(0, Number(value || 0) - rowReceivedAmount(row, month, value));
+  const key = `${row.id}:${month}`;
+  if (isIncomeReceived(key)) return 0;
+  return Math.max(0, Number(value || 0));
 }
 
 export function rowPaidAmount(row, month, fallback) {
