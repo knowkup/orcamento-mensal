@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { $, brl, parseMoney, escapeHtml, showToast, sortedCreditors, addMonths } from './utils.js';
+import { $, brl, parseMoney, escapeHtml, showToast, sortedAllCreditors, addMonths } from './utils.js';
 import { nextInstallment } from './calc.js';
 import { nextPayoffOrder, nextActiveRouteOrder } from './debts.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, doc, addDoc, getDocs, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
@@ -29,7 +29,7 @@ window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa')
     $('debtNotes').value = debt.notes || '';
     $('debtIncludeInBudget').checked = !!debt.includeInBudget;
   } else {
-    $('debtCreditorSelect').value = sortedCreditors()[0]?.id || '';
+    $('debtCreditorSelect').value = sortedAllCreditors()[0]?.id || '';
     $('debtName').value = '';
     $('debtType').value = 'Cartão';
     $('debtPaymentMethod').value = 'Boleto';
@@ -53,7 +53,7 @@ window.closeDebtForm = function() {
 };
 
 window.saveDebt = async function() {
-  if (!state.creditors.length) return showToast('Cadastre um credor antes da dívida.');
+  if (!sortedAllCreditors().length) return showToast('Cadastre um credor antes da dívida.');
   const creditorId = $('debtCreditorSelect').value;
   const name = $('debtName').value.trim();
   const firstDue = $('debtFirstDue').value;

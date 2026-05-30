@@ -42,7 +42,8 @@ export function getDebtInstallmentsForMonth(month) {
         .filter(i => i.debtId === debt.id && i.status === 'Pendente' && String(i.dueDate || '').startsWith(month))
         .sort((a, b) => Number(a.number || 0) - Number(b.number || 0))[0];
       if (!installment) return [];
-      const creditorName = state.creditors.find(c => c.id === debt.creditorId)?.name || '';
+      const creditorName = (state.creditors.find(c => c.id === debt.creditorId)
+        || (mainState.data?.creditors || []).find(c => c.id === debt.creditorId))?.name || '';
       const row = {
         id: `auto-debt-${debt.id}`,
         kind: 'expense',

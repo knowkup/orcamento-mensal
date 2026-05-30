@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { state as appState } from '../state.js';
-import { $, brl, escapeHtml, emptyCard, showToast, getCreditorName, sortedCreditors, creditorLogoHtml, initials } from './utils.js';
+import { $, brl, escapeHtml, emptyCard, showToast, getCreditorName, sortedCreditors, sortedAllCreditors, creditorLogoHtml, initials } from './utils.js';
 import { debtBalance } from './calc.js';
 import { debtMetric } from './debts.js';
 import { debtCreditorsColl, debtCreditorDoc, debtDoc, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from './firebase.js';
@@ -35,8 +35,9 @@ export function renderCreditors() {
 
   const select = $('debtCreditorSelect');
   if (select) {
-    select.innerHTML = state.creditors.length
-      ? sortedCreditors().map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('')
+    const all = sortedAllCreditors();
+    select.innerHTML = all.length
+      ? all.map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('')
       : '<option value="">Cadastre um credor primeiro</option>';
   }
 }
