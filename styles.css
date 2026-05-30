@@ -158,6 +158,42 @@ button:disabled {
   cursor: not-allowed;
 }
 
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.sidebar-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.sidebar-action-btn:hover {
+  background: rgba(13, 32, 56, 0.07);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.sidebar-action-btn.danger { color: var(--red); }
+.sidebar-action-btn.danger:hover { color: var(--red); }
+
+.sidebar-action-btn input[type="file"] { display: none; }
+
 .sync-panel {
   display: flex;
   gap: 10px;
@@ -3191,7 +3227,9 @@ select {
     min-height: 56px;
   }
 
+  .bottom-tab { min-height: 64px; }
   .bottom-tab i { width: 22px; height: 22px; }
+  .bottom-tab span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bottom-tab.active { color: var(--blue); }
 
   /* ── Mais overlay ── */

@@ -137,6 +137,21 @@ function bindEvents() {
         maisOverlay.classList.remove("open");
       });
     });
+    document.getElementById("maisExportBtn")?.addEventListener("click", () => {
+      el.exportButton.click();
+      maisDrawer.classList.remove("open");
+      maisOverlay.classList.remove("open");
+    });
+    document.getElementById("maisImportBtn")?.addEventListener("click", () => {
+      el.importInput.click();
+      maisDrawer.classList.remove("open");
+      maisOverlay.classList.remove("open");
+    });
+    document.getElementById("maisLoginBtn")?.addEventListener("click", () => {
+      el.loginButton.click();
+      maisDrawer.classList.remove("open");
+      maisOverlay.classList.remove("open");
+    });
   }
 }
 
