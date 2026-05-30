@@ -8,6 +8,7 @@ import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from 
 import { ensureCarPayments } from "./carro.js";
 import { openPlannedDialog, deleteManualPlanned, rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDate } from "./controle.js";
 import { normalizedIncomeChanges } from "./data.js";
+import { getDebtInstallmentsForMonth } from "./dividas/boot.js";
 
 export function renderProjection() {
   const months = nextMonths(12);
@@ -568,6 +569,21 @@ export function appendDynamicProjectionRows(rows, months, keepPaidValues) {
     if (!keepPaidValues && isOccurrencePaid(key)) carValues[month] = 0;
   });
   if (Object.values(carValues).some(Boolean)) rows.push({ id: "auto-car", kind: "expense", owner: "Felipe", creditorId: state.data.car.creditorId, label: state.data.car.name || "Carro", origin: state.data.car.creditorId ? getCreditorName(state.data.car.creditorId) : "Financiamento", sourceLabel: "", values: carValues, dueDates: carDueDates, children: carChildren });
+
+  const debtRowMap = new Map();
+  months.forEach((month) => {
+    getDebtInstallmentsForMonth(month).forEach(({ row, value }) => {
+      if (!debtRowMap.has(row.id)) {
+        debtRowMap.set(row.id, { id: row.id, kind: "expense", owner: row.owner || "Felipe", creditorId: row.creditorId, label: row.label, origin: row.origin, sourceLabel: "", values: {}, dueDates: {} });
+      }
+      const key = `${row.id}:${month}`;
+      debtRowMap.get(row.id).values[month] = !keepPaidValues && isOccurrencePaid(key) ? 0 : value;
+      debtRowMap.get(row.id).dueDates[month] = row.dueDates?.[month] || "";
+    });
+  });
+  debtRowMap.forEach((row) => {
+    if (Object.values(row.values).some(Boolean)) rows.push(row);
+  });
 }
 
 export function groupKey(item) {
