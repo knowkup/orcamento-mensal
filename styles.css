@@ -2950,6 +2950,7 @@ select {
 .route-summary-bar { margin-bottom: 16px; }
 .route-top-bar { display: flex; justify-content: flex-end; margin-bottom: 4px; }
 .route-sort-bar { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-bottom: 8px; color: var(--muted); font-size: 13px; font-weight: 600; }
+.route-sort-bar select { width: auto; }
 .insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .donut-panel { display: grid; grid-template-columns: 220px 1fr; gap: 22px; align-items: center; }
 .donut-legend { display: grid; gap: 10px; }
