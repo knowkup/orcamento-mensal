@@ -3184,6 +3184,30 @@ select {
 .inline-card-add-btn { width: 100%; justify-content: center; }
 
 /* ═══════════════════════════════════════════════════════════════════
+   RESPONSIVIDADE — Correções de overflow mobile
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 760px) {
+  /* Gráfico de barras: scroll horizontal (min-width: 980px fixo) */
+  .chart-panel { overflow-x: auto; }
+
+  /* Tabela de resumo mensal: scroll horizontal sem wrapper */
+  #projMonthlySummary { overflow-x: auto; }
+  .mst-table { min-width: 440px; }
+
+  /* Donut chart: empilha círculo e legenda */
+  .donut-panel { grid-template-columns: 1fr; justify-items: center; }
+
+  /* KPIs de parcelamentos: 3 → 2 colunas */
+  .installments-kpis { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 560px) {
+  /* KPIs de parcelamentos: 2 → 1 coluna */
+  .installments-kpis { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
    MOBILE — Bottom Navigation
    ═══════════════════════════════════════════════════════════════════ */
 
