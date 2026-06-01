@@ -324,13 +324,9 @@ export function accountBalanceCard(value) {
     <button class="hero-card hero-now" type="button" data-edit-account-balance>
       <div class="hero-card-head">
         <span class="hero-label">Agora</span>
-        <span class="hero-sublabel">Saldo em conta</span>
+        <span class="hero-sublabel">Saldo em conta <i data-lucide="pencil" class="hero-edit-icon"></i></span>
       </div>
       <strong class="hero-value ${tone}">${currency.format(value)}</strong>
-      <div class="hero-card-foot">
-        <span class="hero-edit-hint">Editar saldo</span>
-        <span class="hero-desc">Valor manual usado como ponto de partida</span>
-      </div>
     </button>
   `;
 }
@@ -341,7 +337,7 @@ export function projectedBalanceCard(value) {
   return `
     <article class="hero-card hero-closing ${bgClass}">
       <div class="hero-card-head">
-        <span class="hero-label">Fechamento</span>
+        <span class="hero-label">Projeção</span>
         <span class="hero-sublabel">Saldo projetado do mês</span>
       </div>
       <strong class="hero-value ${tone}">${currency.format(value)}</strong>
