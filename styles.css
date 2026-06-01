@@ -436,6 +436,27 @@ svg {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+/* ── Controle Mensal — hero ── */
+.control-hero-meta { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.month-status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+.month-status-pill.is-open { border: 1.5px solid #1e9e5c; color: #1e9e5c; background: #f0fdf6; }
+.month-status-pill.is-closed { border: 1.5px solid var(--muted); color: var(--muted); background: #f5f5f5; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
+.control-hero-row { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.hero-card { display: flex; flex-direction: column; gap: 12px; padding: 28px 32px; background: var(--surface); text-align: left; border: none; }
+button.hero-card { cursor: pointer; transition: background 0.15s; }
+button.hero-card:hover { background: #f5f7fa; }
+.hero-now { border-right: 1px solid var(--border); }
+.hero-closing-negative { background: #fff5f5; }
+.hero-closing-positive { background: #f0fdf6; }
+.hero-card-head { display: flex; justify-content: space-between; align-items: center; }
+.hero-label { font-size: 11px; font-weight: 800; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; }
+.hero-sublabel { font-size: 12px; font-weight: 600; color: var(--muted); }
+.hero-value { font-size: 40px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; }
+.hero-card-foot { display: flex; align-items: center; gap: 16px; margin-top: auto; flex-wrap: wrap; }
+.hero-edit-hint { font-size: 13px; font-weight: 700; color: var(--blue); text-decoration: underline; }
+.hero-desc { font-size: 12px; color: var(--muted); }
+
 .installments-kpis {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -2583,6 +2604,11 @@ select {
   .mst-row-main span:nth-child(4) {
     display: none;
   }
+
+  .control-hero-row { grid-template-columns: 1fr; }
+  .hero-now { border-right: none; border-bottom: 1px solid var(--border); }
+  .hero-value { font-size: 30px; }
+  .hero-card { padding: 20px; }
 
   .month-summary,
   .monthly-summary-row,

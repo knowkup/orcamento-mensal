@@ -55,16 +55,12 @@ export function renderMonthlyControl() {
   el.closeMonthButton.disabled = hasPending;
   el.monthlySummary.classList.add("monthly-control-summary");
   el.monthlySummary.innerHTML = `
-    <div class="monthly-summary-row executive-row">
+    <div class="control-hero-meta">
+      <span class="month-status-pill ${isClosed ? "is-closed" : "is-open"}"><span class="status-dot"></span>${formatMonthLong(month)} · ${isClosed ? "Fechado" : "Em andamento"}</span>
+    </div>
+    <div class="control-hero-row">
       ${accountBalanceCard(accountBalance)}
       ${projectedBalanceCard(projectedBalance)}
-      ${monthReferenceCard(month, isClosed)}
-    </div>
-    <div class="monthly-summary-row operational-row">
-      ${metric("Previsto entrar", expectedIncome, "positive")}
-      ${metric("Já recebido", received, "positive")}
-      ${metric("Previsto sair", -expectedExpense, "negative")}
-      ${metric("Já pago", -paid, "negative")}
     </div>
   `;
 
@@ -325,21 +321,33 @@ export function applyCashMovement(key, amount) {
 export function accountBalanceCard(value) {
   const tone = value >= 0 ? "positive" : "negative";
   return `
-    <button class="metric editable-metric" type="button" data-edit-account-balance>
-      <span>Saldo em conta</span>
-      <strong class="${tone}">${currency.format(value)}</strong>
-      <small>Editar saldo</small>
+    <button class="hero-card hero-now" type="button" data-edit-account-balance>
+      <div class="hero-card-head">
+        <span class="hero-label">Agora</span>
+        <span class="hero-sublabel">Saldo em conta</span>
+      </div>
+      <strong class="hero-value ${tone}">${currency.format(value)}</strong>
+      <div class="hero-card-foot">
+        <span class="hero-edit-hint">Editar saldo</span>
+        <span class="hero-desc">Valor manual usado como ponto de partida</span>
+      </div>
     </button>
   `;
 }
 
 export function projectedBalanceCard(value) {
   const tone = value >= 0 ? "positive" : "negative";
+  const bgClass = value >= 0 ? "hero-closing-positive" : "hero-closing-negative";
   return `
-    <article class="metric projected-balance-card">
-      <span>Saldo projetado do mês</span>
-      <strong class="${tone}">${currency.format(value)}</strong>
-      <small>Conta + entradas - saídas</small>
+    <article class="hero-card hero-closing ${bgClass}">
+      <div class="hero-card-head">
+        <span class="hero-label">Fechamento</span>
+        <span class="hero-sublabel">Saldo projetado do mês</span>
+      </div>
+      <strong class="hero-value ${tone}">${currency.format(value)}</strong>
+      <div class="hero-card-foot">
+        <span class="hero-desc">Após entradas e saídas pendentes</span>
+      </div>
     </article>
   `;
 }
