@@ -118,6 +118,13 @@ export function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-edit-fixed-amount]").forEach((button) => {
     button.addEventListener("click", () => openFixedCostAmountDialog(button.dataset.editFixedAmount));
   });
+  el.monthlyBoard.querySelectorAll("[data-edit-occurrence-value]").forEach((button) => {
+    button.addEventListener("click", () => openOccurrenceValueDialog(
+      button.dataset.editOccurrenceValue,
+      button.dataset.occurrenceLabel,
+      Number(button.dataset.occurrenceExpected)
+    ));
+  });
   el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
 
@@ -154,6 +161,9 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const deleteButton = isManualPlannedRow(row)
       ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
       : "";
+    const editValueButton = !isManualPlannedRow(row) && !done && value > 0
+      ? `<button class="icon-button mini-icon" type="button" title="Ajustar valor deste mês" data-edit-occurrence-value="${key}" data-occurrence-label="${escapeHtml(row.label)}" data-occurrence-expected="${value}">${icon("pencil")}</button>`
+      : "";
     const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
     const dueDate = rowDueDate(row, month);
     const dateLabel = kind === "income" ? "Recebimento" : "Vencimento";
@@ -182,6 +192,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
         <div class="monthly-field compact"><span>Contas</span><strong>${accountCount}</strong></div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
+          ${editValueButton}
           ${actionButton}
         </div>
         ${chevron}
@@ -677,4 +688,27 @@ export async function saveFixedCostAmount(event) {
   state.data.fixedCostAmountOverrides = { ...(state.data.fixedCostAmountOverrides || {}), [key]: amount };
   el.fixedCostAmountDialog.close();
   if (state.saveStateFn) await state.saveStateFn("Valor do custo fixo ajustado para o mês.");
+}
+
+export function openOccurrenceValueDialog(key, label, currentValue) {
+  const overrides = state.data.occurrenceValueOverrides || {};
+  const current = overrides[key] !== undefined ? overrides[key] : currentValue;
+  el.occurrenceValueForm.elements.key.value = key;
+  el.occurrenceValueForm.elements.amount.value = formatCurrencyInput(current);
+  el.occurrenceValueDialogTitle.textContent = label || "Ajustar valor";
+  el.occurrenceValueDialog.showModal();
+}
+
+export function closeOccurrenceValueDialog() {
+  el.occurrenceValueDialog.close();
+}
+
+export async function saveOccurrenceValue(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const key = String(form.get("key"));
+  const amount = parseCurrencyInput(form.get("amount"));
+  state.data.occurrenceValueOverrides = { ...(state.data.occurrenceValueOverrides || {}), [key]: amount };
+  el.occurrenceValueDialog.close();
+  if (state.saveStateFn) await state.saveStateFn("Valor ajustado para o mês.");
 }

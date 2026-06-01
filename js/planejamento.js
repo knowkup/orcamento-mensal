@@ -419,6 +419,13 @@ export function buildProjectionRows(months, keepPaidValues = false) {
 
   appendDynamicProjectionRows(rows, months, keepPaidValues);
   appendKahDifferenceRow(rows, months);
+  const valueOverrides = state.data.occurrenceValueOverrides || {};
+  rows.forEach((row) => {
+    months.forEach((month) => {
+      const key = `${row.id}:${month}`;
+      if (valueOverrides[key] !== undefined) row.values[month] = valueOverrides[key];
+    });
+  });
   return rows.sort((a, b) => compareRowsByDueDate(a, b, months[0]));
 }
 

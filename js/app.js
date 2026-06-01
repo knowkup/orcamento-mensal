@@ -4,7 +4,7 @@ import { loadLocalState, exportState, importState } from "./storage.js";
 import { setupFirebase, handleLoginToggle, saveState } from "./firebase.js";
 import { bindMoneyInputs, refreshIcons, formatCurrencyInput } from "./utils.js";
 import { renderProjection } from "./planejamento.js";
-import { renderMonthlyControl, confirmReceivedOccurrence, openExpensePaymentDialog, confirmPaidOccurrence, cancelPaidOccurrence, cancelReceivedOccurrence, openReceiveDialog, openPlannedDialog, deleteManualPlanned, closeMonth, openAccountBalanceDialog, saveAccountBalance, updatePlannedFields, addPlannedPurchase, closePlannedDialog, saveFixedCostAmount, navigateControlMonth } from "./controle.js";
+import { renderMonthlyControl, confirmReceivedOccurrence, openExpensePaymentDialog, confirmPaidOccurrence, cancelPaidOccurrence, cancelReceivedOccurrence, openReceiveDialog, openPlannedDialog, deleteManualPlanned, closeMonth, openAccountBalanceDialog, saveAccountBalance, updatePlannedFields, addPlannedPurchase, closePlannedDialog, saveFixedCostAmount, navigateControlMonth, saveOccurrenceValue, closeOccurrenceValueDialog } from "./controle.js";
 import { renderInstallments, addInstallment, openInstallmentDialog, closeInstallmentDialog, payInstallment, unpayInstallment, deleteInstallment } from "./parcelamentos.js";
 import { renderFixedCosts, openFixedCostDialog, closeFixedCostDialog, updateFixedCostFields, addFixedCost } from "./custos-fixos.js";
 import { renderCar, updateCar, openCarContractDialog, ensureCarPayments, updateSettings, openCarPaymentDialog, payCarInstallment, unpayCarInstallment } from "./carro.js";
@@ -82,6 +82,8 @@ function bindEvents() {
   el.closeMonthButton.addEventListener("click", closeMonth);
   el.prevControlMonthButton.addEventListener("click", () => navigateControlMonth(-1));
   el.nextControlMonthButton.addEventListener("click", () => navigateControlMonth(1));
+  el.occurrenceValueForm.addEventListener("submit", saveOccurrenceValue);
+  el.closeOccurrenceValueButton.addEventListener("click", closeOccurrenceValueDialog);
   el.closePlanButton.addEventListener("click", closePlannedDialog);
   el.plannedForm.addEventListener("submit", addPlannedPurchase);
   document.querySelector("#plannedKindExpense")?.addEventListener("click", () => {
