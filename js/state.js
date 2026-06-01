@@ -140,9 +140,5 @@ export const el = {
   closeIncomeExceptionButton: document.querySelector("#closeIncomeExceptionButton"),
   toast: document.querySelector("#toast"),
   prevControlMonthButton: document.querySelector("#prevControlMonthButton"),
-  nextControlMonthButton: document.querySelector("#nextControlMonthButton"),
-  occurrenceValueDialog: document.querySelector("#occurrenceValueDialog"),
-  occurrenceValueForm: document.querySelector("#occurrenceValueForm"),
-  occurrenceValueDialogTitle: document.querySelector("#occurrenceValueDialogTitle"),
-  closeOccurrenceValueButton: document.querySelector("#closeOccurrenceValueButton")
+  nextControlMonthButton: document.querySelector("#nextControlMonthButton")
 };

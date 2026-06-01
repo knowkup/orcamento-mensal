@@ -118,12 +118,8 @@ export function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-edit-fixed-amount]").forEach((button) => {
     button.addEventListener("click", () => openFixedCostAmountDialog(button.dataset.editFixedAmount));
   });
-  el.monthlyBoard.querySelectorAll("[data-edit-occurrence-value]").forEach((button) => {
-    button.addEventListener("click", () => openOccurrenceValueDialog(
-      button.dataset.editOccurrenceValue,
-      button.dataset.occurrenceLabel,
-      Number(button.dataset.occurrenceExpected)
-    ));
+  el.monthlyBoard.querySelectorAll("[data-edit-manual-plan]").forEach((button) => {
+    button.addEventListener("click", () => openPlannedDialog(button.dataset.editManualPlan, button.dataset.editManualKind));
   });
   el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
@@ -158,26 +154,29 @@ export function monthlyItems(items, month, kind, scope = "pending") {
       }
       return sourceLogoHtml(row.logoUrl, row.origin || row.label);
     })();
-    const deleteButton = isManualPlannedRow(row)
-      ? `<button class="icon-button mini-icon danger-mini" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
-      : "";
-    const editValueButton = !isManualPlannedRow(row) && !done && value > 0
-      ? `<button class="icon-button mini-icon" type="button" title="Ajustar valor deste mês" data-edit-occurrence-value="${key}" data-occurrence-label="${escapeHtml(row.label)}" data-occurrence-expected="${value}">${icon("pencil")}</button>`
-      : "";
     const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
     const dueDate = rowDueDate(row, month);
     const dateLabel = kind === "income" ? "Recebimento" : "Vencimento";
     const accountCount = monthlyAccountCount(row, month);
-    // mostra chevron sempre que houver conteúdo de breakdown (inclui grupos com 1 item)
     const hasBreakdown = kind === "expense" && Boolean(breakdown);
+    const isManual = isManualPlannedRow(row);
+    const manualKind = row.manualType === "planned-income" ? "income" : "expense";
+    const manualMenu = isManual ? `
+      <details class="monthly-breakdown">
+        <summary class="visually-hidden">Opções</summary>
+        <div class="monthly-breakdown-list">
+          <div class="monthly-breakdown-row manual-actions-row">
+            <button class="small-button" type="button" data-edit-manual-plan="${row.id}" data-edit-manual-kind="${manualKind}">${icon("pencil")} Editar</button>
+            <button class="small-button danger-mini" type="button" data-delete-manual-plan="${row.id}">${icon("trash-2")} Excluir</button>
+          </div>
+        </div>
+      </details>` : "";
     const statusLabel = kind === "income"
       ? (done ? "Recebido" : "Pendente")
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
-    const chevron = hasBreakdown
-      ? `<button class="monthly-chevron" type="button" title="Expandir contas" data-toggle-monthly-details>${icon("chevron-down")}</button>`
-      : isManualPlannedRow(row)
-        ? deleteButton
-        : `<span class="monthly-chevron placeholder"></span>`;
+    const chevron = (hasBreakdown || isManual)
+      ? `<button class="monthly-chevron" type="button" title="${hasBreakdown ? "Expandir contas" : "Opções"}" data-toggle-monthly-details>${icon("chevron-down")}</button>`
+      : `<span class="monthly-chevron placeholder"></span>`;
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""} ${kind === "income" ? "income-item" : "expense-item"}">
         <div class="entity-cell monthly-entity">
@@ -192,11 +191,11 @@ export function monthlyItems(items, month, kind, scope = "pending") {
         <div class="monthly-field compact"><span>Contas</span><strong>${accountCount}</strong></div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>
-          ${editValueButton}
           ${actionButton}
         </div>
         ${chevron}
         ${breakdown}
+        ${manualMenu}
       </article>
     `;
   }).join("");
@@ -690,25 +689,3 @@ export async function saveFixedCostAmount(event) {
   if (state.saveStateFn) await state.saveStateFn("Valor do custo fixo ajustado para o mês.");
 }
 
-export function openOccurrenceValueDialog(key, label, currentValue) {
-  const overrides = state.data.occurrenceValueOverrides || {};
-  const current = overrides[key] !== undefined ? overrides[key] : currentValue;
-  el.occurrenceValueForm.elements.key.value = key;
-  el.occurrenceValueForm.elements.amount.value = formatCurrencyInput(current);
-  el.occurrenceValueDialogTitle.textContent = label || "Ajustar valor";
-  el.occurrenceValueDialog.showModal();
-}
-
-export function closeOccurrenceValueDialog() {
-  el.occurrenceValueDialog.close();
-}
-
-export async function saveOccurrenceValue(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const key = String(form.get("key"));
-  const amount = parseCurrencyInput(form.get("amount"));
-  state.data.occurrenceValueOverrides = { ...(state.data.occurrenceValueOverrides || {}), [key]: amount };
-  el.occurrenceValueDialog.close();
-  if (state.saveStateFn) await state.saveStateFn("Valor ajustado para o mês.");
-}

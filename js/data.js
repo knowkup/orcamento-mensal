@@ -31,7 +31,6 @@ export function createDefaultData() {
     receivedAmounts: {},
     appliedCashMovements: {},
     fixedCostAmountOverrides: {},
-    occurrenceValueOverrides: {},
     car: {
       name: "Carro",
       creditorId: "",
