@@ -8,6 +8,14 @@ export function nextMonths(count) {
   });
 }
 
+export function currentMonths(count) {
+  const now = new Date();
+  return Array.from({ length: count }, (_, index) => {
+    const date = new Date(now.getFullYear(), now.getMonth() + index, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  });
+}
+
 export function previousMonths(count) {
   const now = new Date();
   return Array.from({ length: count }, (_, index) => {

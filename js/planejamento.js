@@ -1,5 +1,5 @@
 import { state, el, currency } from "./state.js";
-import { nextMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
+import { nextMonths, currentMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
 
 let _expandedSummaryMonth = null;
 import { calcNetClt } from "./taxes.js";
@@ -11,7 +11,7 @@ import { normalizedIncomeChanges } from "./data.js";
 import { getDebtInstallmentsForMonth } from "./dividas/boot.js";
 
 export function renderProjection() {
-  const months = nextMonths(12);
+  const months = currentMonths(12);
   const rows = buildProjectionRows(months, true);
   const totals = buildTotals(rows, months);
 
@@ -365,7 +365,7 @@ export function renderPlanningChart(totals, months) {
     btn.addEventListener("click", () => {
       const month = btn.dataset.chartMonth;
       _expandedSummaryMonth = _expandedSummaryMonth === month ? null : month;
-      const months12 = nextMonths(12);
+      const months12 = currentMonths(12);
       const rows12 = buildProjectionRows(months12, true);
       const totals12 = buildTotals(rows12, months12);
       renderPlanningChart(totals12, months12);
