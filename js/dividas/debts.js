@@ -49,12 +49,8 @@ export function trailOrderValue(debt) {
 }
 
 export function orderedTrailDebts() {
-  return [...state.debts.filter(d => d.status === 'Ativa' || d.status === 'Quitada')]
-    .sort((a, b) => {
-      if (a.status === 'Quitada' && b.status !== 'Quitada') return 1;
-      if (a.status !== 'Quitada' && b.status === 'Quitada') return -1;
-      return trailOrderValue(a) - trailOrderValue(b);
-    });
+  return [...state.debts.filter(d => d.status === 'Ativa')]
+    .sort((a, b) => trailOrderValue(a) - trailOrderValue(b));
 }
 
 export function sortPaidOffDebts(items) {

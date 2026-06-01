@@ -166,7 +166,7 @@ export function renderTrail() {
 
   road.innerHTML = '<div class="route-panel"><div class="route-list">' + route.map((debt, index) => {
     const balance = debtBalance(debt);
-    const done = debt.status === 'Quitada' || balance === 0;
+    const done = balance === 0;
     const current = !done && debt.id === next?.id;
     const isExpanded = state.expandedDebtId === debt.id;
     const nextItem = nextInstallment(debt);
