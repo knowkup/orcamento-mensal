@@ -30,7 +30,8 @@ export const state = {
   incomeEditingId: null,
   incomeExceptionId: null,
   plannedEditingId: null,
-  plannedEditingKind: null
+  plannedEditingKind: null,
+  controlMonth: null
 };
 
 export const el = {
@@ -137,5 +138,7 @@ export const el = {
   incomeExceptionForm: document.querySelector("#incomeExceptionForm"),
   incomeExceptionDialogTitle: document.querySelector("#incomeExceptionDialogTitle"),
   closeIncomeExceptionButton: document.querySelector("#closeIncomeExceptionButton"),
-  toast: document.querySelector("#toast")
+  toast: document.querySelector("#toast"),
+  prevControlMonthButton: document.querySelector("#prevControlMonthButton"),
+  nextControlMonthButton: document.querySelector("#nextControlMonthButton")
 };

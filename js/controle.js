@@ -9,8 +9,26 @@ function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
 }
 
+function resolveAutoMonth() {
+  const current = todayIsoDate().slice(0, 7);
+  const rows = buildProjectionRows([current], true);
+  const entries = rows.filter((r) => r.kind === "income").map((r) => ({ row: r, value: r.values[current] || 0 })).filter((i) => i.value > 0);
+  const exits = rows.filter((r) => r.kind === "expense").map((r) => ({ row: r, value: r.values[current] || 0 })).filter((i) => i.value > 0 || rowHasAnyPayment(i.row, current));
+  const hasPending = entries.some((i) => !isIncomeReceived(`${i.row.id}:${current}`)) || exits.some((i) => rowOutstanding(i.row, current, i.value) > 0);
+  return hasPending ? current : nextMonths(1)[0];
+}
+
+export function navigateControlMonth(direction) {
+  const current = state.controlMonth ?? resolveAutoMonth();
+  const [year, month] = current.split("-").map(Number);
+  const d = new Date(year, month - 1 + direction, 1);
+  const newMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  state.controlMonth = newMonth === resolveAutoMonth() ? null : newMonth;
+  state.renderFn?.();
+}
+
 export function renderMonthlyControl() {
-  const month = nextMonths(1)[0];
+  const month = state.controlMonth ?? resolveAutoMonth();
   const rows = buildProjectionRows([month], true);
   const entries = rows
     .filter((row) => row.kind === "income")
@@ -586,7 +604,7 @@ export function syncExpenseSource(key, paid, amount, paymentDate) {
 }
 
 export async function closeMonth() {
-  const month = nextMonths(1)[0];
+  const month = state.controlMonth ?? resolveAutoMonth();
   const rows = buildProjectionRows([month], true);
   const entries = rows.filter((row) => row.kind === "income" && (row.values[month] || 0) > 0);
   const exits = rows.filter((row) => row.kind === "expense" && ((row.values[month] || 0) > 0 || rowHasAnyPayment(row, month)));
