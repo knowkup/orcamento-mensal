@@ -141,8 +141,8 @@ export function monthlyItems(items, month, kind, scope = "pending") {
       : (done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
     const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
     const buttonLabel = kind === "income" ? (done ? "Cancelar Recebimento" : "Receber") : (done ? "Excluir pagamento" : "Pagar");
-    const actionButton = scope === "realized" && kind === "expense" && !done
-      ? ""
+    const actionButton = scope === "realized"
+      ? (kind === "expense" && !done ? "" : `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`)
       : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
     const marker = (() => {
       if (row.creditorId) return creditorLogoHtml(row.creditorId);
@@ -154,14 +154,14 @@ export function monthlyItems(items, month, kind, scope = "pending") {
       }
       return sourceLogoHtml(row.logoUrl, row.origin || row.label);
     })();
-    const breakdown = kind === "expense" ? monthlyBreakdown(row, month) : "";
+    const breakdown = kind === "expense" && scope !== "realized" ? monthlyBreakdown(row, month) : "";
     const dueDate = rowDueDate(row, month);
     const dateLabel = kind === "income" ? "Recebimento" : "Vencimento";
     const accountCount = monthlyAccountCount(row, month);
     const hasBreakdown = kind === "expense" && Boolean(breakdown);
     const isManual = isManualPlannedRow(row);
     const manualKind = row.manualType === "planned-income" ? "income" : "expense";
-    const manualMenu = isManual ? `
+    const manualMenu = isManual && scope !== "realized" ? `
       <details class="monthly-breakdown">
         <summary class="visually-hidden">Opções</summary>
         <div class="monthly-breakdown-list">
@@ -174,7 +174,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const statusLabel = kind === "income"
       ? (done ? "Recebido" : "Pendente")
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
-    const chevron = (hasBreakdown || isManual)
+    const chevron = scope !== "realized" && (hasBreakdown || isManual)
       ? `<button class="monthly-chevron" type="button" title="${hasBreakdown ? "Expandir contas" : "Opções"}" data-toggle-monthly-details>${icon("chevron-down")}</button>`
       : `<span class="monthly-chevron placeholder"></span>`;
     return `
