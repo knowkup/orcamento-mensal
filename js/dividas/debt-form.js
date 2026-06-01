@@ -28,6 +28,7 @@ window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa')
     $('debtPayoffOrder').value = debt.payoffOrder || '';
     $('debtNotes').value = debt.notes || '';
     $('debtIncludeInBudget').checked = !!debt.includeInBudget;
+    $('debtIsConsignado').checked = !!debt.isConsignado;
   } else {
     $('debtCreditorSelect').value = sortedAllCreditors()[0]?.id || '';
     $('debtName').value = '';
@@ -43,6 +44,7 @@ window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa')
     $('debtPayoffOrder').value = nextPayoffOrder();
     $('debtNotes').value = '';
     $('debtIncludeInBudget').checked = false;
+    $('debtIsConsignado').checked = false;
   }
   document.getElementById('divDebtDialog').showModal();
 };
@@ -71,6 +73,7 @@ window.saveDebt = async function() {
     payoffOrder: Number($('debtPayoffOrder').value || 0),
     notes: $('debtNotes').value.trim(),
     includeInBudget: $('debtIncludeInBudget').checked,
+    isConsignado: $('debtIsConsignado').checked,
     updatedAt: serverTimestamp()
   };
 

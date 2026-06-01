@@ -120,7 +120,10 @@ export function renderTrail() {
   const nextTarget = $('nextTarget');
   if (!metrics || !road || !position || !nextTarget) return;
 
-  const route = sortedTrailDebts();
+  const allRoute = sortedTrailDebts();
+  const route = allRoute.filter(d => !d.isConsignado);
+  const consignadoRoute = allRoute.filter(d => !!d.isConsignado);
+
   const totalBalance = route.reduce((sum, debt) => sum + debtBalance(debt), 0);
   const monthlyCommitment = route
     .filter(debt => debt.status === 'Ativa' && debtBalance(debt) > 0)
@@ -140,7 +143,7 @@ export function renderTrail() {
     ? 'Próximo alvo: ' + getCreditorName(next.creditorId) + ' · ' + next.name
     : route.length ? 'Nenhuma dívida ativa com saldo em aberto' : 'Defina sua primeira dívida na rota';
 
-  if (!route.length) {
+  if (!allRoute.length) {
     nextTarget.innerHTML = '';
     road.innerHTML = emptyCard('Rota vazia', 'Cadastre dívidas na Rota Financeira para montar sua ordem de quitação.');
     return;
@@ -164,35 +167,76 @@ export function renderTrail() {
     nextTarget.innerHTML = '<div class="next-target-card complete"><div class="next-target-main"><div class="target-icon">✓</div><div><div class="eyebrow">Rota sem pressão</div><h2>Nenhuma dívida ativa com saldo em aberto</h2><div class="debt-meta">A frente atual fica vazia até você cadastrar ou reativar uma dívida.</div></div></div></div>';
   }
 
-  road.innerHTML = '<div class="route-panel"><div class="route-list">' + route.map((debt, index) => {
-    const balance = debtBalance(debt);
-    const done = balance === 0;
-    const current = !done && debt.id === next?.id;
-    const isExpanded = state.expandedDebtId === debt.id;
-    const nextItem = nextInstallment(debt);
-    const nextLabel = nextItem ? formatDateBR(nextItem.dueDate) : 'Sem parcela';
-    const progressValue = done ? 100 : debtProgress(debt);
-    const rank = done ? '✓' : route.filter(item => item.status === 'Ativa').findIndex(item => item.id === debt.id) + 1;
-    const canReorder = state.selectedTrailDebtSort === 'trail' && !done;
-    const dragAttrs = canReorder ? 'draggable="true" ondragstart="window.startRouteDrag(event, \'' + debt.id + '\')" ondragover="window.routeDragOver(event, \'' + debt.id + '\')" ondrop="window.dropRouteDebt(event, \'' + debt.id + '\')" ondragend="window.endRouteDrag()"' : 'draggable="false"';
-    const reorderActions = canReorder
-      ? '<button class="ghost-btn subtle" onclick="window.moveDebtInTrail(\'' + debt.id + '\', -1)">↑</button><button class="ghost-btn subtle" onclick="window.moveDebtInTrail(\'' + debt.id + '\', 1)">↓</button>'
-      : '';
-    const dragTitle = done ? 'Dívida concluída' : state.selectedTrailDebtSort === 'trail' ? 'Arrastar para reordenar' : 'Reordenação manual disponível em Ordem da Rota';
-    return '<div class="route-item' + (done ? ' done' : '') + (current ? ' current' : '') + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" ' + dragAttrs + '>' +
-      '<button class="drag-handle" title="' + dragTitle + '"' + (canReorder ? '' : ' disabled') + '>⋮⋮</button>' +
-      '<div class="route-rank">' + rank + '</div>' +
-      '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name clickable" onclick="window.toggleDebt(\'' + debt.id + '\')">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt, current) + '</div></div></div>' +
-      routeProgressHtml(progressValue) +
-      '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
-      '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
-      '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
-      '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
-      '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
-      '<div class="route-actions">' + reorderActions + '<button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
-      (isExpanded ? debtExpandedDetail(debt) : '') +
+  let roadHtml = '';
+
+  if (route.length) {
+    roadHtml += '<div class="route-panel"><div class="route-list">' + route.map((debt, index) => {
+      const balance = debtBalance(debt);
+      const done = balance === 0;
+      const current = !done && debt.id === next?.id;
+      const isExpanded = state.expandedDebtId === debt.id;
+      const nextItem = nextInstallment(debt);
+      const nextLabel = nextItem ? formatDateBR(nextItem.dueDate) : 'Sem parcela';
+      const progressValue = done ? 100 : debtProgress(debt);
+      const rank = done ? '✓' : route.filter(item => item.status === 'Ativa').findIndex(item => item.id === debt.id) + 1;
+      const canReorder = state.selectedTrailDebtSort === 'trail' && !done;
+      const dragAttrs = canReorder ? 'draggable="true" ondragstart="window.startRouteDrag(event, \'' + debt.id + '\')" ondragover="window.routeDragOver(event, \'' + debt.id + '\')" ondrop="window.dropRouteDebt(event, \'' + debt.id + '\')" ondragend="window.endRouteDrag()"' : 'draggable="false"';
+      const reorderActions = canReorder
+        ? '<button class="ghost-btn subtle" onclick="window.moveDebtInTrail(\'' + debt.id + '\', -1)">↑</button><button class="ghost-btn subtle" onclick="window.moveDebtInTrail(\'' + debt.id + '\', 1)">↓</button>'
+        : '';
+      const dragTitle = done ? 'Dívida concluída' : state.selectedTrailDebtSort === 'trail' ? 'Arrastar para reordenar' : 'Reordenação manual disponível em Ordem da Rota';
+      return '<div class="route-item' + (done ? ' done' : '') + (current ? ' current' : '') + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" ' + dragAttrs + '>' +
+        '<button class="drag-handle" title="' + dragTitle + '"' + (canReorder ? '' : ' disabled') + '>⋮⋮</button>' +
+        '<div class="route-rank">' + rank + '</div>' +
+        '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name clickable" onclick="window.toggleDebt(\'' + debt.id + '\')">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt, current) + '</div></div></div>' +
+        routeProgressHtml(progressValue) +
+        '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
+        '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
+        '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
+        '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
+        '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
+        '<div class="route-actions">' + reorderActions + '<button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
+        (isExpanded ? debtExpandedDetail(debt) : '') +
+      '</div>';
+    }).join('') + '</div></div>';
+  }
+
+  if (consignadoRoute.length) {
+    const consignadoTotal = consignadoRoute.reduce((sum, d) => sum + Number(d.installmentValue || 0), 0);
+    roadHtml += '<div class="consignado-section">' +
+      '<div class="consignado-section-head">' +
+        '<div>' +
+          '<div class="consignado-section-title">Consignados · Descontados em folha</div>' +
+          '<div class="consignado-section-sub">Já deduzidos do salário líquido — não entram no compromisso mensal</div>' +
+        '</div>' +
+        '<div class="consignado-section-total"><span>Total em folha</span><strong>' + brl(consignadoTotal) + '/mês</strong></div>' +
+      '</div>' +
+      '<div class="route-panel consignado-panel"><div class="route-list">' +
+      consignadoRoute.map(debt => {
+        const balance = debtBalance(debt);
+        const isExpanded = state.expandedDebtId === debt.id;
+        const nextItem = nextInstallment(debt);
+        const nextLabel = nextItem ? formatDateBR(nextItem.dueDate) : 'Sem parcela';
+        const progressValue = balance === 0 ? 100 : debtProgress(debt);
+        return '<div class="route-item consignado' + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" draggable="false">' +
+          '<button class="drag-handle" disabled>⋮⋮</button>' +
+          '<div class="route-rank consignado-rank">CLT</div>' +
+          '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name clickable" onclick="window.toggleDebt(\'' + debt.id + '\')">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt, false) + '</div></div></div>' +
+          routeProgressHtml(progressValue) +
+          '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
+          '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
+          '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
+          '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
+          '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
+          '<div class="route-actions"><button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
+          (isExpanded ? debtExpandedDetail(debt) : '') +
+        '</div>';
+      }).join('') +
+      '</div></div>' +
     '</div>';
-  }).join('') + '</div></div>';
+  }
+
+  road.innerHTML = roadHtml;
 }
 
 // --- Ordenação ---

@@ -2972,6 +2972,16 @@ select {
 .paid-difference.neutral strong { color: var(--muted); }
 .route-item .debt-detail { grid-column: 1 / -1; margin: 4px -14px -12px; }
 .ghost-btn.subtle { width: 32px; height: 32px; padding: 0; color: var(--muted); }
+.consignado-section { margin-top: 24px; }
+.consignado-section-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 20px; background: #eef2f9; border: 1px solid #cdd7ea; border-bottom: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; }
+.consignado-panel { border-radius: 0 0 var(--radius-lg) var(--radius-lg); border-color: #cdd7ea; }
+.consignado-section-title { font-weight: 750; font-size: 15px; color: #1e3a6e; }
+.consignado-section-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.consignado-section-total { text-align: right; white-space: nowrap; }
+.consignado-section-total span { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+.consignado-section-total strong { font-size: 17px; color: #1e3a6e; }
+.route-item.consignado { background: linear-gradient(90deg, #f0f4fb, #f5f8fd); }
+.route-rank.consignado-rank { background: #dce6f5; border-color: rgba(60,100,170,0.3); color: #1e3a6e; font-size: 9px; font-weight: 800; letter-spacing: 0.04em; }
 
 /* ── Buttons in debt context ── */
 .danger-btn { color: #9b2f2f; border-color: rgba(216,100,100,0.28); }

@@ -6,11 +6,12 @@ export function renderDashboard() {
   const active = state.debts.filter(d => d.status === 'Ativa');
   const waiting = state.debts.filter(d => d.status === 'Em espera');
   const activeIds = new Set(active.map(d => d.id));
+  const activeNonConsignadoIds = new Set(active.filter(d => !d.isConsignado).map(d => d.id));
   const totalActive = active.reduce((sum, d) => sum + debtBalance(d), 0);
   const totalWaiting = waiting.reduce((sum, d) => sum + debtBalance(d), 0);
   const month = currentMonthKey();
   const monthInstallments = state.installments
-    .filter(i => isOpenInstallment(i) && String(i.dueDate || '').startsWith(month) && activeIds.has(i.debtId))
+    .filter(i => isOpenInstallment(i) && String(i.dueDate || '').startsWith(month) && activeNonConsignadoIds.has(i.debtId))
     .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
   const monthCommitment = monthInstallments.reduce((sum, i) => sum + Number(i.expectedValue || 0), 0);
   const openInstallments = state.installments
