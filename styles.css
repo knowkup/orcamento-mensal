@@ -1029,7 +1029,7 @@ button.hero-card:hover { background: #f5f7fa; }
 
 .acc-chart-area {
   position: relative;
-  height: 150px;
+  height: 260px;
 }
 
 .acc-svg {
@@ -1040,9 +1040,124 @@ button.hero-card:hover { background: #f5f7fa; }
 }
 
 .acc-zero-line {
+  stroke: #8fa3b8;
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+}
+
+.acc-grid-line {
   stroke: var(--line);
-  stroke-width: 1.5;
-  stroke-dasharray: 5 4;
+  stroke-width: 1;
+  stroke-dasharray: none;
+}
+
+.acc-danger-band {
+  fill: rgba(216, 100, 100, 0.07);
+}
+
+.acc-safe-band {
+  fill: rgba(63, 185, 133, 0.04);
+}
+
+.acc-y-label {
+  position: absolute;
+  left: 0;
+  width: 46px;
+  transform: translateY(-50%);
+  text-align: right;
+  padding-right: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted);
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.acc-tooltip {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 14px));
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 168px;
+  box-shadow: 0 8px 24px rgba(13, 32, 56, 0.13);
+  pointer-events: none;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acc-tooltip strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.acc-tooltip small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.acc-tooltip em {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+.chart-segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-soft);
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+
+.chart-seg-btn {
+  min-width: 72px;
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+}
+
+.chart-seg-btn.chart-seg-active {
+  background: var(--surface);
+  color: var(--teal);
+  box-shadow: 0 3px 10px rgba(13, 32, 56, 0.1);
+}
+
+.chart-panel-copy {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.acc-chart-hint-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: italic;
 }
 
 .acc-area {

@@ -2,6 +2,8 @@ import { state, el, currency } from "./state.js";
 import { nextMonths, currentMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
 
 let _expandedSummaryMonth = null;
+let _chartPeriod = 6;
+let _periodSelectorReady = false;
 import { calcNetClt } from "./taxes.js";
 import { getCreditorName, getInstallmentCard, ownerRank } from "./creditors.js";
 import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from "./components.js";
@@ -15,7 +17,7 @@ export function renderProjection() {
   const rows = buildProjectionRows(months, true);
   const totals = buildTotals(rows, months);
 
-  _renderKpis(totals);
+  _initPeriodSelector();
   renderPlanningChart(totals, months);
   _renderEvents(totals, months, rows);
   _renderMonthlySummary(totals, months, rows);
@@ -291,24 +293,66 @@ function projectionCell(row, month) {
   return `<td><span class="${className}">${sign}${currency.format(displayValue)}</span>${status}</td>`;
 }
 
+function _initPeriodSelector() {
+  if (_periodSelectorReady) return;
+  _periodSelectorReady = true;
+  document.querySelectorAll("[data-chart-period]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      _chartPeriod = parseInt(btn.dataset.chartPeriod, 10);
+      document.querySelectorAll("[data-chart-period]").forEach((b) =>
+        b.classList.toggle("chart-seg-active", b === btn)
+      );
+      const m12 = currentMonths(12);
+      const r12 = buildProjectionRows(m12, true);
+      const t12 = buildTotals(r12, m12);
+      renderPlanningChart(t12, m12);
+    });
+  });
+}
+
 export function renderPlanningChart(totals, months) {
-  const accValues = totals.map((t) => t.accumulated);
-  const minVal = Math.min(0, ...accValues);
-  const maxVal = Math.max(0, ...accValues);
-  const range = Math.max(1, maxVal - minVal);
+  const chartTotals = totals.slice(0, _chartPeriod);
+  const accValues = chartTotals.map((t) => t.accumulated);
 
-  // SVG viewport
+  const Y_MIN = Math.min(-3000, ...accValues);
+  const Y_MAX = Math.max(20000, ...accValues);
+  const yRange = Y_MAX - Y_MIN;
+
   const W = 960;
-  const SVG_H = 150;
-  const PAD_T = 22; const PAD_B = 10;
-  const chartH = SVG_H - PAD_T - PAD_B;
-  const n = totals.length;
+  const SVG_H = 260;
+  const LEFT = 50;
+  const RIGHT = 16;
+  const TOP = 18;
+  const BOTTOM = 36;
+  const chartW = W - LEFT - RIGHT;
+  const chartH = SVG_H - TOP - BOTTOM;
+  const n = chartTotals.length;
 
-  const xPos = (i) => (i + 0.5) * (W / n);
-  const yPos = (v) => PAD_T + (1 - (v - minVal) / range) * chartH;
+  const xPos = (i) => LEFT + (i + 0.5) * (chartW / n);
+  const yPos = (v) => TOP + (1 - (v - Y_MIN) / yRange) * chartH;
   const zeroY = yPos(0);
 
-  const pts = totals.map((t, i) => [xPos(i), yPos(t.accumulated)]);
+  const yTicks = [-3000, 0, 5000, 10000, 15000, 20000].filter((v) => v >= Y_MIN - 1 && v <= Y_MAX + 1);
+
+  const gridHtml = yTicks.map((v) => {
+    const y = yPos(v).toFixed(1);
+    if (v === 0) return `<line x1="${LEFT}" y1="${y}" x2="${W - RIGHT}" y2="${y}" class="acc-zero-line"/>`;
+    return `<line x1="${LEFT}" y1="${y}" x2="${W - RIGHT}" y2="${y}" class="acc-grid-line"/>`;
+  }).join("");
+
+  const dangerTopY = Math.max(TOP, zeroY);
+  const dangerH = (TOP + chartH) - dangerTopY;
+  const dangerBand = dangerH > 0
+    ? `<rect x="${LEFT}" y="${dangerTopY.toFixed(1)}" width="${chartW}" height="${dangerH.toFixed(1)}" class="acc-danger-band"/>`
+    : "";
+
+  const safeBottomY = Math.min(TOP + chartH, zeroY);
+  const safeH = safeBottomY - TOP;
+  const safeBand = safeH > 0
+    ? `<rect x="${LEFT}" y="${TOP}" width="${chartW}" height="${safeH.toFixed(1)}" class="acc-safe-band"/>`
+    : "";
+
+  const pts = chartTotals.map((t, i) => [xPos(i), yPos(t.accumulated)]);
   const lineD = pts.map((p, i) => `${i === 0 ? "M" : "L"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   const areaD = [
     `M${pts[0][0].toFixed(1)},${zeroY.toFixed(1)}`,
@@ -316,19 +360,15 @@ export function renderPlanningChart(totals, months) {
     `L${pts[pts.length - 1][0].toFixed(1)},${zeroY.toFixed(1)}Z`
   ].join(" ");
 
-  const hasNeg = minVal < 0;
-  const areaClass = hasNeg ? "acc-area-neg" : "acc-area-pos";
-
-  const dotsHtml = totals.map((t, i) => {
+  const dotsHtml = chartTotals.map((t, i) => {
     const x = xPos(i).toFixed(1);
     const y = yPos(t.accumulated).toFixed(1);
     const activeClass = _expandedSummaryMonth === t.month ? " acc-dot-active" : "";
     const posClass = t.accumulated >= 0 ? " acc-dot-pos" : " acc-dot-neg";
-    return `<circle class="acc-dot${posClass}${activeClass}" cx="${x}" cy="${y}" r="5.5" data-month="${t.month}"><title>${formatMonthLong(t.month)}: ${currency.format(t.accumulated)}</title></circle>`;
+    return `<circle class="acc-dot${posClass}${activeClass}" cx="${x}" cy="${y}" r="5.5" data-chart-month="${t.month}" data-value="${t.accumulated}"/>`;
   }).join("");
 
-  // Value labels positioned by percentage (works with preserveAspectRatio="none")
-  const valLabels = totals.map((t, i) => {
+  const valLabels = chartTotals.map((t, i) => {
     const xPct = (xPos(i) / W * 100).toFixed(2);
     const yPct = (yPos(t.accumulated) / SVG_H * 100).toFixed(2);
     const cls = t.accumulated >= 0 ? "acc-val-pos" : "acc-val-neg";
@@ -336,19 +376,36 @@ export function renderPlanningChart(totals, months) {
     return `<span class="acc-val-lbl ${cls}${active}" style="left:${xPct}%;top:${yPct}%">${currency.format(t.accumulated)}</span>`;
   }).join("");
 
+  const yAxisHtml = yTicks.map((v) => {
+    const yPct = (yPos(v) / SVG_H * 100).toFixed(2);
+    const label = v === 0 ? "0" : v < 0 ? `-${Math.abs(v / 1000)}k` : `${v / 1000}k`;
+    return `<span class="acc-y-label" style="top:${yPct}%">${label}</span>`;
+  }).join("");
+
   el.planningChart.innerHTML = `
     <div class="acc-chart-wrap">
       <div class="acc-chart-area">
         <svg class="acc-svg" viewBox="0 0 ${W} ${SVG_H}" preserveAspectRatio="none" aria-hidden="true">
-          <line x1="0" y1="${zeroY.toFixed(1)}" x2="${W}" y2="${zeroY.toFixed(1)}" class="acc-zero-line"/>
-          <path d="${areaD}" class="acc-area ${areaClass}"/>
+          <defs>
+            <linearGradient id="accAreaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--blue)" stop-opacity=".14"/>
+              <stop offset="65%" stop-color="var(--blue)" stop-opacity=".03"/>
+              <stop offset="100%" stop-color="var(--red)" stop-opacity=".08"/>
+            </linearGradient>
+          </defs>
+          ${dangerBand}
+          ${safeBand}
+          ${gridHtml}
+          <path d="${areaD}" fill="url(#accAreaGrad)"/>
           <path d="${lineD}" class="acc-line"/>
           ${dotsHtml}
         </svg>
+        ${yAxisHtml}
         ${valLabels}
+        <div class="acc-tooltip" id="accTooltip" hidden></div>
       </div>
       <div class="acc-months-row">
-        ${totals.map((t) => {
+        ${chartTotals.map((t) => {
           const active = _expandedSummaryMonth === t.month ? " acc-lbl-active" : "";
           const neg = t.accumulated < 0 ? " negative" : "";
           const [y, m] = t.month.split("-").map(Number);
@@ -358,9 +415,39 @@ export function renderPlanningChart(totals, months) {
         }).join("")}
       </div>
     </div>
-    <p class="acc-chart-hint">Clique em um mês no gráfico ou na tabela para ver os detalhes</p>
+    <p class="acc-chart-hint-row">
+      <span>Passe o mouse nos pontos para ver o saldo do mês.</span>
+      <span>Clique em um mês para expandir o resumo abaixo.</span>
+    </p>
   `;
 
+  // Sync period selector active state
+  document.querySelectorAll("[data-chart-period]").forEach((b) =>
+    b.classList.toggle("chart-seg-active", parseInt(b.dataset.chartPeriod, 10) === _chartPeriod)
+  );
+
+  // Tooltip on dot hover
+  const tooltipEl = document.getElementById("accTooltip");
+  el.planningChart.querySelectorAll(".acc-dot").forEach((circle) => {
+    circle.addEventListener("mouseenter", () => {
+      const month = circle.dataset.chartMonth;
+      const value = parseFloat(circle.dataset.value);
+      tooltipEl.innerHTML = `
+        <strong>${formatMonthLong(month)}</strong>
+        <small>Saldo projetado</small>
+        <strong class="${value >= 0 ? "positive" : "negative"}">${currency.format(value)}</strong>
+        <em>Clique para abrir o mês</em>
+      `;
+      const cxPct = (parseFloat(circle.getAttribute("cx")) / W * 100).toFixed(2);
+      const cyPct = (parseFloat(circle.getAttribute("cy")) / SVG_H * 100).toFixed(2);
+      tooltipEl.style.left = cxPct + "%";
+      tooltipEl.style.top = cyPct + "%";
+      tooltipEl.hidden = false;
+    });
+    circle.addEventListener("mouseleave", () => { tooltipEl.hidden = true; });
+  });
+
+  // Click — toggle month expansion and scroll to summary
   el.planningChart.querySelectorAll("[data-chart-month]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const month = btn.dataset.chartMonth;

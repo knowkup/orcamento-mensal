@@ -120,13 +120,17 @@
           </header>
 
         <section class="view active" id="planejamentoView" data-title="Planejamento" data-eyebrow="Orçamento Mensal">
-          <div class="proj-kpis" id="monthSummary"></div>
-
           <section class="panel chart-panel">
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Saldo acumulado projetado</p>
-                <h2>Evolução dos próximos 12 meses</h2>
+                <h2>Evolução do caixa</h2>
+                <p class="chart-panel-copy">Escala em milhares de reais. A linha zero marca o limite que você não quer cruzar.</p>
+              </div>
+              <div class="chart-segmented">
+                <button type="button" class="chart-seg-btn" data-chart-period="3">3 meses</button>
+                <button type="button" class="chart-seg-btn chart-seg-active" data-chart-period="6">6 meses</button>
+                <button type="button" class="chart-seg-btn" data-chart-period="12">12 meses</button>
               </div>
             </div>
             <div class="planning-chart" id="planningChart"></div>
