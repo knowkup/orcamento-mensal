@@ -3024,11 +3024,18 @@ select {
 
 /* ── Responsive (debt components) ── */
 @media (max-width: 1550px) {
-  .route-item {
+  .route-item:not(.paid-route-item) {
     grid-template-columns: 24px 38px minmax(160px, 1.22fr) minmax(90px, 0.48fr) minmax(100px, 0.58fr) minmax(85px, 0.48fr) minmax(100px, 0.58fr) minmax(90px, 0.48fr);
   }
-  .route-item .route-progress,
-  .route-item .payoff-stat { display: none; }
+  .route-item:not(.paid-route-item) .route-progress,
+  .route-item:not(.paid-route-item) .payoff-stat { display: none; }
+  .paid-route-item {
+    grid-template-columns: 38px minmax(150px, 1.22fr) minmax(90px, 0.6fr) minmax(90px, 0.6fr) minmax(100px, 0.72fr) minmax(90px, 0.54fr) minmax(70px, 0.36fr);
+  }
+  .next-target-card {
+    grid-template-columns: minmax(200px, 1.45fr) minmax(120px, 0.62fr) repeat(4, minmax(85px, 0.42fr));
+  }
+  .next-target-card .payoff-stat { display: none; }
 }
 
 @media (max-width: 1180px) {
@@ -3045,7 +3052,8 @@ select {
   .debt-insights { grid-template-columns: 1fr; }
   .route-summary { grid-template-columns: minmax(0, 1fr); }
   .route-summary-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-  .next-target-card { grid-template-columns: minmax(280px, 1fr) minmax(180px, 0.8fr) repeat(3, minmax(120px, 0.55fr)); }
+  .next-target-card { grid-template-columns: minmax(160px, 1fr) repeat(4, minmax(80px, 0.5fr)); }
+  .next-target-card .route-progress, .next-target-card .payoff-stat { display: none; }
   .route-item { grid-template-columns: 24px 38px minmax(0, 1fr); gap: 10px; align-items: start; }
   .paid-route-item { grid-template-columns: 38px minmax(0, 1fr); }
   .route-item .route-progress, .route-stat, .route-status, .route-actions { grid-column: 3; }
