@@ -1,9 +1,9 @@
-import { state, el, currency } from "./state.js";
-import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, isIncomeReceived, receivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "./utils.js";
-import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCreditorName } from "./creditors.js";
-import { metric, isManualPlannedRow } from "./components.js";
-import { buildProjectionRows, uniqueGroups, groupKey } from "./planejamento.js";
-import { markDebtInstallmentPaid } from "./dividas/boot.js";
+import { state, el, currency } from "../state.js";
+import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, isIncomeReceived, receivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "../utils.js";
+import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCreditorName } from "../creditors.js";
+import { metric, isManualPlannedRow } from "../components.js";
+import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
+import { markDebtInstallmentPaid } from "../dividas/boot.js";
 
 function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;

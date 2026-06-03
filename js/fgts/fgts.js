@@ -1,7 +1,7 @@
-import { state, el, currency } from "./state.js";
-import { escapeHtml, icon, formatDate, formatCurrencyInput, parseCurrencyInput, todayIsoDate, nextAnnualDate, addYearsToDate, bindMoneyInputs, showToast, refreshIcons } from "./utils.js";
-import { creditorLogoHtml, getCreditorName } from "./creditors.js";
-import { metric, metaBox, debtTabs } from "./components.js";
+import { state, el, currency } from "../state.js";
+import { escapeHtml, icon, formatDate, formatCurrencyInput, parseCurrencyInput, todayIsoDate, nextAnnualDate, addYearsToDate, bindMoneyInputs, showToast, refreshIcons } from "../utils.js";
+import { creditorLogoHtml, getCreditorName } from "../creditors.js";
+import { metric, metaBox, debtTabs } from "../components.js";
 
 export function normalizeFgtsContract(contract) {
   const total = Number(contract.totalInstallments || contract.installments?.length || 1);

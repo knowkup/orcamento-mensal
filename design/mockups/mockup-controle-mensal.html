@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Controle Mensal</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0d2038;
+    --muted: #6b7a8d;
+    --border: #e4e9f0;
+    --surface: #ffffff;
+    --bg: #f2f5f9;
+    --blue: #2563eb;
+    --green: #1e9e5c;
+    --red: #c0392b;
+    --gold: #b45309;
+    --radius: 10px;
+    --radius-lg: 16px;
+    --shadow: 0 2px 12px rgba(13,32,56,0.07);
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 32px;
+  }
+
+  /* ── Page header ── */
+  .page-header {
+    margin-bottom: 24px;
+  }
+  .page-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 4px;
+  }
+  .page-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  /* ── Month pill ── */
+  .month-pill-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 14px;
+  }
+  .month-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 13px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1.5px solid #1e9e5c;
+    color: #1e9e5c;
+    background: #f0fdf6;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* ── Hero cards ── */
+  .hero-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: var(--shadow);
+    max-width: 780px;
+  }
+  .hero-card {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px 26px;
+    background: var(--surface);
+  }
+  .hero-card.now {
+    border-right: 1px solid var(--border);
+  }
+  .hero-card.closing-neg { background: #fff8f8; }
+  .hero-card.closing-pos { background: #f6fdf8; }
+
+  .hero-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hero-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .hero-sublabel {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .hero-sublabel:hover { color: var(--blue); }
+  .hero-sublabel svg { width: 11px; height: 11px; opacity: 0.7; }
+  .hero-value {
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .hero-value.positive { color: var(--green); }
+  .hero-value.negative { color: var(--red); }
+  .hero-desc {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: -6px;
+  }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .tool-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink);
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: background 0.15s;
+  }
+  .tool-btn:hover { background: #f0f4fb; }
+  .tool-btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tool-btn.primary:hover { background: #1a3050; }
+  .tool-btn svg { width: 16px; height: 16px; }
+
+  /* ── Monthly section ── */
+  .monthly-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  /* Section divider header */
+  .section-divider {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 18px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-divider-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .section-divider-total {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .section-divider-total.positive { color: var(--green); }
+  .section-divider-total.negative { color: var(--red); }
+
+  /* ── List items — replica fiel do app ── */
+  .monthly-item {
+    display: grid;
+    grid-template-columns: minmax(200px,1.4fr) minmax(100px,0.6fr) minmax(90px,0.5fr) minmax(70px,0.4fr) auto auto;
+    gap: 14px;
+    align-items: center;
+    padding: 13px 18px;
+    border-bottom: 1px solid var(--border);
+  }
+  .monthly-item:last-child { border-bottom: none; }
+
+  .entity-cell { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .item-logo {
+    width: 44px; height: 44px; flex-shrink: 0;
+    border-radius: 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: var(--muted);
+    overflow: hidden;
+  }
+  .item-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .item-info { min-width: 0; }
+  .item-name { font-size: 14px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+  .monthly-field { display: flex; flex-direction: column; gap: 2px; }
+  .monthly-field span { font-size: 11px; color: var(--muted); font-weight: 500; }
+  .monthly-field strong { font-size: 13px; font-weight: 700; color: var(--ink); }
+
+  .item-action-cell { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+  .item-value { font-size: 14px; font-weight: 700; white-space: nowrap; }
+  .item-value.positive { color: var(--green); }
+  .item-value.negative { color: var(--red); }
+
+  .action-btn {
+    padding: 5px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    font-size: 12px; font-weight: 700;
+    cursor: pointer; color: var(--ink);
+    white-space: nowrap;
+  }
+  .action-btn.income { border-color: rgba(30,158,92,0.4); color: var(--green); }
+  .action-btn.expense { border-color: rgba(192,57,43,0.3); color: var(--red); }
+
+  .chevron-btn {
+    width: 30px; height: 30px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 7px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); cursor: pointer;
+  }
+  .chevron-btn svg { width: 14px; height: 14px; }
+  .chevron-placeholder { width: 30px; }
+
+  /* Trash icon button (realized) */
+  .trash-btn {
+    width: 30px; height: 30px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 7px;
+    border: 1px solid rgba(192,57,43,0.3);
+    background: #fff5f5;
+    color: var(--red);
+    cursor: pointer;
+  }
+  .trash-btn svg { width: 14px; height: 14px; }
+
+  /* ── Nav header ── */
+  .nav-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .nav-header-text .eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .nav-header-text h2 {
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .nav-arrows { display: flex; gap: 6px; }
+  .nav-arrow {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    color: var(--muted);
+    box-shadow: var(--shadow);
+  }
+  .nav-arrow:hover { background: var(--bg); color: var(--ink); }
+  .nav-arrow svg { width: 14px; height: 14px; }
+
+  /* comparison label */
+  .compare-note {
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    margin-bottom: 20px;
+    font-style: italic;
+  }
+  .compare-note span { color: var(--ink); font-weight: 600; font-style: normal; }
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="page-eyebrow">Orçamento Mensal</div>
+  <div class="page-title">Controle Mensal</div>
+</div>
+
+<!-- Month pill -->
+<div class="month-pill-wrap">
+  <span class="month-status-pill">
+    <span class="status-dot"></span>
+    Junho de 2026 · Em andamento
+  </span>
+</div>
+
+<!-- Hero cards -->
+<div class="hero-row">
+  <div class="hero-card now">
+    <div class="hero-head">
+      <span class="hero-eyebrow">Agora</span>
+      <span class="hero-sublabel" title="Editar saldo">Saldo em conta <i data-lucide="pencil"></i></span>
+    </div>
+    <span class="hero-value positive">R$ 2.084,37</span>
+  </div>
+  <div class="hero-card closing-neg">
+    <div class="hero-head">
+      <span class="hero-eyebrow">Projeção</span>
+      <span class="hero-sublabel">Saldo projetado do mês</span>
+    </div>
+    <span class="hero-value negative">-R$ 969,44</span>
+    <span class="hero-desc">Após entradas e saídas pendentes</span>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <button class="tool-btn primary" title="Novo lançamento">
+    <i data-lucide="calendar-plus"></i>
+  </button>
+  <button class="tool-btn" title="Fechar mês">
+    <i data-lucide="calendar-check"></i>
+  </button>
+</div>
+
+<!-- Nav header -->
+<div class="nav-header">
+  <div class="nav-header-text">
+    <div class="eyebrow">Mês atual</div>
+    <h2>Receber e pagar o previsto</h2>
+  </div>
+  <div class="nav-arrows">
+    <button class="nav-arrow"><i data-lucide="chevron-left"></i></button>
+    <button class="nav-arrow"><i data-lucide="chevron-right"></i></button>
+  </div>
+</div>
+
+<!-- Entradas previstas -->
+<div class="monthly-section">
+  <div class="section-divider">
+    <span class="section-divider-label">Entradas previstas</span>
+    <span class="section-divider-total positive">R$ 13.380,13</span>
+  </div>
+
+  <div class="monthly-item">
+    <div class="entity-cell">
+      <div class="item-logo">ATP</div>
+      <div class="item-info"><div class="item-name">Salário ATP</div><div class="item-sub">ATP</div></div>
+    </div>
+    <div class="monthly-field"><span>Recebimento</span><strong>05/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong>Pendente</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value positive">R$ 10.080,13</span><button class="action-btn income">Receber</button></div>
+    <div class="chevron-placeholder"></div>
+  </div>
+
+  <div class="monthly-item">
+    <div class="entity-cell">
+      <div class="item-logo">🏠</div>
+      <div class="item-info"><div class="item-name">Aula Uniplac</div><div class="item-sub">Outros</div></div>
+    </div>
+    <div class="monthly-field"><span>Recebimento</span><strong>25/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong>Pendente</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value positive">R$ 3.300,00</span><button class="action-btn income">Receber</button></div>
+    <button class="chevron-btn"><i data-lucide="chevron-down"></i></button>
+  </div>
+</div>
+
+<!-- Saídas previstas -->
+<div class="monthly-section">
+  <div class="section-divider">
+    <span class="section-divider-label">Saídas previstas</span>
+    <span class="section-divider-total negative">-R$ 16.433,94</span>
+  </div>
+
+  <div class="monthly-item">
+    <div class="entity-cell">
+      <div class="item-logo">IN</div>
+      <div class="item-info"><div class="item-name">Pix Parcelado (Káh)</div><div class="item-sub">Banco Inter</div></div>
+    </div>
+    <div class="monthly-field"><span>Vencimento</span><strong>05/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong>Pendente</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value negative">-R$ 667,13</span><button class="action-btn expense">Pagar</button></div>
+    <div class="chevron-placeholder"></div>
+  </div>
+
+  <div class="monthly-item">
+    <div class="entity-cell">
+      <div class="item-logo">💧</div>
+      <div class="item-info"><div class="item-name">Água e Esgoto</div><div class="item-sub">Semae</div></div>
+    </div>
+    <div class="monthly-field"><span>Vencimento</span><strong>05/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong>Pendente</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value negative">-R$ 172,70</span><button class="action-btn expense">Pagar</button></div>
+    <button class="chevron-btn"><i data-lucide="chevron-down"></i></button>
+  </div>
+
+  <div class="monthly-item">
+    <div class="entity-cell">
+      <div class="item-logo">CL</div>
+      <div class="item-info"><div class="item-name">Claro/NET</div><div class="item-sub">Itaú</div></div>
+    </div>
+    <div class="monthly-field"><span>Vencimento</span><strong>10/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong>Pendente</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value negative">-R$ 193,28</span><button class="action-btn expense">Pagar</button></div>
+    <div class="chevron-placeholder"></div>
+  </div>
+</div>
+
+<!-- Realizado no mês -->
+<div class="monthly-section">
+  <div class="section-divider">
+    <span class="section-divider-label">Realizado no mês</span>
+    <span class="section-divider-total positive">R$ 1.191,46</span>
+  </div>
+
+  <div class="monthly-item" style="background:#fafcff;">
+    <div class="entity-cell">
+      <div class="item-logo">🏠</div>
+      <div class="item-info"><div class="item-name" style="color:var(--muted);font-weight:500;">Ar Condicionado/Compras</div><div class="item-sub">Outros</div></div>
+    </div>
+    <div class="monthly-field"><span>Recebimento</span><strong>01/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong style="color:var(--green);">Recebido</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value positive">R$ 217,47</span><button class="trash-btn" title="Cancelar recebimento"><i data-lucide="trash-2"></i></button></div>
+    <div class="chevron-placeholder"></div>
+  </div>
+
+  <div class="monthly-item" style="background:#fafcff;">
+    <div class="entity-cell">
+      <div class="item-logo">🏠</div>
+      <div class="item-info"><div class="item-name" style="color:var(--muted);font-weight:500;">Aluguel Matheus</div><div class="item-sub">Aluguel Ap. 02</div></div>
+    </div>
+    <div class="monthly-field"><span>Recebimento</span><strong>01/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong style="color:var(--green);">Recebido</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value positive">R$ 900,00</span><button class="trash-btn" title="Cancelar recebimento"><i data-lucide="trash-2"></i></button></div>
+    <div class="chevron-placeholder"></div>
+  </div>
+
+  <div class="monthly-item" style="background:#fafcff;">
+    <div class="entity-cell">
+      <div class="item-logo">IT</div>
+      <div class="item-info"><div class="item-name" style="color:var(--muted);font-weight:500;">Claro/NET</div><div class="item-sub">Itaú</div></div>
+    </div>
+    <div class="monthly-field"><span>Vencimento</span><strong>10/06/2026</strong></div>
+    <div class="monthly-field"><span>Status</span><strong style="color:var(--muted);">Pago</strong></div>
+    <div class="monthly-field"><span>Contas</span><strong>1</strong></div>
+    <div class="item-action-cell"><span class="item-value negative">-R$ 193,28</span><button class="trash-btn" title="Excluir pagamento"><i data-lucide="trash-2"></i></button></div>
+    <div class="chevron-placeholder"></div>
+  </div>
+</div>
+
+<script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,6 +1,6 @@
-import { state, el, currency } from "./state.js";
-import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast } from "./utils.js";
-import { getCreditorName, creditorLogoHtml, getCreditCard } from "./creditors.js";
+import { state, el, currency } from "../state.js";
+import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast } from "../utils.js";
+import { getCreditorName, creditorLogoHtml, getCreditCard } from "../creditors.js";
 
 export function renderFixedCosts() {
   const fixedCosts = [...state.data.fixedCosts].sort((a, b) => {

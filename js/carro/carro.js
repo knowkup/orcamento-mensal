@@ -1,9 +1,9 @@
-import { state, el } from "./state.js";
-import { formatDate, formatCurrencyInput, parseCurrencyInput, todayIsoDate, nextMonths, addMonthsToDate, showToast } from "./utils.js";
-import { getCreditorName, creditorLogoHtml } from "./creditors.js";
-import { metric, carDebtCard, carInstallmentEconomy, carProgress } from "./components.js";
-import { applyCashMovement } from "./controle.js";
-import { carPaymentMonth } from "./planejamento.js";
+import { state, el } from "../state.js";
+import { formatDate, formatCurrencyInput, parseCurrencyInput, todayIsoDate, nextMonths, addMonthsToDate, showToast } from "../utils.js";
+import { getCreditorName, creditorLogoHtml } from "../creditors.js";
+import { metric, carDebtCard, carInstallmentEconomy, carProgress } from "../components.js";
+import { applyCashMovement } from "../controle/controle.js";
+import { carPaymentMonth } from "../planejamento/planejamento.js";
 
 export function renderCar() {
   ensureCarPayments();

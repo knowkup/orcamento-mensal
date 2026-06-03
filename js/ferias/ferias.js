@@ -1,9 +1,9 @@
-import { state, el, currency } from "./state.js";
-import { parseCurrencyInput, formatCurrencyInput, nextMonths, escapeHtml, formatMonth, addMonthsToDate, icon, refreshIcons } from "./utils.js";
-import { calcInss, calcIrrf } from "./taxes.js";
-import { normalizedIncomeChanges } from "./data.js";
-import { openPlannedDialog } from "./controle.js";
-import { upsertIncomeChange, latestIncomeChange } from "./planejamento.js";
+import { state, el, currency } from "../state.js";
+import { parseCurrencyInput, formatCurrencyInput, nextMonths, escapeHtml, formatMonth, addMonthsToDate, icon, refreshIcons } from "../utils.js";
+import { calcInss, calcIrrf } from "../taxes.js";
+import { normalizedIncomeChanges } from "../data.js";
+import { openPlannedDialog } from "../controle/controle.js";
+import { upsertIncomeChange, latestIncomeChange } from "../planejamento/planejamento.js";
 
 let _mode = "ferias";
 let _prefilled = false;

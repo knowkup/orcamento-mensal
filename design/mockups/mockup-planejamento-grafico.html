@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mockup - Grafico Planejamento</title>
+<style>
+  :root {
+    --bg: #eef3f7;
+    --surface: #ffffff;
+    --surface-soft: #f3f6f9;
+    --ink: #0d2038;
+    --muted: #5d7086;
+    --line: #d4dce6;
+    --green: #3fb985;
+    --red: #d86464;
+    --blue: #4d8df7;
+    --teal: #0f766e;
+    --shadow: 0 18px 50px rgba(13, 32, 56, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 450;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-columns: 284px minmax(0, 1fr);
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    padding: 24px 18px;
+    border-right: 1px solid var(--line);
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .mark {
+    display: grid;
+    place-items: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 8px;
+    background: #06233b;
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 800;
+  }
+
+  .brand strong,
+  .brand span {
+    display: block;
+  }
+
+  .brand strong { font-size: 15px; }
+  .brand span { color: var(--muted); font-size: 12px; }
+
+  .nav-label {
+    margin: 16px 4px 6px;
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 44px;
+    border-radius: 12px;
+    padding: 0 12px;
+    color: var(--muted);
+    font-size: 14px;
+  }
+
+  .nav-item.active {
+    border: 1px solid var(--line);
+    background: rgba(13, 32, 56, .07);
+    color: var(--ink);
+  }
+
+  .workspace {
+    min-width: 0;
+    padding: 26px;
+  }
+
+  .eyebrow {
+    margin: 0 0 4px;
+    color: var(--green);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  h1 {
+    margin: 0 0 24px;
+    font-size: 34px;
+    line-height: 1.1;
+    letter-spacing: -.04em;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+    letter-spacing: -.02em;
+  }
+
+  .panel {
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.72)), var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .chart-panel {
+    margin-bottom: 16px;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 20px 24px 6px;
+  }
+
+  .chart-copy {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .segmented {
+    display: inline-flex;
+    gap: 2px;
+    padding: 3px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-soft);
+  }
+
+  .segmented button {
+    min-width: 76px;
+    min-height: 34px;
+    border: 0;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--muted);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 800;
+  }
+
+  .segmented button.active {
+    background: #ffffff;
+    color: var(--teal);
+    box-shadow: 0 7px 18px rgba(13, 32, 56, .1);
+  }
+
+  .chart-wrap {
+    position: relative;
+    padding: 12px 24px 20px;
+  }
+
+  .chart {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .axis-label {
+    fill: var(--muted);
+    font-size: 11px;
+    font-weight: 750;
+  }
+
+  .month-label {
+    fill: #40556d;
+    font-size: 11px;
+    font-weight: 750;
+  }
+
+  .month-label.active {
+    fill: var(--blue);
+    font-weight: 900;
+  }
+
+  .grid-line {
+    stroke: #dce4ec;
+    stroke-width: 1;
+  }
+
+  .zero-line {
+    stroke: #aebccb;
+    stroke-width: 1.5;
+    stroke-dasharray: 6 6;
+  }
+
+  .danger-band {
+    fill: rgba(216, 100, 100, .09);
+  }
+
+  .safe-band {
+    fill: rgba(63, 185, 133, .035);
+  }
+
+  .balance-line {
+    fill: none;
+    stroke: var(--blue);
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .area {
+    fill: url(#areaGradient);
+  }
+
+  .point {
+    stroke: #ffffff;
+    stroke-width: 4;
+  }
+
+  .point.positive { fill: var(--green); }
+  .point.negative { fill: var(--red); }
+  .point.active {
+    stroke-width: 7;
+    filter: drop-shadow(0 6px 8px rgba(77, 141, 247, .28));
+  }
+
+  .value-label {
+    font-size: 11px;
+    font-weight: 850;
+  }
+
+  .value-label.positive { fill: var(--green); }
+  .value-label.negative { fill: var(--red); }
+
+  .tooltip-card {
+    filter: drop-shadow(0 12px 24px rgba(13, 32, 56, .18));
+  }
+
+  .tooltip-title {
+    fill: var(--ink);
+    font-size: 13px;
+    font-weight: 850;
+  }
+
+  .tooltip-muted {
+    fill: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+  }
+
+  .tooltip-value {
+    fill: var(--green);
+    font-size: 15px;
+    font-weight: 900;
+  }
+
+  .chart-help {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 24px 18px 84px;
+    color: var(--muted);
+    font-size: 12px;
+    font-style: italic;
+  }
+
+  .highlights {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .highlight {
+    min-height: 78px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+    background: rgba(255,255,255,.72);
+  }
+
+  .highlight.critical {
+    border-color: rgba(216, 100, 100, .45);
+    background: rgba(216, 100, 100, .06);
+  }
+
+  .highlight strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 13px;
+  }
+
+  .highlight span {
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .workspace { padding: 18px; }
+    .panel-head { flex-direction: column; }
+    .chart-help { padding-left: 24px; }
+    .highlights { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="mark">▥</div>
+        <div>
+          <strong>Orçamento Mensal</strong>
+          <span>Controle do futuro</span>
+        </div>
+      </div>
+
+      <p class="nav-label">Orçamento</p>
+      <div class="nav-item active">▥ Planejamento</div>
+      <div class="nav-item">☑ Controle Mensal</div>
+      <div class="nav-item">▭ Parcelamentos</div>
+      <div class="nav-item">↔ Custos Fixos</div>
+      <div class="nav-item">⌁ Carro</div>
+      <div class="nav-item">▦ FGTS</div>
+    </aside>
+
+    <main class="workspace">
+      <p class="eyebrow">Orçamento Mensal</p>
+      <h1>Planejamento</h1>
+
+      <section class="panel chart-panel">
+        <header class="panel-head">
+          <div>
+            <p class="eyebrow">Saldo acumulado projetado</p>
+            <h2>Evolução do caixa</h2>
+            <div class="chart-copy">Escala em milhares de reais. A linha zero marca o limite que você não quer cruzar.</div>
+          </div>
+
+          <div class="segmented" aria-label="Periodo do grafico">
+            <button type="button">3 meses</button>
+            <button class="active" type="button">6 meses</button>
+            <button type="button">12 meses</button>
+          </div>
+        </header>
+
+        <div class="chart-wrap">
+          <svg class="chart" viewBox="0 0 980 370" role="img" aria-label="Grafico de saldo acumulado projetado">
+            <defs>
+              <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4d8df7" stop-opacity=".16"/>
+                <stop offset="62%" stop-color="#4d8df7" stop-opacity=".04"/>
+                <stop offset="100%" stop-color="#d86464" stop-opacity=".10"/>
+              </linearGradient>
+            </defs>
+
+            <!-- Plot area: x 64-946, y 28-292. Scale: -3k to 20k -->
+            <rect class="safe-band" x="64" y="28" width="882" height="230"/>
+            <rect class="danger-band" x="64" y="258" width="882" height="34"/>
+
+            <line class="grid-line" x1="64" y1="28" x2="946" y2="28"/>
+            <line class="grid-line" x1="64" y1="85" x2="946" y2="85"/>
+            <line class="grid-line" x1="64" y1="143" x2="946" y2="143"/>
+            <line class="grid-line" x1="64" y1="200" x2="946" y2="200"/>
+            <line class="zero-line" x1="64" y1="258" x2="946" y2="258"/>
+            <line class="grid-line" x1="64" y1="292" x2="946" y2="292"/>
+
+            <text class="axis-label" x="22" y="32">20k</text>
+            <text class="axis-label" x="22" y="89">15k</text>
+            <text class="axis-label" x="22" y="147">10k</text>
+            <text class="axis-label" x="28" y="204">5k</text>
+            <text class="axis-label" x="32" y="262">0</text>
+            <text class="axis-label" x="17" y="296">-3k</text>
+
+            <path class="area" d="M 86 269 L 245 270 L 404 172 L 563 92 L 722 85 L 924 28 L 924 258 L 86 258 Z"/>
+            <path class="balance-line" d="M 86 269 L 245 270 L 404 172 L 563 92 L 722 85 L 924 28"/>
+
+            <circle class="point negative" cx="86" cy="269" r="6"/>
+            <text class="value-label negative" x="54" y="252">-R$ 969</text>
+            <text class="month-label" x="50" y="326">Jun/26</text>
+
+            <circle class="point negative" cx="245" cy="270" r="6"/>
+            <text class="value-label negative" x="204" y="253">-R$ 1.056</text>
+            <text class="month-label" x="210" y="326">Jul/26</text>
+
+            <circle class="point positive active" cx="404" cy="172" r="7"/>
+            <text class="value-label positive" x="370" y="153">R$ 7.565</text>
+            <text class="month-label active" x="360" y="326">Set/26</text>
+
+            <circle class="point positive" cx="563" cy="92" r="6"/>
+            <text class="value-label positive" x="526" y="73">R$ 13.075</text>
+            <text class="month-label" x="520" y="326">Nov/26</text>
+
+            <circle class="point positive" cx="722" cy="85" r="6"/>
+            <text class="value-label positive" x="686" y="66">R$ 18.140</text>
+            <text class="month-label" x="676" y="326">Dez/26</text>
+
+            <circle class="point positive" cx="924" cy="28" r="6"/>
+            <text class="value-label positive" x="876" y="19">R$ 20.003</text>
+            <text class="month-label" x="882" y="326">Mai/27</text>
+
+            <g class="tooltip-card" transform="translate(426 112)">
+              <rect x="0" y="0" width="190" height="92" rx="8" fill="#ffffff" stroke="#d4dce6"/>
+              <text class="tooltip-title" x="14" y="24">Setembro/2026</text>
+              <text class="tooltip-muted" x="14" y="45">Saldo projetado</text>
+              <text class="tooltip-value" x="14" y="68">R$ 7.565,38</text>
+              <text class="tooltip-muted" x="14" y="84">Clique para abrir o mês</text>
+            </g>
+          </svg>
+        </div>
+
+        <div class="chart-help">
+          <span>Passe o mouse nos pontos para ver o saldo do mês.</span>
+          <span>Clique em um mês para expandir o resumo abaixo.</span>
+        </div>
+      </section>
+
+      <div class="highlights">
+        <div class="highlight critical">
+          <strong>Mês crítico</strong>
+          <span>Julho de 2026: -R$ 1.056,24</span>
+        </div>
+        <div class="highlight">
+          <strong>Maior entrada</strong>
+          <span>Novembro de 2026: +R$ 22.358,95</span>
+        </div>
+        <div class="highlight">
+          <strong>Maior saída</strong>
+          <span>Junho de 2026: -R$ 16.433,94</span>
+        </div>
+        <div class="highlight">
+          <strong>Férias</strong>
+          <span>Setembro de 2026</span>
+        </div>
+        <div class="highlight">
+          <strong>13º Salário</strong>
+          <span>Novembro de 2026</span>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

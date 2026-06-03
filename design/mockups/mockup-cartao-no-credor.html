@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Cartão/crediário dentro do credor</title>
+<style>
+  :root {
+    --bg: #eef3f7;
+    --surface: #ffffff;
+    --surface-soft: #f3f6f9;
+    --ink: #0d2038;
+    --muted: #5d7086;
+    --line: #d4dce6;
+    --green: #3fb985;
+    --red: #d86464;
+    --gold: #d8a441;
+    --blue: #4d8df7;
+    --border: rgba(13,32,56,0.10);
+    --border-strong: rgba(13,32,56,0.16);
+    --shadow: 0 4px 24px rgba(13,32,56,0.08);
+    --radius-lg: 20px;
+    --radius-md: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    background: var(--bg);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 40px;
+    padding: 40px 20px;
+    min-height: 100vh;
+    color: var(--ink);
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* Dialog */
+  .dialog {
+    width: 520px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  /* Panel heading */
+  .panel-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .panel-heading h2 { font-size: 18px; font-weight: 750; }
+
+  /* Icon button */
+  .icon-button {
+    width: 36px; height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-soft);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--muted);
+  }
+
+  /* Creditor editor row */
+  .creditor-editor {
+    display: flex; gap: 14px; align-items: flex-start;
+  }
+  .creditor-logo {
+    width: 52px; height: 52px; border-radius: 16px;
+    background: #ff6b00;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; color: #fff;
+    flex-shrink: 0; overflow: hidden;
+  }
+  .creditor-logo img { width: 100%; height: 100%; object-fit: cover; }
+  .creditor-editor > div { flex: 1; display: grid; gap: 8px; }
+
+  /* Form elements */
+  label {
+    display: grid; gap: 5px;
+    color: var(--muted); font-size: 13px; font-weight: 600;
+  }
+  input, select {
+    width: 100%; min-height: 40px;
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 0 11px; background: #fff; color: var(--ink);
+    font: inherit;
+  }
+  .form-row { display: flex; gap: 10px; }
+  .form-row label { flex: 1; }
+
+  /* Checkboxes */
+  .check-group {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px; border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px;
+  }
+  .check-group legend {
+    padding: 0 6px; color: var(--muted);
+    font-size: 13px; font-weight: 650;
+  }
+  .check-group label {
+    display: flex; align-items: center;
+    gap: 8px; color: var(--ink);
+  }
+  .check-group input { width: 16px; min-height: 16px; }
+
+  /* Buttons */
+  .primary-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; min-height: 42px; padding: 10px 18px;
+    background: var(--green); color: #fff;
+    border: none; border-radius: 10px;
+    font: inherit; font-size: 14px; font-weight: 700;
+    cursor: pointer;
+  }
+  .primary-button.full { width: 100%; }
+  .ghost-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px; min-height: 36px; padding: 7px 14px;
+    background: var(--surface-soft); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 9px;
+    font: inherit; font-size: 13px; font-weight: 650; cursor: pointer;
+  }
+  .ghost-button.danger { color: var(--red); }
+  .ghost-button.small { min-height: 30px; padding: 4px 10px; font-size: 12px; }
+
+  /* NEW — cartões vinculados */
+  .cards-section {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .cards-section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--surface-soft);
+    border-bottom: 1px solid var(--border);
+  }
+  .cards-section-head span {
+    font-size: 12px; font-weight: 700; letter-spacing: .05em;
+    text-transform: uppercase; color: var(--muted);
+  }
+
+  /* Card rows inside section */
+  .card-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-row:last-of-type { border-bottom: none; }
+  .card-row-info { flex: 1; }
+  .card-row-name { font-weight: 650; font-size: 13px; }
+  .card-row-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .owner-pill {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(77,141,247,0.13);
+    color: var(--blue);
+    font-size: 11px; font-weight: 700;
+  }
+
+  /* Inline new-card form */
+  .new-card-form {
+    padding: 12px 14px;
+    background: rgba(63,185,133,0.06);
+    border-top: 1px dashed rgba(63,185,133,0.4);
+    display: grid; gap: 10px;
+  }
+  .new-card-form .form-row { align-items: flex-end; }
+  .new-card-form .add-btn {
+    min-height: 40px; padding: 0 14px;
+    background: var(--green); color: #fff;
+    border: none; border-radius: 8px;
+    font: inherit; font-size: 13px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    align-self: flex-end;
+  }
+
+  /* Empty state inside section */
+  .cards-empty {
+    padding: 14px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* Column labels for mockup */
+  .state-label {
+    font-size: 12px; font-weight: 700; text-align: center;
+    letter-spacing: .04em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px;
+    padding: 6px 12px; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ESTADO A: sem cartões ainda -->
+<div>
+  <p class="state-label">A — Credor sem cartões</p>
+  <div class="dialog">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Credor</p>
+        <h2>Editar credor</h2>
+      </div>
+      <button class="icon-button">✕</button>
+    </div>
+
+    <div class="creditor-editor">
+      <div class="creditor-logo">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Banco_Inter_logo.svg/200px-Banco_Inter_logo.svg.png" alt="Inter">
+      </div>
+      <div>
+        <label>Nome<input value="Banco Inter"></label>
+        <label style="font-size:12px;color:var(--muted);">
+          <span>Logo</span>
+          <input type="file" style="font-size:12px;">
+        </label>
+      </div>
+    </div>
+
+    <fieldset class="check-group">
+      <legend>Formas de pagamento</legend>
+      <label><input type="checkbox" checked> Cartão de crédito</label>
+      <label><input type="checkbox"> Empréstimo</label>
+      <label><input type="checkbox"> Débito em conta</label>
+      <label><input type="checkbox"> Financiamento</label>
+      <label><input type="checkbox"> PIX</label>
+      <label><input type="checkbox"> Boleto</label>
+    </fieldset>
+
+    <!-- NOVA SEÇÃO -->
+    <div class="cards-section">
+      <div class="cards-section-head">
+        <span>Cartões / crediários</span>
+        <button class="ghost-button small">+ Novo cartão/crediário</button>
+      </div>
+      <div class="cards-empty">Nenhum cartão vinculado ainda.</div>
+    </div>
+
+    <button class="primary-button full">💾 Salvar credor</button>
+  </div>
+</div>
+
+<!-- ESTADO B: com cartões e formulário aberto -->
+<div>
+  <p class="state-label">B — Com cartão existente + formulário aberto</p>
+  <div class="dialog">
+    <div class="panel-heading">
+      <div>
+        <p class="eyebrow">Credor</p>
+        <h2>Editar credor</h2>
+      </div>
+      <button class="icon-button">✕</button>
+    </div>
+
+    <div class="creditor-editor">
+      <div class="creditor-logo">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Banco_Inter_logo.svg/200px-Banco_Inter_logo.svg.png" alt="Inter">
+      </div>
+      <div>
+        <label>Nome<input value="Banco Inter"></label>
+        <label style="font-size:12px;color:var(--muted);">
+          <span>Logo</span>
+          <input type="file" style="font-size:12px;">
+        </label>
+      </div>
+    </div>
+
+    <fieldset class="check-group">
+      <legend>Formas de pagamento</legend>
+      <label><input type="checkbox" checked> Cartão de crédito</label>
+      <label><input type="checkbox"> Empréstimo</label>
+      <label><input type="checkbox"> Débito em conta</label>
+      <label><input type="checkbox"> Financiamento</label>
+      <label><input type="checkbox"> PIX</label>
+      <label><input type="checkbox"> Boleto</label>
+    </fieldset>
+
+    <!-- NOVA SEÇÃO com cartão existente + form aberto -->
+    <div class="cards-section">
+      <div class="cards-section-head">
+        <span>Cartões / crediários</span>
+        <button class="ghost-button small">+ Novo cartão/crediário</button>
+      </div>
+
+      <!-- Cartão já existente -->
+      <div class="card-row">
+        <div class="card-row-info">
+          <div class="card-row-name">Inter Black Felipe</div>
+          <div class="card-row-meta">
+            <span class="owner-pill">Felipe</span>
+            &nbsp;Vence dia <strong>10</strong>
+          </div>
+        </div>
+        <button class="ghost-button small danger" title="Excluir">✕</button>
+      </div>
+
+      <!-- Formulário inline de novo cartão -->
+      <div class="new-card-form">
+        <label>Nome do cartão/crediário
+          <input placeholder="Ex.: Inter Black Felipe, Grazziotin Kah">
+        </label>
+        <div class="form-row">
+          <label>Titular
+            <select>
+              <option>Felipe</option>
+              <option>Kah</option>
+            </select>
+          </label>
+          <label>Vencimento (dia)
+            <input type="number" placeholder="10" min="1" max="31" style="max-width:90px;">
+          </label>
+          <button class="add-btn">Adicionar</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="primary-button full">💾 Salvar credor</button>
+  </div>
+</div>
+
+</body>
+</html>

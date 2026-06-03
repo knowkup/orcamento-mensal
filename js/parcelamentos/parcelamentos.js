@@ -1,7 +1,7 @@
-import { state, el, currency } from "./state.js";
-import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, refreshIcons } from "./utils.js";
-import { getInstallmentCard, getCreditorName, creditorLogoHtml, getCreditCard } from "./creditors.js";
-import { genericDebtCard } from "./components.js";
+import { state, el, currency } from "../state.js";
+import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, refreshIcons } from "../utils.js";
+import { getInstallmentCard, getCreditorName, creditorLogoHtml, getCreditCard } from "../creditors.js";
+import { genericDebtCard } from "../components.js";
 
 export function renderInstallments() {
   renderInstallmentSummary();

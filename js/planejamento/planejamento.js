@@ -1,16 +1,16 @@
-import { state, el, currency } from "./state.js";
-import { nextMonths, currentMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "./utils.js";
+import { state, el, currency } from "../state.js";
+import { nextMonths, currentMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "../utils.js";
 
 let _expandedSummaryMonth = null;
 let _chartPeriod = 6;
 let _periodSelectorReady = false;
-import { calcNetClt } from "./taxes.js";
-import { getCreditorName, getInstallmentCard, ownerRank } from "./creditors.js";
-import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from "./components.js";
-import { ensureCarPayments } from "./carro.js";
-import { openPlannedDialog, deleteManualPlanned, rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDate } from "./controle.js";
-import { normalizedIncomeChanges } from "./data.js";
-import { getDebtInstallmentsForMonth } from "./dividas/boot.js";
+import { calcNetClt } from "../taxes.js";
+import { getCreditorName, getInstallmentCard, ownerRank } from "../creditors.js";
+import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from "../components.js";
+import { ensureCarPayments } from "../carro/carro.js";
+import { openPlannedDialog, deleteManualPlanned, rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDate } from "../controle/controle.js";
+import { normalizedIncomeChanges } from "../data.js";
+import { getDebtInstallmentsForMonth } from "../dividas/boot.js";
 
 export function renderProjection() {
   const months = currentMonths(12);

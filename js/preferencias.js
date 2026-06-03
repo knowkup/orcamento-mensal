@@ -3,8 +3,8 @@ import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, n
 import { calcNetClt } from "./taxes.js";
 import { getCreditorName, getCreditor, getCreditCard, sortedCreditors, sortedCreditCards, creditorLogoHtml, sourceLogoHtml, initials, isCreditCardInUse, creditorUsageCount, cardOpenBalance } from "./creditors.js";
 import { createDefaultData, normalizedIncomeChanges } from "./data.js";
-import { latestIncomeChange, upsertIncomeChange } from "./planejamento.js";
-import { openFeriasDialog, openDecimoTerceiroDialog } from "./ferias.js";
+import { latestIncomeChange, upsertIncomeChange } from "./planejamento/planejamento.js";
+import { openFeriasDialog, openDecimoTerceiroDialog } from "./ferias/ferias.js";
 
 export function renderSettings() {
   el.settingsForm.elements.kahLimit.value = formatCurrencyInput(state.data.kahLimit || "");
