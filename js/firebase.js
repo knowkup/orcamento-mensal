@@ -23,9 +23,13 @@ export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
     state.firestore = firestoreSdk;
     state.firebaseReady = true;
 
-    authSdk.getRedirectResult(state.auth).catch((error) => {
+    authSdk.getRedirectResult(state.auth).then((result) => {
+      if (result?.user) {
+        state.user = result.user;
+      }
+    }).catch((error) => {
       console.error(error);
-      if (error.code === "auth/unauthorized-domain") showToast("Autorize kupka1988.github.io no Firebase Auth.");
+      if (error.code === "auth/unauthorized-domain") showToast("Autorize knowkup.github.io no Firebase Auth.");
     });
 
     authSdk.onAuthStateChanged(state.auth, (user) => {
