@@ -1,7 +1,7 @@
 import { firebaseConfig, isFirebaseConfigured } from "../firebase-config.js";
 import { state, el } from "./state.js";
 import { loadLocalState, exportState, importState } from "./storage.js";
-import { setupFirebase, handleLoginToggle, saveState } from "./firebase.js";
+import { setupFirebase, saveState } from "./firebase.js";
 import { bindMoneyInputs, refreshIcons, formatCurrencyInput } from "./utils.js";
 import { renderProjection } from "./planejamento.js";
 import { renderMonthlyControl, confirmReceivedOccurrence, openExpensePaymentDialog, confirmPaidOccurrence, cancelPaidOccurrence, cancelReceivedOccurrence, openReceiveDialog, openPlannedDialog, deleteManualPlanned, closeMonth, openAccountBalanceDialog, saveAccountBalance, updatePlannedFields, addPlannedPurchase, closePlannedDialog, saveFixedCostAmount, navigateControlMonth } from "./controle.js";
@@ -29,7 +29,6 @@ async function boot() {
 
 function bindEvents() {
   el.navTabs.forEach((button) => button.addEventListener("click", () => showView(button.dataset.view)));
-  el.loginButton.addEventListener("click", handleLoginToggle);
   el.exportButton.addEventListener("click", exportState);
   el.importInput.addEventListener("change", importState);
   const menuBtn = document.getElementById("topbarMenuButton");
@@ -149,11 +148,7 @@ function bindEvents() {
       maisDrawer.classList.remove("open");
       maisOverlay.classList.remove("open");
     });
-    document.getElementById("maisLoginBtn")?.addEventListener("click", () => {
-      el.loginButton.click();
-      maisDrawer.classList.remove("open");
-      maisOverlay.classList.remove("open");
-    });
+
   }
 }
 
