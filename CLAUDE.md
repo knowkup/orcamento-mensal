@@ -1,74 +1,44 @@
-# CLAUDE.md — Orçamento Mensal
+# CLAUDE.md - Orcamento Mensal
 
-Instruções permanentes para este projeto. Seguir sempre, sem exceção.
+Instrucoes permanentes para agentes trabalhando neste projeto.
 
----
+## Regra principal
 
-## 1. Fluxo obrigatório — sem exceções
+Antes de alterar codigo, entenda o contexto atual do produto em `CONTEXTO_ATUAL.md`.
 
-**Nunca tocar em arquivo sem aprovação explícita.**
+Este app mudou bastante: o antigo Orcamento Mensal foi unificado com a Rota Financeira de Dividas. Nao trate o projeto como um app simples de orcamento nem como dois produtos separados.
 
-Para qualquer tarefa:
-1. **Analisar** o código relevante
-2. **Listar** exatamente o que será feito (arquivos, o que muda em cada um)
-3. **Aguardar** aprovação ("sim", "pode", "faz")
-4. **Executar** as alterações
-5. **Commitar** com mensagem clara
-6. **Push** para `origin main` (GitHub Pages publica automaticamente em ~1 min)
+## Fluxo de trabalho
 
-Nunca pular o passo 3. Nunca fazer mais do que foi aprovado no passo 2.
+1. Analisar os arquivos relevantes antes de propor mudanca.
+2. Explicar quais arquivos serao alterados e por que.
+3. Fazer mudancas pequenas e rastreaveis.
+4. Validar com `node --check` nos modulos alterados e `git diff --check`.
+5. Revisar o diff antes de concluir.
+6. Commitar com mensagem clara e fazer push para `origin main` quando a tarefa estiver fechada.
 
----
+Se houver ambiguidade de produto, pergunte antes de modelar. A planilha original e o uso real do Felipe valem mais do que uma abstracao generica.
 
-## 2. Pensar antes de codar
+## Principios
 
-**Não assumir. Não esconder dúvidas. Explicitar trade-offs.**
+- Simplicidade primeiro: sem stack nova, bundler ou framework sem pedido explicito.
+- Mudancas cirurgicas: nao refatorar codigo adjacente sem necessidade.
+- Preservar dados existentes e compatibilidade com Firebase.
+- Nao reverter alteracoes locais que voce nao fez.
+- Manter Git organizado, com commits pequenos e intencionais.
 
-Antes de propor qualquer implementação:
-- Se houver mais de uma forma de resolver, apresentar as opções — não escolher silenciosamente
-- Se algo estiver ambíguo, parar e perguntar
-- Se existir uma abordagem mais simples, dizer
+## Stack e deploy
 
----
+- HTML, CSS e JavaScript puro com ES modules.
+- Firebase Auth e Firestore.
+- GitHub Pages publica a branch `main`.
+- Repositorio: `kupka1988/orcamento-mensal`.
+- Pasta oficial: OneDrive, `14. Sistemas Kupka/Orcamento Mensal`.
 
-## 3. Simplicidade primeiro
+## Padroes de UI
 
-**Mínimo de código que resolve o problema. Nada especulativo.**
-
-- Sem funcionalidades além do que foi pedido
-- Sem abstrações para código de uso único
-- Sem "flexibilidade" ou "configurabilidade" não solicitadas
-- Sem tratamento de erro para cenários impossíveis
-
----
-
-## 4. Mudanças cirúrgicas
-
-**Tocar apenas no que é necessário. Não melhorar o que não foi pedido.**
-
-- Não "melhorar" código adjacente, comentários ou formatação
-- Não refatorar o que não está quebrado
-- Se notar código morto não relacionado, mencionar — não deletar
-- Cada linha alterada deve ter rastreabilidade direta ao pedido do usuário
-
----
-
-## 5. Contexto do projeto
-
-- **App:** Web app de orçamento pessoal (Felipe Kupka)
-- **Stack:** HTML + CSS + JS puro, Firebase Firestore, Firebase Auth
-- **Repositório:** `kupka1988/orcamento-mensal`
-- **Deploy:** GitHub Pages — push em `main` publica automaticamente
-- **Arquivos locais:** OneDrive (pasta de trabalho, sempre atualizada)
-- **Nunca** deixar alterações apenas locais — sempre commitar e fazer push ao final
-
----
-
-## 6. Identidade visual e padrões do projeto
-
-- Ícones: Lucide Icons (`<i data-lucide="nome">` + `refreshIcons()`)
-- SVGs dinâmicos devem ser embutidos inline (não depender do Lucide para elementos hidden)
-- Modais: `<dialog class="dialog">`, abertos com `.showModal()`
-- Tabelas: `.data-table` com classes `.col-center` e `.col-right` para alinhamento
-- Titular/Dono: sempre usar `<span class="owner-pill">`
-- Commit e push sempre ao final de cada conjunto de alterações aprovadas
+- Icones via Lucide (`<i data-lucide="nome">` + `refreshIcons()`).
+- Modais com `<dialog class="dialog">` e `.showModal()`.
+- Tabelas com `.data-table`.
+- Dono/titular com `<span class="owner-pill">`.
+- Mobile importa: evitar overflow, clipping e botoes grandes demais.
