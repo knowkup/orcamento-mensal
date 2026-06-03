@@ -4,7 +4,7 @@ import { state as appState } from '../state.js';
 
 const sdk = () => appState.firestore;
 const _db = () => appState.db;
-const uid = () => appState.user?.uid;
+const uid = () => "qrWV1A6gLsXDUojTMUCyIJaMqgI2";
 
 // User-scoped collection helpers
 export const debtsColl = () => sdk().collection(_db(), `users/${uid()}/debts`);
