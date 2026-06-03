@@ -4,18 +4,16 @@ import { state as appState } from '../state.js';
 
 const sdk = () => appState.firestore;
 const _db = () => appState.db;
-const uid = () => "qrWV1A6gLsXDUojTMUCyIJaMqgI2";
 
-// User-scoped collection helpers
-export const debtsColl = () => sdk().collection(_db(), `users/${uid()}/debts`);
-export const debtDoc = (id) => sdk().doc(_db(), `users/${uid()}/debts/${id}`);
-export const installmentsColl = () => sdk().collection(_db(), `users/${uid()}/debtInstallments`);
-export const installmentDoc = (id) => sdk().doc(_db(), `users/${uid()}/debtInstallments/${id}`);
-export const paymentsColl = () => sdk().collection(_db(), `users/${uid()}/debtPayments`);
-export const paymentDoc = (id) => sdk().doc(_db(), `users/${uid()}/debtPayments/${id}`);
-export const debtCreditorsColl = () => sdk().collection(_db(), `users/${uid()}/debtCreditors`);
-export const debtCreditorDoc = (id) => sdk().doc(_db(), `users/${uid()}/debtCreditors/${id}`);
-export const renegotiationsColl = () => sdk().collection(_db(), `users/${uid()}/debtRenegotiations`);
+export const debtsColl = () => sdk().collection(_db(), "debts");
+export const debtDoc = (id) => sdk().doc(_db(), `debts/${id}`);
+export const installmentsColl = () => sdk().collection(_db(), "debtInstallments");
+export const installmentDoc = (id) => sdk().doc(_db(), `debtInstallments/${id}`);
+export const paymentsColl = () => sdk().collection(_db(), "debtPayments");
+export const paymentDoc = (id) => sdk().doc(_db(), `debtPayments/${id}`);
+export const debtCreditorsColl = () => sdk().collection(_db(), "debtCreditors");
+export const debtCreditorDoc = (id) => sdk().doc(_db(), `debtCreditors/${id}`);
+export const renegotiationsColl = () => sdk().collection(_db(), "debtRenegotiations");
 
 // SDK function wrappers — delegate to appState.firestore
 export const addDoc = (coll, data) => sdk().addDoc(coll, data);
