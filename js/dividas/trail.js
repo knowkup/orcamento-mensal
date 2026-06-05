@@ -247,11 +247,6 @@ window.setTrailDebtSort = function(mode) {
   renderTrail();
 };
 
-const trailDebtSortSelect = $('trailDebtSort');
-if (trailDebtSortSelect) {
-  trailDebtSortSelect.addEventListener('change', () => window.setTrailDebtSort(trailDebtSortSelect.value));
-}
-
 // --- Drag & drop da Rota Financeira ---
 
 async function persistRouteOrder(route) {

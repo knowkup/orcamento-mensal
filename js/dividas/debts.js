@@ -407,16 +407,6 @@ window.setHiddenDebtSort = function(mode) {
   renderDebts();
 };
 
-function bindDebtSortSelect(id, handler) {
-  const select = $(id);
-  if (!select || select.dataset.sortBound) return;
-  select.dataset.sortBound = 'true';
-  select.addEventListener('change', () => handler(select.value));
-}
-
-bindDebtSortSelect('waitingDebtSort', window.setWaitingDebtSort);
-bindDebtSortSelect('hiddenDebtSort', window.setHiddenDebtSort);
-
 window.toggleDebt = function(id) {
   const nextExpanded = state.expandedDebtId === id ? null : id;
   if (state.expandedDebtId !== id) {
