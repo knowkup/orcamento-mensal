@@ -447,10 +447,13 @@ svg {
 }
 
 /* ── Controle Mensal — hero ── */
-.control-hero-meta { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+.control-hero-meta { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .month-status-pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; }
 .month-status-pill.is-open { border: 1.5px solid #1e9e5c; color: #1e9e5c; background: #f0fdf6; }
 .month-status-pill.is-closed { border: 1.5px solid var(--muted); color: var(--muted); background: #f5f5f5; }
+.month-pending-pill { display: inline-flex; align-items: center; min-height: 32px; border: 1px solid var(--line); border-radius: 999px; padding: 0 12px; color: var(--muted); background: var(--surface); font-size: 12px; font-weight: 750; }
+.month-pending-pill.has-pending { color: #9b6a14; background: var(--amber-soft); border-color: rgba(216, 164, 65, 0.28); }
+.month-pending-pill.clear { color: #18744b; background: var(--green-soft); border-color: rgba(63, 185, 133, 0.28); }
 .status-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; flex-shrink: 0; }
 .control-hero-row { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; max-width: 780px; }
 .hero-card { display: flex; flex-direction: column; gap: 12px; padding: 22px 26px; background: var(--surface); text-align: left; border: none; }

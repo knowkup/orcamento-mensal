@@ -53,6 +53,9 @@ export function renderMonthlyControl() {
   const closeMonthLabel = hasPending
     ? "Baixe todas as entradas e saidas antes de fechar o mes."
     : `Fechar ${formatMonthLong(month)}`;
+  const pendingSummary = hasPending
+    ? `${pendingEntries.length} entrada${pendingEntries.length === 1 ? "" : "s"} e ${pendingExits.length} saida${pendingExits.length === 1 ? "" : "s"} pendente${pendingEntries.length + pendingExits.length === 1 ? "" : "s"}`
+    : "Sem pendencias para fechar";
 
   el.monthlyReference.textContent = "";
   el.closeMonthButton.disabled = hasPending;
@@ -62,6 +65,7 @@ export function renderMonthlyControl() {
   el.monthlySummary.innerHTML = `
     <div class="control-hero-meta">
       <span class="month-status-pill ${isClosed ? "is-closed" : "is-open"}"><span class="status-dot"></span>${formatMonthLong(month)} · ${isClosed ? "Fechado" : "Em andamento"}</span>
+      <span class="month-pending-pill ${hasPending ? "has-pending" : "clear"}">${pendingSummary}</span>
     </div>
     <div class="control-hero-row">
       ${accountBalanceCard(accountBalance)}
