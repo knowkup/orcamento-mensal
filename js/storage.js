@@ -1,6 +1,6 @@
 import { state, STORAGE_KEY } from "./state.js";
 import { normalizeData, createDefaultData } from "./data.js";
-import { todayKey, showToast } from "./utils.js";
+import { dateTimeKey, showToast } from "./utils.js";
 
 export function loadLocalState() {
   try {
@@ -19,11 +19,12 @@ export function exportState() {
   const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
+  const filename = `orcamento-mensal-${dateTimeKey()}.json`;
   link.href = url;
-  link.download = `orcamento-mensal-${todayKey()}.json`;
+  link.download = filename;
   link.click();
   URL.revokeObjectURL(url);
-  showToast("Backup exportado.", "success");
+  showToast(`Backup exportado: ${filename}`, "success");
 }
 
 export function importState(event) {
