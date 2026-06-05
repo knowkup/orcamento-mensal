@@ -78,6 +78,8 @@ Ultima atualizacao: 2026-06-05
 - Quitar divida funciona.
 - Alterar ordem da rota funciona.
 - A parcela de divida integrada aparece no Controle Mensal quando aplicavel.
+- Se houve mudanca em eventos/bindings de Dividas, todas as abas de Dividas devem continuar mostrando dados.
+- Se houve mudanca em eventos/bindings de Dividas, testar filtros, ordenacao e abrir/fechar detalhes antes de seguir.
 
 ---
 

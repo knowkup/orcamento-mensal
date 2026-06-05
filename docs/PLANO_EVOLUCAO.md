@@ -570,6 +570,9 @@ Para mudancas de dados:
 - Criar telas experimentais apenas quando o risco justificar.
 - Nao migrar para React agora.
 - Stack atual deve ser evoluida, nao descartada.
+- Modulos de Dividas tem imports circulares sensiveis; evitar codigo novo executando no topo dos modulos.
+- Em Dividas, preferir ligar eventos dentro de funcoes chamadas apos render/boot, nunca em inicializacao de modulo sem necessidade.
+- Mudancas em bindings de Dividas devem ter rollback facil e homologacao imediata nas abas Dashboard, Rota, Em Espera, Fora do Radar e Quitadas.
 
 ---
 
@@ -580,4 +583,3 @@ Para mudancas de dados:
 - Usar como guia entre computadores.
 - Manter no Git para historico.
 - Manter no OneDrive como copia local sincronizada.
-
