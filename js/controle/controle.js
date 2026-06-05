@@ -49,6 +49,8 @@ export function renderMonthlyControl() {
   const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
   const projectedBalance = accountBalance + expectedIncome - expectedExpense;
   const hasPending = pendingEntries.length > 0 || pendingExits.length > 0;
+  const pendingCount = pendingEntries.length + pendingExits.length;
+  const realizedCount = realizedEntries.length + realizedExits.length;
   const isClosed = (state.data.closedMonths || []).includes(month);
   const closeMonthLabel = hasPending
     ? "Baixe todas as entradas e saidas antes de fechar o mes."
@@ -71,12 +73,21 @@ export function renderMonthlyControl() {
       ${accountBalanceCard(accountBalance)}
       ${projectedBalanceCard(projectedBalance)}
     </div>
+    <div class="control-flow-strip">
+      ${controlFlowCard("A receber", currency.format(expectedIncome), `${pendingEntries.length} pendente${pendingEntries.length === 1 ? "" : "s"}`, "income")}
+      ${controlFlowCard("A pagar", `-${currency.format(expectedExpense)}`, `${pendingExits.length} pendente${pendingExits.length === 1 ? "" : "s"}`, "expense")}
+      ${controlFlowCard("Realizado", currency.format(received - paid), `${realizedCount} baixa${realizedCount === 1 ? "" : "s"}`, "realized")}
+      ${controlFlowCard("Fechamento", hasPending ? `${pendingCount} pendencia${pendingCount === 1 ? "" : "s"}` : "Liberado", closeMonthLabel, hasPending ? "pending" : "clear")}
+    </div>
   `;
 
   el.monthlyBoard.innerHTML = `
     <section class="monthly-column income-column">
       <div class="monthly-column-head">
-        <span>Entradas previstas</span>
+        <div>
+          <span>Entradas previstas</span>
+          <small>${pendingEntries.length} item${pendingEntries.length === 1 ? "" : "s"} para receber</small>
+        </div>
         <strong>${currency.format(expectedIncome)}</strong>
       </div>
       ${monthlyItems(pendingEntries, month, "income")}
@@ -84,6 +95,7 @@ export function renderMonthlyControl() {
     <section class="monthly-column expense-column">
       <div class="monthly-column-head">
         <span>Saídas previstas</span>
+        <small>${pendingExits.length} item${pendingExits.length === 1 ? "" : "s"} para pagar</small>
         <strong>-${currency.format(expectedExpense)}</strong>
       </div>
       ${monthlyItems(pendingExits, month, "expense")}
@@ -91,6 +103,7 @@ export function renderMonthlyControl() {
     <section class="monthly-column realized-column">
       <div class="monthly-column-head">
         <span>Realizado no mês</span>
+        <small>${realizedCount} baixa${realizedCount === 1 ? "" : "s"} confirmada${realizedCount === 1 ? "" : "s"}</small>
         <strong>${currency.format(received - paid)}</strong>
       </div>
       ${monthlyRealizedItems(realizedEntries, realizedExits, month)}
@@ -127,6 +140,16 @@ export function renderMonthlyControl() {
     button.addEventListener("click", () => openPlannedDialog(button.dataset.editManualPlan, button.dataset.editManualKind));
   });
   el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
+}
+
+export function controlFlowCard(label, value, helper, tone = "neutral") {
+  return `
+    <article class="control-flow-card ${tone}">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(helper)}</small>
+    </article>
+  `;
 }
 
 export function monthlyItems(items, month, kind, scope = "pending") {
@@ -183,6 +206,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const statusLabel = kind === "income"
       ? (done ? "Recebido" : "Pendente")
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
+    const statusTone = statusLabel === "Pendente" ? "pending" : statusLabel === "Parcial" ? "partial" : "done";
     const chevron = scope !== "realized" && (hasBreakdown || isManual)
       ? `<button class="monthly-chevron" type="button" title="${hasBreakdown ? "Expandir contas" : "Opções"}" data-toggle-monthly-details>${icon("chevron-down")}</button>`
       : `<span class="monthly-chevron placeholder"></span>`;
@@ -196,7 +220,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
           </div>
         </div>
         <div class="monthly-field"><span>${dateLabel}</span><strong>${dueDate ? formatDate(dueDate) : "-"}</strong></div>
-        <div class="monthly-field compact"><span>Status</span><strong>${statusLabel}</strong></div>
+        <div class="monthly-field compact"><span>Status</span><strong class="monthly-status ${statusTone}">${statusLabel}</strong></div>
         <div class="monthly-field compact"><span>Contas</span><strong>${accountCount}</strong></div>
         <div class="monthly-item-action">
           <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(displayValue)}</strong>

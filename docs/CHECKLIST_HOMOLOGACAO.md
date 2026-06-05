@@ -29,8 +29,12 @@ Ultima atualizacao: 2026-06-05
 ## Controle Mensal
 
 - A tela de Controle Mensal abre corretamente.
+- O topo mostra mes, status, pendencias, saldo em conta e saldo projetado.
+- O resumo operacional mostra valores a receber, a pagar, realizado e fechamento.
 - Recebimentos pendentes aparecem.
 - Saidas pendentes aparecem.
+- Cabecalhos de entradas, saidas e realizado mostram quantidades coerentes.
+- Cada linha mostra status visual coerente: Pendente, Parcial, Pago ou Recebido.
 - Realizado do mes aparece.
 - Registrar recebimento funciona.
 - Cancelar recebimento funciona.
