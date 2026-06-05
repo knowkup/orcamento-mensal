@@ -2252,16 +2252,18 @@ select {
 
 .dialog {
   width: min(520px, calc(100vw - 30px));
-  border: 1px solid var(--line);
+  max-height: min(86vh, 780px);
+  overflow: auto;
+  border: 1px solid var(--border-strong);
   border-radius: 8px;
-  padding: 18px;
+  padding: 20px;
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow);
 }
 
 .dialog::backdrop {
-  background: rgba(0, 0, 0, 0.50);
+  background: rgba(13, 32, 56, 0.54);
 }
 
 .dialog--wide {
@@ -2320,6 +2322,10 @@ select {
 }
 
 .empty-state.table-empty {
+  margin: 8px 0;
+}
+
+.debt-empty-state {
   margin: 8px 0;
 }
 

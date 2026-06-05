@@ -53,7 +53,7 @@ export function escapeHtml(value) {
 }
 
 export function emptyCard(title, text) {
-  return '<div class="debt-card"><div class="debt-name">' + escapeHtml(title) + '</div><div class="debt-meta">' + escapeHtml(text) + '</div></div>';
+  return '<div class="empty-state debt-empty-state"><strong>' + escapeHtml(title) + '</strong><span>' + escapeHtml(text) + '</span></div>';
 }
 
 export function tag(label, tone) {
