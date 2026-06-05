@@ -537,9 +537,10 @@ export function valuesFromMonthlyMap(map, months) {
 
 export function recurringIncomeValues(income, months) {
   const changes = normalizedIncomeChanges(income);
+  const latestFirstChanges = [...changes].reverse();
   const values = {};
   months.forEach((month) => {
-    const current = [...changes].reverse().find((change) => change.month <= month);
+    const current = latestFirstChanges.find((change) => change.month <= month);
     const gross = current ? Number(current.amount || 0) : 0;
     values[month] = income.isClt && gross > 0
       ? Math.max(0, calcNetClt(gross, income.clt?.consignado || 0, income.clt?.alimentacao ?? 1))
