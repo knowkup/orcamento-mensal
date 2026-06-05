@@ -2276,13 +2276,22 @@ select {
   transform: translateY(18px);
   opacity: 0;
   pointer-events: none;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   padding: 12px 14px;
-  background: var(--sidebar);
+  background: var(--ink);
   color: #ffffff;
   box-shadow: var(--shadow);
   transition: 160ms ease;
+  z-index: 1200;
+}
+
+.toast[data-tone="success"] {
+  background: #176a4d;
+}
+
+.toast[data-tone="error"] {
+  background: #9f3838;
 }
 
 .toast.show {

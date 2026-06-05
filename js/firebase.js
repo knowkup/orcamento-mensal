@@ -72,7 +72,7 @@ export async function saveState(message) {
       console.error(error);
       cloudFailed = true;
       updateSync("Pendente", "Salvo localmente; nuvem falhou.", "error");
-      showToast("Salvo localmente. Falha ao sincronizar.");
+      showToast("Salvo localmente. Falha ao sincronizar.", "error");
     } finally {
       state.saving = false;
     }

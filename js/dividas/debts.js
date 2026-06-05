@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml } from './utils.js';
+import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml, showToast } from './utils.js';
 import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceLabel, paidOffDifferenceClass, paidOffClosedDateKey, isOpenInstallment, openInstallmentsForDebt, debtProgress, nextInstallment, installmentProgress, payoffTodayHtml, routeInstallmentStatusLabel } from './calc.js';
 import { renderDashboard } from './dashboard.js';
 import { debtDoc, writeBatch, serverTimestamp } from './firebase.js';
@@ -536,14 +536,6 @@ window.endHiddenDebtDrag = function() {
   state.draggedHiddenDebtId = null;
   document.querySelectorAll('.hidden-route-item.dragging').forEach(item => item.classList.remove('dragging'));
 };
-
-function showToast(message) {
-  const toast = document.getElementById('toast');
-  if (!toast) return;
-  toast.textContent = message;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2600);
-}
 
 function formatAnyDateBR(value) {
   if (!value) return '-';

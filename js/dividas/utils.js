@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { state as appState } from '../state.js';
+import { showToast as showAppToast } from '../utils.js';
 
 export const $ = (id) => document.getElementById(id);
 
@@ -35,11 +36,7 @@ export function currentMonthKey() { return new Date().toISOString().slice(0, 7);
 export function byDueDate(a, b) { return String(a.dueDate || '').localeCompare(String(b.dueDate || '')); }
 
 export function showToast(message) {
-  const toast = $('toast');
-  if (!toast) return;
-  toast.textContent = message;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2600);
+  showAppToast(message);
 }
 
 export function escapeHtml(value) {
