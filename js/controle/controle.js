@@ -50,9 +50,14 @@ export function renderMonthlyControl() {
   const projectedBalance = accountBalance + expectedIncome - expectedExpense;
   const hasPending = pendingEntries.length > 0 || pendingExits.length > 0;
   const isClosed = (state.data.closedMonths || []).includes(month);
+  const closeMonthLabel = hasPending
+    ? "Baixe todas as entradas e saidas antes de fechar o mes."
+    : `Fechar ${formatMonthLong(month)}`;
 
   el.monthlyReference.textContent = "";
   el.closeMonthButton.disabled = hasPending;
+  el.closeMonthButton.title = closeMonthLabel;
+  el.closeMonthButton.setAttribute("aria-label", closeMonthLabel);
   el.monthlySummary.classList.add("monthly-control-summary");
   el.monthlySummary.innerHTML = `
     <div class="control-hero-meta">
