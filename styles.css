@@ -201,6 +201,28 @@ button:disabled {
   padding: 13px;
   border: 1px solid var(--line);
   border-radius: 12px;
+  background: rgba(255, 255, 255, 0.42);
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.sync-panel[data-status="online"] {
+  border-color: rgba(63, 185, 133, 0.28);
+  background: var(--green-soft);
+}
+
+.sync-panel[data-status="syncing"] {
+  border-color: rgba(77, 141, 247, 0.3);
+  background: var(--blue-soft);
+}
+
+.sync-panel[data-status="offline"] {
+  border-color: rgba(216, 164, 65, 0.3);
+  background: var(--amber-soft);
+}
+
+.sync-panel[data-status="error"] {
+  border-color: rgba(216, 100, 100, 0.32);
+  background: var(--danger-soft);
 }
 
 .sync-dot {

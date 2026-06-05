@@ -138,6 +138,7 @@ export const el = {
   incomeExceptionDialogTitle: document.querySelector("#incomeExceptionDialogTitle"),
   closeIncomeExceptionButton: document.querySelector("#closeIncomeExceptionButton"),
   toast: document.querySelector("#toast"),
+  syncPanel: document.querySelector("#syncPanel"),
   prevControlMonthButton: document.querySelector("#prevControlMonthButton"),
   nextControlMonthButton: document.querySelector("#nextControlMonthButton")
 };

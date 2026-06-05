@@ -132,6 +132,10 @@ export function formatTime(value = new Date()) {
 
 export function updateSync(title, text, status = "online") {
   const tone = typeof status === "boolean" ? (status ? "online" : "offline") : status;
+  if (el.syncPanel) {
+    el.syncPanel.dataset.status = tone;
+    el.syncPanel.title = `${title}: ${text}`;
+  }
   if (el.syncTitle) el.syncTitle.textContent = title;
   if (el.syncText) el.syncText.textContent = text;
   if (el.syncDot) {
