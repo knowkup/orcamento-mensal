@@ -1,6 +1,7 @@
 backups/
 files-mentioned-by-the-user-or/
 _arquivo/
+.claude/
 
 # Dados financeiros locais
 *.xlsx
