@@ -302,7 +302,15 @@ export function rowPaidAmount(row, month, fallback) {
 }
 
 export function rowOutstanding(row, month, value) {
-  return Math.max(0, Number(value || 0) - rowPaidAmount(row, month, value));
+  const key = `${row.id}:${month}`;
+  if (isOccurrencePaid(key)) return 0;
+  const children = row.children?.[month] || [];
+  if (children.length) {
+    return children.reduce((total, item) => (
+      total + (isOccurrencePaid(item.key) ? 0 : Number(item.value || 0))
+    ), 0);
+  }
+  return Math.max(0, Number(value || 0));
 }
 
 export function adjustAccountBalance(delta) {
