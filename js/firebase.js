@@ -81,7 +81,7 @@ export async function saveState(message) {
   }
   if (state.hydrateFn) state.hydrateFn();
   if (state.renderFn) state.renderFn();
-  if (message && !cloudFailed) showToast(message);
+  if (message && !cloudFailed) showToast(message, "success");
 }
 
 export function withMeta(data) {

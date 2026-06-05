@@ -23,7 +23,7 @@ export function exportState() {
   link.download = `orcamento-mensal-${todayKey()}.json`;
   link.click();
   URL.revokeObjectURL(url);
-  showToast("Backup exportado.");
+  showToast("Backup exportado.", "success");
 }
 
 export function importState(event) {
@@ -39,10 +39,10 @@ export function importState(event) {
         persistLocalState();
         if (state.hydrateFn) state.hydrateFn();
         if (state.renderFn) state.renderFn();
-        showToast("Backup importado.");
+        showToast("Backup importado.", "success");
       }
     } catch {
-      showToast("Arquivo inválido.");
+      showToast("Arquivo invalido.", "error");
     }
   };
   reader.readAsText(file);

@@ -132,8 +132,11 @@ export function updateSync(title, text, status = "online") {
 
 export function showToast(message, tone = "info") {
   if (!el.toast) return;
+  const live = tone === "error" ? "assertive" : "polite";
   el.toast.textContent = message;
   el.toast.dataset.tone = tone;
+  el.toast.setAttribute("role", tone === "error" ? "alert" : "status");
+  el.toast.setAttribute("aria-live", live);
   el.toast.classList.add("show");
   clearTimeout(showToast.timer);
   showToast.timer = setTimeout(() => el.toast.classList.remove("show"), 2500);
