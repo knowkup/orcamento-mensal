@@ -211,8 +211,18 @@ button:disabled {
   background: var(--green);
 }
 
+.sync-dot.syncing {
+  background: var(--blue);
+  box-shadow: 0 0 0 4px var(--blue-soft);
+}
+
 .sync-dot.offline {
   background: var(--gold);
+}
+
+.sync-dot.error {
+  background: var(--red);
+  box-shadow: 0 0 0 4px var(--danger-soft);
 }
 
 .workspace {

@@ -115,10 +115,19 @@ export function todayIsoDate() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
-export function updateSync(title, text, online) {
-  el.syncTitle.textContent = title;
-  el.syncText.textContent = text;
-  el.syncDot.classList.toggle("offline", !online);
+export function formatTime(value = new Date()) {
+  return new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit" }).format(value);
+}
+
+export function updateSync(title, text, status = "online") {
+  const tone = typeof status === "boolean" ? (status ? "online" : "offline") : status;
+  if (el.syncTitle) el.syncTitle.textContent = title;
+  if (el.syncText) el.syncText.textContent = text;
+  if (el.syncDot) {
+    el.syncDot.classList.toggle("offline", tone === "offline");
+    el.syncDot.classList.toggle("syncing", tone === "syncing");
+    el.syncDot.classList.toggle("error", tone === "error");
+  }
 }
 
 export function showToast(message) {
