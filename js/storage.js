@@ -28,23 +28,31 @@ export function exportState() {
 }
 
 export function importState(event) {
-  const file = event.target.files?.[0];
+  const input = event.target;
+  const file = input.files?.[0];
   if (!file) return;
+  const filename = file.name || "backup.json";
   const reader = new FileReader();
   reader.onload = async () => {
     try {
       state.data = normalizeData(JSON.parse(String(reader.result)));
       if (state.saveStateFn) {
-        await state.saveStateFn("Backup importado.");
+        await state.saveStateFn(`Backup importado: ${filename}`);
       } else {
         persistLocalState();
         if (state.hydrateFn) state.hydrateFn();
         if (state.renderFn) state.renderFn();
-        showToast("Backup importado.", "success");
+        showToast(`Backup importado: ${filename}`, "success");
       }
     } catch {
-      showToast("Arquivo invalido.", "error");
+      showToast(`Arquivo invalido: ${filename}`, "error");
+    } finally {
+      input.value = "";
     }
+  };
+  reader.onerror = () => {
+    showToast(`Nao foi possivel ler: ${filename}`, "error");
+    input.value = "";
   };
   reader.readAsText(file);
 }

@@ -36,7 +36,10 @@ export function currentMonthKey() { return new Date().toISOString().slice(0, 7);
 export function byDueDate(a, b) { return String(a.dueDate || '').localeCompare(String(b.dueDate || '')); }
 
 export function showToast(message, tone = null) {
-  const inferredTone = tone || (/sucesso|salvo|salva|importado/i.test(String(message)) ? 'success' : 'info');
+  const text = String(message);
+  const inferredTone = tone
+    || (/sucesso|salvo|salva|atualizad|cadastrad|registrad|removid|excluid|importado|quitada/i.test(text) ? 'success' : null)
+    || (/nao|não|informe|preencha|selecione|nenhum|nenhuma|falha|erro|impossivel|indisponivel/i.test(text) ? 'error' : 'info');
   showAppToast(message, inferredTone);
 }
 
