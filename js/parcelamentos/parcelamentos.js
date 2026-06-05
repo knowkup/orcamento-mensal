@@ -1,7 +1,7 @@
 import { state, el, currency } from "../state.js";
 import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, refreshIcons } from "../utils.js";
 import { getInstallmentCard, getCreditorName, creditorLogoHtml, getCreditCard } from "../creditors.js";
-import { genericDebtCard } from "../components.js";
+import { emptyState, genericDebtCard } from "../components.js";
 
 export function renderInstallments() {
   renderInstallmentSummary();
@@ -26,7 +26,7 @@ export function renderInstallments() {
         open: state.expandedInstallments[item.id] === true
       });
     }).join("")
-    : `<div class="empty-state">Nenhuma conta parcelada encontrada para este filtro.</div>`;
+    : emptyState("Nenhum parcelamento encontrado", "Ajuste o filtro ou cadastre uma nova conta parcelada.");
 
   el.installmentsTable.querySelectorAll("[data-installment-card-tab]").forEach((button) => {
     button.addEventListener("click", () => {

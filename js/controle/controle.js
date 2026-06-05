@@ -1,7 +1,7 @@
 import { state, el, currency } from "../state.js";
 import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, isIncomeReceived, receivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "../utils.js";
 import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCreditorName } from "../creditors.js";
-import { metric, isManualPlannedRow } from "../components.js";
+import { metric, isManualPlannedRow, emptyState } from "../components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
 import { markDebtInstallmentPaid } from "../dividas/boot.js";
 
@@ -121,7 +121,11 @@ export function renderMonthlyControl() {
 }
 
 export function monthlyItems(items, month, kind, scope = "pending") {
-  if (!items.length) return `<div class="empty-state compact">Nada previsto para este mês.</div>`;
+  if (!items.length) {
+    const title = kind === "income" ? "Nenhuma entrada pendente" : "Nenhuma saida pendente";
+    const text = kind === "income" ? "Tudo recebido ou sem entradas previstas para este mes." : "Tudo pago ou sem contas previstas para este mes.";
+    return emptyState(title, text);
+  }
   return items
     .sort((a, b) => compareMonthlyEntries(a, b, month, kind))
     .map(({ row, value }) => {
@@ -198,7 +202,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
 }
 
 export function monthlyRealizedItems(entries, exits, month) {
-  if (!entries.length && !exits.length) return `<div class="empty-state compact">Nada realizado neste mês.</div>`;
+  if (!entries.length && !exits.length) return emptyState("Nada realizado neste mes", "Recebimentos e pagamentos confirmados aparecem aqui.");
   const entryRows = entries.length
     ? `<div class="realized-group"><span>Recebimentos</span>${monthlyItems(entries, month, "income", "realized")}</div>`
     : "";

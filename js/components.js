@@ -38,6 +38,15 @@ export function metaBox(label, value) {
   return `<div class="meta-box"><span>${label}</span><strong>${value}</strong></div>`;
 }
 
+export function emptyState(title, text = "") {
+  return `
+    <div class="empty-state">
+      <strong>${escapeHtml(title)}</strong>
+      ${text ? `<span>${escapeHtml(text)}</span>` : ""}
+    </div>
+  `;
+}
+
 export function genericDebtCard(config) {
   const installments = Array.from({ length: Number(config.total || 0) }, (_, index) => ({
     id: `${config.id}-${index + 1}`,

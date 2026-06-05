@@ -23,7 +23,7 @@ export function renderFixedCosts() {
             <button class="icon-button mini-icon danger-mini" type="button" title="Excluir" data-delete-fixed="${item.id}">${icon("trash-2")}</button>
           </td>
         </tr>
-      `).join("") || `<tr><td colspan="7" class="muted-cell">Nenhum custo fixo cadastrado.</td></tr>`}
+      `).join("") || `<tr><td colspan="7"><div class="empty-state table-empty"><strong>Nenhum custo fixo cadastrado</strong><span>Cadastre despesas recorrentes para elas entrarem automaticamente no controle mensal.</span></div></td></tr>`}
     </tbody>
   `;
 
