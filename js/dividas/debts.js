@@ -270,17 +270,36 @@ function renderWaitingDebtMetrics(waitingDebts) {
     debtMetric('Pressão no Mês', brl(monthlyPressure), maxPriority ? '!' : '▤', maxPriority ? 'red' : 'green');
 }
 
+function creditorFilterButton(scope, id, labelHtml, count, active) {
+  return '<button class="filter-chip ' + (active ? 'is-active' : '') + '" type="button" data-creditor-filter-scope="' + scope + '" data-creditor-filter-id="' + escapeHtml(id) + '">' + labelHtml + '<span class="filter-count">' + count + '</span></button>';
+}
+
+function bindCreditorFilterButtons(container) {
+  container.querySelectorAll('[data-creditor-filter-scope]').forEach(button => {
+    button.addEventListener('click', () => applyCreditorFilter(button.dataset.creditorFilterScope, button.dataset.creditorFilterId));
+  });
+}
+
+function applyCreditorFilter(scope, id) {
+  if (scope === 'waiting') state.selectedWaitingCreditorFilter = id;
+  if (scope === 'hidden') state.selectedHiddenCreditorFilter = id;
+  if (scope === 'paidOff') state.selectedPaidOffCreditorFilter = id;
+  state.expandedDebtId = null;
+  renderDebts();
+}
+
 function renderWaitingCreditorFilters(waitingDebts) {
   const container = $('waitingCreditorFilters');
   if (!container) return;
   const creditorIds = [...new Set(waitingDebts.map(d => d.creditorId).filter(Boolean))]
     .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = '<button class="filter-chip ' + (state.selectedWaitingCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterWaitingByCreditor(\'all\')">◌ Todos <span class="filter-count">' + waitingDebts.length + '</span></button>';
+  let html = creditorFilterButton('waiting', 'all', 'Todos', waitingDebts.length, state.selectedWaitingCreditorFilter === 'all');
   creditorIds.forEach(id => {
     const count = waitingDebts.filter(d => d.creditorId === id).length;
-    html += '<button class="filter-chip ' + (state.selectedWaitingCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterWaitingByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
+    html += creditorFilterButton('waiting', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedWaitingCreditorFilter === id);
   });
   container.innerHTML = html;
+  bindCreditorFilterButtons(container);
 }
 
 function renderHiddenDebtMetrics(hiddenDebts) {
@@ -302,12 +321,13 @@ function renderHiddenCreditorFilters(hiddenDebts) {
   if (!container) return;
   const creditorIds = [...new Set(hiddenDebts.map(d => d.creditorId).filter(Boolean))]
     .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = '<button class="filter-chip ' + (state.selectedHiddenCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterHiddenByCreditor(\'all\')">◎ Todos <span class="filter-count">' + hiddenDebts.length + '</span></button>';
+  let html = creditorFilterButton('hidden', 'all', 'Todos', hiddenDebts.length, state.selectedHiddenCreditorFilter === 'all');
   creditorIds.forEach(id => {
     const count = hiddenDebts.filter(d => d.creditorId === id).length;
-    html += '<button class="filter-chip ' + (state.selectedHiddenCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterHiddenByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
+    html += creditorFilterButton('hidden', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedHiddenCreditorFilter === id);
   });
   container.innerHTML = html;
+  bindCreditorFilterButtons(container);
 }
 
 function renderPaidOffCreditorFilters(paidOffDebts) {
@@ -315,12 +335,13 @@ function renderPaidOffCreditorFilters(paidOffDebts) {
   if (!container) return;
   const creditorIds = [...new Set(paidOffDebts.map(d => d.creditorId).filter(Boolean))]
     .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = '<button class="filter-chip ' + (state.selectedPaidOffCreditorFilter === 'all' ? 'is-active' : '') + '" onclick="window.filterPaidOffByCreditor(\'all\')">✓ Todos <span class="filter-count">' + paidOffDebts.length + '</span></button>';
+  let html = creditorFilterButton('paidOff', 'all', 'Todos', paidOffDebts.length, state.selectedPaidOffCreditorFilter === 'all');
   creditorIds.forEach(id => {
     const count = paidOffDebts.filter(d => d.creditorId === id).length;
-    html += '<button class="filter-chip ' + (state.selectedPaidOffCreditorFilter === id ? 'is-active' : '') + '" onclick="window.filterPaidOffByCreditor(\'' + id + '\')">' + creditorLogoHtml(id) + escapeHtml(getCreditorName(id)) + '<span class="filter-count">' + count + '</span></button>';
+    html += creditorFilterButton('paidOff', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedPaidOffCreditorFilter === id);
   });
   container.innerHTML = html;
+  bindCreditorFilterButtons(container);
 }
 
 function renderPaidOffDebtMetrics(filteredPaidOffDebts) {
@@ -363,21 +384,15 @@ export function renderDebts() {
 // --- Ações de filtro e ordenação ---
 
 window.filterWaitingByCreditor = function(id) {
-  state.selectedWaitingCreditorFilter = id;
-  state.expandedDebtId = null;
-  renderDebts();
+  applyCreditorFilter('waiting', id);
 };
 
 window.filterHiddenByCreditor = function(id) {
-  state.selectedHiddenCreditorFilter = id;
-  state.expandedDebtId = null;
-  renderDebts();
+  applyCreditorFilter('hidden', id);
 };
 
 window.filterPaidOffByCreditor = function(id) {
-  state.selectedPaidOffCreditorFilter = id;
-  state.expandedDebtId = null;
-  renderDebts();
+  applyCreditorFilter('paidOff', id);
 };
 
 window.setWaitingDebtSort = function(mode) {
