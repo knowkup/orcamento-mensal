@@ -323,8 +323,13 @@ Acao:
 
 Stack possivel:
 
-- Comecar sem framework, com scripts simples Node.
+- Comecar sem framework, com o test runner nativo do Node (`npm test`).
 - Evoluir para Vitest se o projeto ganhar build tool.
+
+Estado atual:
+
+- Testes iniciais cobrem INSS, IRRF, liquido CLT e a ponte `auto-debt-*` entre Dividas e Orcamento.
+- Regras puras iniciais ficam em `js/domain/`.
 
 Risco: baixo.
 

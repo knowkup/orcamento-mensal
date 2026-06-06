@@ -1,33 +1,22 @@
 import { state, rebuildIndexes } from './state.js';
 import { state as mainState } from '../state.js';
 import { addDoc, updateDoc, deleteDoc, installmentDoc, paymentsColl, paymentDoc, serverTimestamp } from './firebase.js';
+import { debtInstallmentForMonth, debtBudgetRow } from '../domain/debt-budget.js';
 
 export function getDebtInstallmentsForMonth(month) {
   return state.debts
     .filter(d => d.includeInBudget && d.status !== 'Quitada')
     .flatMap(debt => {
-      const paidViaControle = (mainState.data?.paidOccurrences || []).includes(`auto-debt-${debt.id}:${month}`);
-      const installment = state.installments
-        .filter(i => i.debtId === debt.id
-          && String(i.dueDate || '').startsWith(month)
-          && (i.status === 'Pendente' || (i.status === 'Paga' && paidViaControle)))
-        .sort((a, b) => Number(a.number || 0) - Number(b.number || 0))[0];
+      const installment = debtInstallmentForMonth({
+        debt,
+        installments: state.installments,
+        month,
+        paidOccurrences: mainState.data?.paidOccurrences || []
+      });
       if (!installment) return [];
       const creditorName = (state.creditors.find(c => c.id === debt.creditorId)
         || (mainState.data?.creditors || []).find(c => c.id === debt.creditorId))?.name || '';
-      const row = {
-        id: `auto-debt-${debt.id}`,
-        kind: 'expense',
-        owner: 'Felipe',
-        creditorId: debt.creditorId || '',
-        fromDebtId: debt.id,
-        label: debt.name,
-        origin: creditorName,
-        logoUrl: '',
-        values: { [month]: Number(installment.expectedValue || 0) },
-        dueDates: { [month]: installment.dueDate }
-      };
-      return [{ row, value: Number(installment.expectedValue || 0) }];
+      return [debtBudgetRow({ debt, installment, creditorName, month })];
     });
 }
 
