@@ -10,7 +10,7 @@ import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from 
 import { ensureCarPayments } from "../carro/carro.js";
 import { openPlannedDialog, deleteManualPlanned, rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDate } from "../controle/controle.js";
 import { normalizedIncomeChanges } from "../data.js";
-import { getDebtInstallmentsForMonth } from "../dividas/boot.js";
+import { getDebtInstallmentsForMonth } from "../dividas/budget-integration.js";
 
 export function renderProjection() {
   const months = currentMonths(12);

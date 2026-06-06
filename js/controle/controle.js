@@ -3,7 +3,7 @@ import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAm
 import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCreditorName } from "../creditors.js";
 import { metric, isManualPlannedRow, emptyState } from "../components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
-import { markDebtInstallmentPaid } from "../dividas/boot.js";
+import { markDebtInstallmentPaid } from "../dividas/budget-integration.js";
 
 function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;

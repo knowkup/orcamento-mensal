@@ -78,7 +78,7 @@ O modulo de dividas usa a instancia Firebase ja inicializada pelo app principal.
 
 ## Integracao Orcamento + Dividas
 
-A integracao mais importante esta em `js/dividas/boot.js`, `js/planejamento.js` e `js/controle.js`.
+A integracao mais importante esta em `js/dividas/budget-integration.js`, `js/planejamento/planejamento.js` e `js/controle/controle.js`.
 
 Fluxo:
 
@@ -87,6 +87,7 @@ Fluxo:
 - `getDebtInstallmentsForMonth(month)` procura a primeira parcela da divida naquele mes e cria uma linha de saida.
 - No Controle Mensal, ao pagar uma linha `auto-debt-*`, `confirmPaidOccurrence()` chama `markDebtInstallmentPaid()`.
 - `markDebtInstallmentPaid()` atualiza a parcela em `debtInstallments` e cria/remove registro em `debtPayments`.
+- `js/dividas/boot.js` deve ficar focado em carregar/renderizar Dividas; a ponte com Orcamento fica em `budget-integration.js`.
 - Cancelar pagamento pelo Controle tambem reverte a parcela no modulo de dividas.
 
 Consequencia: nao duplique manualmente uma divida no Orcamento se ela ja esta marcada para entrar no budget.
@@ -174,4 +175,3 @@ Arquivos nao versionados observados:
 - `mockup-*.html`
 
 Eles parecem material auxiliar/local do desenvolvimento no Claude. Nao incluir automaticamente em commit sem revisar com o usuario.
-
