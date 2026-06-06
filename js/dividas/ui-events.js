@@ -15,7 +15,14 @@ import {
   toggleRenegotiationDebt
 } from './renegotiation.js';
 import { toggleDebt } from './debts.js';
-import { setTrailDebtSort } from './trail.js';
+import {
+  dropRouteDebt,
+  endRouteDrag,
+  moveDebtInTrail,
+  routeDragOver,
+  setTrailDebtSort,
+  startRouteDrag
+} from './trail.js';
 
 export function bindDebtDataEvents() {
   const root = document.getElementById('divrenegociacaoView');
@@ -43,6 +50,28 @@ export function bindDebtDataEvents() {
   document.getElementById('trailDebtSort')?.addEventListener('change', (event) => {
     setTrailDebtSort(event.target.value);
   });
+  const trailRoad = document.getElementById('trailRoad');
+  trailRoad?.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-route-move]');
+    if (!button || !trailRoad.contains(button)) return;
+    moveDebtInTrail(button.dataset.routeMove, Number(button.dataset.direction || 0));
+  });
+  trailRoad?.addEventListener('dragstart', (event) => {
+    const item = event.target.closest('.route-item[draggable="true"]');
+    if (!item || !trailRoad.contains(item)) return;
+    startRouteDrag(event, item.dataset.debtId);
+  });
+  trailRoad?.addEventListener('dragover', (event) => {
+    const item = event.target.closest('.route-item[draggable="true"]');
+    if (!item || !trailRoad.contains(item)) return;
+    routeDragOver(event);
+  });
+  trailRoad?.addEventListener('drop', (event) => {
+    const item = event.target.closest('.route-item[draggable="true"]');
+    if (!item || !trailRoad.contains(item)) return;
+    dropRouteDebt(event, item.dataset.debtId);
+  });
+  trailRoad?.addEventListener('dragend', endRouteDrag);
 
   document.getElementById('closeRenegotiationModalButton')?.addEventListener('click', closeRenegotiationModal);
   document.getElementById('saveRenegotiationButton')?.addEventListener('click', saveRenegotiation);

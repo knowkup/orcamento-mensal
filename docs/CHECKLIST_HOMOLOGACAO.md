@@ -92,6 +92,8 @@ Ultima atualizacao: 2026-06-05
 - Excluir pagamento funciona.
 - Quitar divida funciona.
 - Alterar ordem da rota funciona.
+- Reordenar pela seta para cima/baixo funciona em Ordem da Rota.
+- Arrastar uma divida para outra posicao atualiza e preserva a nova ordem.
 - A parcela de divida integrada aparece no Controle Mensal quando aplicavel.
 - Se houve mudanca em eventos/bindings de Dividas, todas as abas de Dividas devem continuar mostrando dados.
 - Se houve mudanca em eventos/bindings de Dividas, testar filtros, ordenacao e abrir/fechar detalhes antes de seguir.

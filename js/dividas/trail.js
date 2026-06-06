@@ -3,6 +3,7 @@ import { $, brl, escapeHtml, emptyCard, getCreditorName, creditorLogoHtml, compa
 import { debtBalance, nextInstallment, debtProgress, installmentProgress, payoffTodayHtml, routeInstallmentStatusLabel } from './calc.js';
 import { debtMetric, sortedTrailDebts, orderedTrailDebts } from './debts.js';
 import { debtDoc, writeBatch, serverTimestamp } from './firebase.js';
+import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder.js';
 
 function debtExpandedDetail(debt) {
   const next = nextInstallment(debt);
@@ -180,9 +181,9 @@ export function renderTrail() {
       const progressValue = done ? 100 : debtProgress(debt);
       const rank = done ? '✓' : route.filter(item => item.status === 'Ativa').findIndex(item => item.id === debt.id) + 1;
       const canReorder = state.selectedTrailDebtSort === 'trail' && !done;
-      const dragAttrs = canReorder ? 'draggable="true" ondragstart="window.startRouteDrag(event, \'' + debt.id + '\')" ondragover="window.routeDragOver(event, \'' + debt.id + '\')" ondrop="window.dropRouteDebt(event, \'' + debt.id + '\')" ondragend="window.endRouteDrag()"' : 'draggable="false"';
+      const dragAttrs = canReorder ? 'draggable="true"' : 'draggable="false"';
       const reorderActions = canReorder
-        ? '<button class="ghost-btn subtle" onclick="window.moveDebtInTrail(\'' + debt.id + '\', -1)">↑</button><button class="ghost-btn subtle" onclick="window.moveDebtInTrail(\'' + debt.id + '\', 1)">↓</button>'
+        ? '<button class="ghost-btn subtle" type="button" data-route-move="' + escapeHtml(debt.id) + '" data-direction="-1">↑</button><button class="ghost-btn subtle" type="button" data-route-move="' + escapeHtml(debt.id) + '" data-direction="1">↓</button>'
         : '';
       const dragTitle = done ? 'Dívida concluída' : state.selectedTrailDebtSort === 'trail' ? 'Arrastar para reordenar' : 'Reordenação manual disponível em Ordem da Rota';
       return '<div class="route-item' + (done ? ' done' : '') + (current ? ' current' : '') + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" ' + dragAttrs + '>' +
@@ -262,22 +263,18 @@ async function persistRouteOrder(route) {
   showToast('Ordem da rota atualizada.');
 }
 
-window.moveDebtInTrail = async function(id, direction) {
+export async function moveDebtInTrail(id, direction) {
   const targetDebt = state.debts.find(debt => debt.id === id);
   if (!targetDebt || targetDebt.status === 'Quitada') return;
   const route = orderedTrailDebts()
     .filter(debt => debt.status === 'Ativa')
     .map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
-  const currentIndex = route.findIndex(debt => debt.id === id);
-  const nextIndex = currentIndex + direction;
-  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= route.length) return;
-  const current = route[currentIndex];
-  route[currentIndex] = route[nextIndex];
-  route[nextIndex] = current;
-  await persistRouteOrder(route);
-};
+  const reordered = moveItemByDirection(route, id, direction);
+  if (!reordered) return;
+  await persistRouteOrder(reordered);
+}
 
-window.startRouteDrag = function(event, id) {
+export function startRouteDrag(event, id) {
   const debt = state.debts.find(item => item.id === id);
   if (!debt || debt.status === 'Quitada') return;
   state.draggedRouteDebtId = id;
@@ -285,16 +282,16 @@ window.startRouteDrag = function(event, id) {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', id);
   }
-  const item = event.currentTarget;
+  const item = event.target.closest('.route-item');
   if (item) item.classList.add('dragging');
-};
+}
 
-window.routeDragOver = function(event) {
+export function routeDragOver(event) {
   event.preventDefault();
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-};
+}
 
-window.dropRouteDebt = async function(event, targetId) {
+export async function dropRouteDebt(event, targetId) {
   event.preventDefault();
   const sourceId = state.draggedRouteDebtId || event.dataTransfer?.getData('text/plain');
   state.draggedRouteDebtId = null;
@@ -303,18 +300,15 @@ window.dropRouteDebt = async function(event, targetId) {
   const targetDebt = state.debts.find(debt => debt.id === targetId);
   if (!targetDebt || targetDebt.status === 'Quitada') return;
   const route = orderedTrailDebts().filter(debt => debt.status === 'Ativa');
-  const from = route.findIndex(debt => debt.id === sourceId);
-  const to = route.findIndex(debt => debt.id === targetId);
-  if (from < 0 || to < 0) return;
-  const [moved] = route.splice(from, 1);
-  route.splice(to, 0, moved);
-  await persistRouteOrder(route);
-};
+  const reordered = moveItemToTargetPosition(route, sourceId, targetId);
+  if (!reordered) return;
+  await persistRouteOrder(reordered);
+}
 
-window.endRouteDrag = function() {
+export function endRouteDrag() {
   state.draggedRouteDebtId = null;
   document.querySelectorAll('.route-item.dragging').forEach(item => item.classList.remove('dragging'));
-};
+}
 
 function formatAnyDateBR(value) {
   if (!value) return '-';
