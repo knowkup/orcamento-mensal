@@ -14,6 +14,11 @@ function payoffSummaryValues() {
   return { debt, totalRemaining, paidValue, discount, interest };
 }
 
+function closeDebtFormIfOpen() {
+  state.editingDebtId = null;
+  document.getElementById('divDebtDialog')?.close();
+}
+
 export function updatePayoffSummary() {
   const target = $('payoffSummary');
   if (!target) return;
@@ -33,10 +38,10 @@ export function updatePayoffSummary() {
     '<p class="payoff-note">Ao confirmar, as parcelas futuras serão encerradas e a dívida será marcada como quitada.</p>';
 }
 
-window.openPayoffModal = function(id) {
+export function openPayoffModal(id) {
   const debt = state.debts.find(d => d.id === id);
   if (!debt) return showToast('Dívida não encontrada.');
-  window.closeDebtForm();
+  closeDebtFormIfOpen();
   closePaymentForm();
   closeInstallmentModal();
   state.payoffDebtId = id;
@@ -47,7 +52,7 @@ window.openPayoffModal = function(id) {
   $('payoffNotes').value = '';
   updatePayoffSummary();
   document.getElementById('divPayoffDialog').showModal();
-};
+}
 
 export function closePayoffModal() {
   state.payoffDebtId = null;
@@ -98,8 +103,8 @@ export async function confirmPayoffDebt() {
 
 // --- Modal de pagamento de parcela ---
 
-window.openPaymentForm = function(installmentId) {
-  window.closeDebtForm();
+export function openPaymentForm(installmentId) {
+  closeDebtFormIfOpen();
   closePayoffModal();
   const inst = state.installments.find(i => i.id === installmentId);
   if (!inst) return;
@@ -111,7 +116,7 @@ window.openPaymentForm = function(installmentId) {
   $('payDate').value = inst.dueDate;
   $('payValue').value = brl(inst.expectedValue);
   document.getElementById('divPaymentDialog').showModal();
-};
+}
 
 export function closePaymentForm() {
   state.paymentInstallmentId = null;
@@ -155,8 +160,8 @@ export async function savePayment() {
 
 // --- Modal de edição de parcela ---
 
-window.openInstallmentModal = function(installmentId) {
-  window.closeDebtForm();
+export function openInstallmentModal(installmentId) {
+  closeDebtFormIfOpen();
   closePaymentForm();
   const inst = state.installments.find(item => item.id === installmentId);
   if (!inst) return showToast('Parcela não encontrada.');
@@ -165,7 +170,7 @@ window.openInstallmentModal = function(installmentId) {
   $('editInstallmentValue').value = brl(inst.expectedValue || 0);
   $('editInstallmentStatus').value = inst.status || 'Pendente';
   document.getElementById('divInstallmentDialog').showModal();
-};
+}
 
 export function closeInstallmentModal() {
   state.editingInstallmentId = null;

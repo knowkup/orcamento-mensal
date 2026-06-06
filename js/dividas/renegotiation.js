@@ -4,6 +4,7 @@ import { debtBalance, openInstallmentsForDebt, nextInstallment } from './calc.js
 import { eligibleRenegotiationDebts, selectedRenegotiationDebts, nextPayoffOrder, debtMetric } from './debts.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, renegotiationsColl, doc, addDoc, writeBatch, serverTimestamp } from './firebase.js';
 import { closeInstallmentModal, closePaymentForm, closePayoffModal } from './payment.js';
+import { closeDebtForm } from './debt-form.js';
 
 export function renderRenegotiation() {
   const metrics = $('renegotiationMetrics');
@@ -58,7 +59,7 @@ export function clearRenegotiationSelection() {
 export function openRenegotiationModal() {
   const selected = selectedRenegotiationDebts();
   if (!selected.length) return showToast('Selecione ao menos uma dívida para renegociar.');
-  window.closeDebtForm();
+  closeDebtForm();
   closePaymentForm();
   closeInstallmentModal();
   closePayoffModal();

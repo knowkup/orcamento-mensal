@@ -2,7 +2,7 @@
 
 Use este checklist depois de mudancas publicadas em producao.
 
-Ultima atualizacao: 2026-06-05
+Ultima atualizacao: 2026-06-06
 
 ---
 
@@ -88,6 +88,9 @@ Ultima atualizacao: 2026-06-05
 - Importar JSON de Dividas permite selecionar o arquivo.
 - Limpar todos os dados abre apenas o modal de confirmacao.
 - Abrir uma divida funciona.
+- Criar divida ativa, em espera e fora do radar abre o formulario com o status correto.
+- Editar e salvar uma divida preserva parcelas e pagamentos existentes.
+- Mover dividas entre Rota, Em Espera e Fora do Radar funciona.
 - Registrar pagamento de divida funciona.
 - Fechar o modal de pagamento sem salvar funciona.
 - Editar uma parcela, salvar e fechar o modal funciona.
@@ -98,6 +101,11 @@ Ultima atualizacao: 2026-06-05
 - Alterar ordem da rota funciona.
 - Reordenar pela seta para cima/baixo funciona em Ordem da Rota.
 - Arrastar uma divida para outra posicao atualiza e preserva a nova ordem.
+- Ordenar e reordenar Em Espera por seletor, setas e arraste funciona.
+- Ordenar e reordenar Fora do Radar por seletor, setas e arraste funciona.
+- Criar, editar e excluir credor sem dividas funciona.
+- Credor vinculado bloqueia exclusao e mostra aviso.
+- Unificar credor com o cadastro do Orcamento preserva as dividas vinculadas.
 - A parcela de divida integrada aparece no Controle Mensal quando aplicavel.
 - Se houve mudanca em eventos/bindings de Dividas, todas as abas de Dividas devem continuar mostrando dados.
 - Se houve mudanca em eventos/bindings de Dividas, testar filtros, ordenacao e abrir/fechar detalhes antes de seguir.

@@ -81,7 +81,7 @@ function renderDashboardAction(activeDebts, openInstallments) {
   }
   const next = openInstallments[0] || null;
   if (!next) {
-    container.innerHTML = '<div class="next-action-card"><div><div class="action-pill">Próxima ação recomendada</div><h2>Sem parcelas pendentes</h2><p>Todas as dívidas ativas estão sem cobrança aberta no momento.</p></div><button class="primary-action" onclick="window.goToDebtsAndNew()">Nova dívida</button></div>';
+    container.innerHTML = '<div class="next-action-card"><div><div class="action-pill">Próxima ação recomendada</div><h2>Sem parcelas pendentes</h2><p>Todas as dívidas ativas estão sem cobrança aberta no momento.</p></div><button class="primary-action" type="button" data-new-debt-status="Ativa">Nova dívida</button></div>';
     return;
   }
   const debt = activeDebts.find(d => d.id === next.debtId);
@@ -96,7 +96,7 @@ function renderDashboardAction(activeDebts, openInstallments) {
         '<div class="next-action-value">' + brl(next.expectedValue) + '</div>' +
         '<div class="impact-line">Impacto: ' + escapeHtml(impact) + '.</div>' +
       '</div>' +
-      '<button class="primary-action" onclick="window.openPaymentForm(\'' + next.id + '\')">Registrar pagamento</button>' +
+      '<button class="primary-action" type="button" data-payment-installment-id="' + escapeHtml(next.id) + '">Registrar pagamento</button>' +
     '</div>';
 }
 
@@ -160,7 +160,7 @@ function renderDashboardDecision(activeDebts, openInstallments) {
   upcomingContainer.innerHTML = openInstallments.slice(0, 5).length ? openInstallments.slice(0, 5).map(item => {
     const debt = state.debts.find(d => d.id === item.debtId);
     const title = debt ? getCreditorName(debt.creditorId) + ' · ' + debt.name : 'Dívida não encontrada';
-    return '<div class="decision-row due-row"><div><strong>' + escapeHtml(title) + '</strong><small>' + formatDateBR(item.dueDate) + ' · ' + dueHint(item.dueDate) + '</small></div><strong>' + brl(item.expectedValue) + '</strong><button class="ghost-btn" onclick="window.openDebtFromDashboard(\'' + item.debtId + '\')">Abrir</button></div>';
+    return '<div class="decision-row due-row"><div><strong>' + escapeHtml(title) + '</strong><small>' + formatDateBR(item.dueDate) + ' · ' + dueHint(item.dueDate) + '</small></div><strong>' + brl(item.expectedValue) + '</strong><button class="ghost-btn" type="button" data-dashboard-debt-id="' + escapeHtml(item.debtId) + '">Abrir</button></div>';
   }).join('') : emptyCard('Sem parcelas pendentes', 'Nenhuma parcela ativa encontrada na frente atual.');
 
   const ranked = [...activeDebts]
@@ -177,7 +177,7 @@ function renderDashboardDecision(activeDebts, openInstallments) {
       '<div><strong>' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</strong><small>' + escapeHtml(priorityReason(debt)) + (next ? ' · ' + dueHint(next.dueDate) : '') + '</small></div>' +
       '<span class="priority-badge ' + tone.tone + '">' + tone.label + '</span>' +
       '<div class="front-value">' + brl(relevantValue || debtBalance(debt)) + '</div>' +
-      '<button class="ghost-btn" onclick="window.openDebtFromDashboard(\'' + debt.id + '\')">Abrir dívida</button>' +
+      '<button class="ghost-btn" type="button" data-dashboard-debt-id="' + escapeHtml(debt.id) + '">Abrir dívida</button>' +
     '</div>';
   }).join('') : emptyCard('Sem frente de pagamento', 'Nenhuma dívida ativa com saldo em aberto.');
 }

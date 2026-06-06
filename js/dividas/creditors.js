@@ -18,15 +18,15 @@ export function renderCreditors() {
         const linkedDebts = state.debts.filter(d => d.creditorId === creditor.id);
         const linkedBalance = linkedDebts.reduce((sum, debt) => sum + debtBalance(debt), 0);
         const deleteButton = linkedDebts.length
-          ? '<button class="ghost-btn icon-only danger-btn" title="Exclusão bloqueada" onclick="window.showToastGlobal(\'Este credor está vinculado a dívidas.\')">⊘</button>'
-          : '<button class="ghost-btn icon-only danger-btn" title="Excluir" onclick="window.openDeleteModal(\'creditor\', \'' + creditor.id + '\')">⌫</button>';
+          ? '<button class="ghost-btn icon-only danger-btn" type="button" title="Exclusão bloqueada" data-creditor-linked>⊘</button>'
+          : '<button class="ghost-btn icon-only danger-btn" type="button" title="Excluir" data-delete-type="creditor" data-delete-id="' + escapeHtml(creditor.id) + '">⌫</button>';
         return '<div class="creditor-table-row">' +
           '<div class="debt-head">' + creditorLogoHtml(creditor.id) + '<div><div class="debt-name">' + escapeHtml(creditor.name) + '</div><div class="debt-meta"><span>' + escapeHtml(creditor.type || '') + '</span></div></div></div>' +
           '<strong>' + linkedDebts.length + '</strong>' +
           '<strong>' + brl(linkedBalance) + '</strong>' +
           '<div class="action-group creditor-actions">' +
-            '<button class="ghost-btn icon-only" title="Unificar com Orçamento" onclick="window.openUnifyCreditorModal(\'' + creditor.id + '\')">⇄</button>' +
-            '<button class="ghost-btn icon-only" title="Editar" onclick="window.editCreditor(\'' + creditor.id + '\')">✎</button>' +
+            '<button class="ghost-btn icon-only" type="button" title="Unificar com Orçamento" data-unify-creditor-id="' + escapeHtml(creditor.id) + '">⇄</button>' +
+            '<button class="ghost-btn icon-only" type="button" title="Editar" data-edit-creditor-id="' + escapeHtml(creditor.id) + '">✎</button>' +
             deleteButton +
           '</div>' +
         '</div>';
@@ -60,7 +60,7 @@ export function renderCreditorMetrics() {
 
 // --- CRUD credores ---
 
-window.saveCreditor = async function() {
+export async function saveCreditor() {
   const name = $('creditorName').value.trim();
   if (!name) return showToast('Informe o nome do credor.');
   const payload = { name, type: $('creditorType').value, logoUrl: $('creditorLogoUrl').value.trim(), notes: $('creditorNotes').value.trim(), updatedAt: serverTimestamp() };
@@ -76,22 +76,22 @@ window.saveCreditor = async function() {
     state.creditors.push({ id: created.id, ...payload });
     showToast('Credor cadastrado com sucesso.');
   }
-  window.resetCreditorForm();
-  window.closeCreditorModal();
+  resetCreditorForm();
+  closeCreditorModal();
   if (state.renderFn) state.renderFn();
-};
+}
 
-window.openCreditorModal = function() {
-  window.resetCreditorForm();
+export function openCreditorModal() {
+  resetCreditorForm();
   document.getElementById('divCreditorDialog').showModal();
-};
+}
 
-window.closeCreditorModal = function() {
-  document.getElementById('divCreditorDialog').close();
-  window.resetCreditorForm();
-};
+export function closeCreditorModal() {
+  document.getElementById('divCreditorDialog')?.close();
+  resetCreditorForm();
+}
 
-window.editCreditor = function(id) {
+export function editCreditor(id) {
   const creditor = state.creditors.find(c => c.id === id);
   if (!creditor) return;
   state.editingCreditorId = id;
@@ -102,9 +102,9 @@ window.editCreditor = function(id) {
   $('creditorLogoUrl').value = creditor.logoUrl || '';
   renderCreditorLogoPreview(creditor.logoUrl || '', creditor.name || '');
   $('creditorNotes').value = creditor.notes || '';
-};
+}
 
-window.resetCreditorForm = function() {
+export function resetCreditorForm() {
   state.editingCreditorId = null;
   $('creditorFormTitle').textContent = 'Novo credor';
   $('creditorName').value = '';
@@ -113,7 +113,7 @@ window.resetCreditorForm = function() {
   if ($('creditorLogoFile')) $('creditorLogoFile').value = '';
   renderCreditorLogoPreview('', 'RF');
   $('creditorNotes').value = '';
-};
+}
 
 function renderCreditorLogoPreview(src, fallbackName) {
   const preview = $('creditorLogoPreview');
@@ -125,7 +125,7 @@ function renderCreditorLogoPreview(src, fallbackName) {
   }
 }
 
-window.handleCreditorLogoUpload = function(event) {
+export function handleCreditorLogoUpload(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   if (!file.type.startsWith('image/')) { event.target.value = ''; return showToast('Selecione um arquivo de imagem.'); }
@@ -136,19 +136,17 @@ window.handleCreditorLogoUpload = function(event) {
     renderCreditorLogoPreview($('creditorLogoUrl').value, $('creditorName').value || 'RF');
   };
   reader.readAsDataURL(file);
-};
+}
 
-window.clearCreditorLogo = function() {
+export function clearCreditorLogo() {
   $('creditorLogoUrl').value = '';
   if ($('creditorLogoFile')) $('creditorLogoFile').value = '';
   renderCreditorLogoPreview('', $('creditorName').value || 'RF');
-};
-
-window.showToastGlobal = function(msg) { showToast(msg); };
+}
 
 // --- Unificação manual com credor do Orçamento ---
 
-window.openUnifyCreditorModal = function(creditorId) {
+export function openUnifyCreditorModal(creditorId) {
   const creditor = state.creditors.find(c => c.id === creditorId);
   if (!creditor) return;
   state.unifyingCreditorId = creditorId;
@@ -166,14 +164,14 @@ window.openUnifyCreditorModal = function(creditorId) {
       : '<option value="">Nenhum credor no Orçamento</option>';
   }
   document.getElementById('divUnifyCreditorDialog').showModal();
-};
+}
 
-window.closeUnifyCreditorModal = function() {
+export function closeUnifyCreditorModal() {
   state.unifyingCreditorId = null;
-  document.getElementById('divUnifyCreditorDialog').close();
-};
+  document.getElementById('divUnifyCreditorDialog')?.close();
+}
 
-window.confirmUnifyCreditor = async function() {
+export async function confirmUnifyCreditor() {
   const sourceId = state.unifyingCreditorId;
   const targetId = $('unifyTargetSelect')?.value;
   if (!sourceId || !targetId) return showToast('Selecione um credor do Orçamento.');
@@ -194,4 +192,4 @@ window.confirmUnifyCreditor = async function() {
   document.getElementById('divUnifyCreditorDialog').close();
   if (state.renderFn) state.renderFn();
   showToast('Credor unificado com sucesso.');
-};
+}

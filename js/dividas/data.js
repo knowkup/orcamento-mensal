@@ -163,7 +163,7 @@ export function openClearAllModal() {
   document.getElementById('divDeleteDialog').showModal();
 }
 
-window.openDeleteModal = function(type, id) {
+export function openDeleteModal(type, id) {
   state.deleteContext = { type, id };
   if (type === 'debt') {
     const debt = state.debts.find(d => d.id === id);
@@ -188,7 +188,7 @@ window.openDeleteModal = function(type, id) {
     $('deleteModalWarning').textContent = 'Só exclua credores que não estejam vinculados a dívidas.';
   }
   document.getElementById('divDeleteDialog').showModal();
-};
+}
 
 export function closeDeleteModal() {
   state.deleteContext = null;

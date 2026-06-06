@@ -58,12 +58,8 @@ function debtActionMenu(debt) {
   const buttons = actions.map(action => {
     const [label, type, valueOrTone, maybeTone] = action;
     const tone = valueOrTone === 'danger' || maybeTone === 'danger' ? ' danger-btn' : '';
-    let onclick = '';
-    if (type === 'changeDebtStatus') onclick = 'window.changeDebtStatus(\'' + debt.id + '\', \'' + valueOrTone + '\')';
-    if (type === 'openPayoffModal') onclick = 'window.openPayoffModal(\'' + debt.id + '\')';
-    if (type === 'openDebtForm') onclick = 'window.openDebtForm(\'edit\', \'' + debt.id + '\')';
-    if (type === 'openDeleteModal') onclick = 'window.openDeleteModal(\'debt\', \'' + debt.id + '\')';
-    return '<button class="ghost-btn' + tone + '" onclick="' + onclick + '">' + escapeHtml(label) + '</button>';
+    const status = type === 'changeDebtStatus' ? ' data-debt-status="' + escapeHtml(valueOrTone) + '"' : '';
+    return '<button class="ghost-btn' + tone + '" type="button" data-debt-action="' + type + '" data-debt-id="' + escapeHtml(debt.id) + '"' + status + '>' + escapeHtml(label) + '</button>';
   }).join('');
   return '<details class="more-actions debt-menu"><summary class="ghost-btn">Ações <span>⋮</span></summary><div class="more-menu">' + buttons + '</div></details>';
 }
@@ -82,8 +78,8 @@ function installmentRowsForDebt(debt) {
   const countText = currentTab === 'paid' ? '5 últimas' : '5 próximas';
 
   let html = '<div class="installment-tabs">' +
-    '<button class="installment-tab ' + (currentTab === 'pending' ? 'is-active' : '') + '" onclick="window.setDebtInstallmentTab(\'pending\')">Pendentes <span>' + (currentTab === 'pending' ? escapeHtml(countText) : pending.length) + '</span></button>' +
-    '<button class="installment-tab ' + (currentTab === 'paid' ? 'is-active' : '') + '" onclick="window.setDebtInstallmentTab(\'paid\')">Pagas <span>' + (currentTab === 'paid' ? escapeHtml(countText) : paid.length) + '</span></button>' +
+    '<button class="installment-tab ' + (currentTab === 'pending' ? 'is-active' : '') + '" type="button" data-installment-tab="pending">Pendentes <span>' + (currentTab === 'pending' ? escapeHtml(countText) : pending.length) + '</span></button>' +
+    '<button class="installment-tab ' + (currentTab === 'paid' ? 'is-active' : '') + '" type="button" data-installment-tab="paid">Pagas <span>' + (currentTab === 'paid' ? escapeHtml(countText) : paid.length) + '</span></button>' +
   '</div>';
   html += '<div class="installment-list compact-installments">' +
     '<div class="installment-row header"><div>Parcela</div><div>Vencimento</div><div>Valor</div><div>Status</div><div>Ação</div></div>';
@@ -94,8 +90,8 @@ function installmentRowsForDebt(debt) {
       const statusClass = item.status === 'Paga' || item.status === 'Quitada' ? 'green' : item.status === 'Renegociada' ? 'blue' : 'amber';
       const payment = state.paymentByInstallment.get(item.id) || null;
       const actionHtml = currentTab === 'paid'
-        ? (payment ? '<button class="ghost-btn mini-action" onclick="window.openDeleteModal(\'payment\', \'' + payment.id + '\')">Excluir pagamento</button>' : '')
-        : '<button class="ghost-btn mini-action" onclick="window.openPaymentForm(\'' + item.id + '\')">Registrar pagamento</button>';
+        ? (payment ? '<button class="ghost-btn mini-action" type="button" data-delete-type="payment" data-delete-id="' + escapeHtml(payment.id) + '">Excluir pagamento</button>' : '')
+        : '<button class="ghost-btn mini-action" type="button" data-payment-installment-id="' + escapeHtml(item.id) + '">Registrar pagamento</button>';
       html += '<div class="installment-row">' +
         '<div data-label="Parcela"><strong>' + item.number + '/' + item.total + '</strong></div>' +
         '<div data-label="Vencimento">' + formatDateBR(item.dueDate) + '</div>' +
@@ -106,7 +102,7 @@ function installmentRowsForDebt(debt) {
     });
   }
   if (source.length && isPreview) {
-    html += '<button class="installment-more" onclick="window.showAllDebtInstallments()">' + escapeHtml(buttonText) + '<span>›</span></button>';
+    html += '<button class="installment-more" type="button" data-show-all-installments>' + escapeHtml(buttonText) + '<span>›</span></button>';
   }
   html += '</div>';
   return html;

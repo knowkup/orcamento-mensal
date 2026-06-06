@@ -112,8 +112,8 @@ function installmentRowsForDebt(debt) {
   const countText = currentTab === 'paid' ? '5 últimas' : '5 próximas';
 
   let html = '<div class="installment-tabs">' +
-    '<button class="installment-tab ' + (currentTab === 'pending' ? 'is-active' : '') + '" onclick="window.setDebtInstallmentTab(\'pending\')">Pendentes <span>' + (currentTab === 'pending' ? escapeHtml(countText) : pending.length) + '</span></button>' +
-    '<button class="installment-tab ' + (currentTab === 'paid' ? 'is-active' : '') + '" onclick="window.setDebtInstallmentTab(\'paid\')">Pagas <span>' + (currentTab === 'paid' ? escapeHtml(countText) : paid.length) + '</span></button>' +
+    '<button class="installment-tab ' + (currentTab === 'pending' ? 'is-active' : '') + '" type="button" data-installment-tab="pending">Pendentes <span>' + (currentTab === 'pending' ? escapeHtml(countText) : pending.length) + '</span></button>' +
+    '<button class="installment-tab ' + (currentTab === 'paid' ? 'is-active' : '') + '" type="button" data-installment-tab="paid">Pagas <span>' + (currentTab === 'paid' ? escapeHtml(countText) : paid.length) + '</span></button>' +
   '</div>';
 
   html += '<div class="installment-list compact-installments">' +
@@ -126,8 +126,8 @@ function installmentRowsForDebt(debt) {
       const statusClass = item.status === 'Paga' || item.status === 'Quitada' ? 'green' : item.status === 'Renegociada' ? 'blue' : 'amber';
       const payment = paymentForInstallment(item.id);
       const actionHtml = currentTab === 'paid'
-        ? (payment ? '<button class="ghost-btn mini-action" onclick="window.openDeleteModal(\'payment\', \'' + payment.id + '\')">Excluir pagamento</button>' : '')
-        : '<button class="ghost-btn mini-action" onclick="window.openPaymentForm(\'' + item.id + '\')">Registrar pagamento</button>';
+        ? (payment ? '<button class="ghost-btn mini-action" type="button" data-delete-type="payment" data-delete-id="' + escapeHtml(payment.id) + '">Excluir pagamento</button>' : '')
+        : '<button class="ghost-btn mini-action" type="button" data-payment-installment-id="' + escapeHtml(item.id) + '">Registrar pagamento</button>';
       html += '<div class="installment-row">' +
         '<div data-label="Parcela"><strong>' + item.number + '/' + item.total + '</strong></div>' +
         '<div data-label="Vencimento">' + formatDateBR(item.dueDate) + '</div>' +
@@ -139,7 +139,7 @@ function installmentRowsForDebt(debt) {
   }
 
   if (source.length && isPreview) {
-    html += '<button class="installment-more" onclick="window.showAllDebtInstallments()">' + escapeHtml(buttonText) + '<span>›</span></button>';
+    html += '<button class="installment-more" type="button" data-show-all-installments>' + escapeHtml(buttonText) + '<span>›</span></button>';
   }
 
   html += '</div>';
@@ -181,12 +181,8 @@ function debtActionMenu(debt) {
   const buttons = actions.map(action => {
     const [label, type, valueOrTone, maybeTone] = action;
     const tone = valueOrTone === 'danger' || maybeTone === 'danger' ? ' danger-btn' : '';
-    let onclick = '';
-    if (type === 'changeDebtStatus') onclick = 'window.changeDebtStatus(\'' + debt.id + '\', \'' + valueOrTone + '\')';
-    if (type === 'openPayoffModal') onclick = 'window.openPayoffModal(\'' + debt.id + '\')';
-    if (type === 'openDebtForm') onclick = 'window.openDebtForm(\'edit\', \'' + debt.id + '\')';
-    if (type === 'openDeleteModal') onclick = 'window.openDeleteModal(\'debt\', \'' + debt.id + '\')';
-    return '<button class="ghost-btn' + tone + '" onclick="' + onclick + '">' + escapeHtml(label) + '</button>';
+    const status = type === 'changeDebtStatus' ? ' data-debt-status="' + escapeHtml(valueOrTone) + '"' : '';
+    return '<button class="ghost-btn' + tone + '" type="button" data-debt-action="' + type + '" data-debt-id="' + escapeHtml(debt.id) + '"' + status + '>' + escapeHtml(label) + '</button>';
   }).join('');
   return '<details class="more-actions debt-menu"><summary class="ghost-btn">Ações <span>⋮</span></summary><div class="more-menu">' + buttons + '</div></details>';
 }
@@ -216,10 +212,10 @@ export function debtRouteGridRow(debt, index, mode) {
   const nextLabel = next ? formatDateBR(next.dueDate) : 'Sem parcela';
   const progressValue = debt.status === 'Quitada' ? 100 : debtProgress(debt);
   const config = {
-    waiting: { className: 'waiting-route-item', start: 'startWaitingDebtDrag', over: 'waitingDebtDragOver', drop: 'dropWaitingDebt', end: 'endWaitingDebtDrag', move: 'moveWaitingDebt' },
-    hidden: { className: 'hidden-route-item', start: 'startHiddenDebtDrag', over: 'hiddenDebtDragOver', drop: 'dropHiddenDebt', end: 'endHiddenDebtDrag', move: 'moveHiddenDebt' }
+    waiting: { className: 'waiting-route-item' },
+    hidden: { className: 'hidden-route-item' }
   }[mode] || {};
-  return '<div class="route-item ' + config.className + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" draggable="true" ondragstart="window.' + config.start + '(event, \'' + debt.id + '\')" ondragover="window.' + config.over + '(event)" ondrop="window.' + config.drop + '(event, \'' + debt.id + '\')" ondragend="window.' + config.end + '()">' +
+  return '<div class="route-item ' + config.className + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + escapeHtml(debt.id) + '" data-debt-route="' + mode + '" draggable="true">' +
     '<button class="drag-handle" title="Arrastar para reordenar">⋮⋮</button>' +
     '<div class="route-rank">' + (index + 1) + '</div>' +
     '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><button class="debt-name clickable debt-name-button" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</button><div class="debt-meta">' + compactTagsForDebt(debt) + '</div></div></div>' +
@@ -229,7 +225,7 @@ export function debtRouteGridRow(debt, index, mode) {
     '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
     '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
     '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
-    '<div class="route-actions"><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', -1)">↑</button><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', 1)">↓</button><button class="ghost-btn row-toggle" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
+    '<div class="route-actions"><button class="ghost-btn subtle" type="button" data-secondary-route-move="' + escapeHtml(debt.id) + '" data-route-scope="' + mode + '" data-direction="-1">↑</button><button class="ghost-btn subtle" type="button" data-secondary-route-move="' + escapeHtml(debt.id) + '" data-route-scope="' + mode + '" data-direction="1">↓</button><button class="ghost-btn row-toggle" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
     (isExpanded ? debtExpandedDetail(debt) : '') +
   '</div>';
 }
@@ -246,7 +242,7 @@ export function paidOffDebtRow(debt, index) {
     '<div class="route-stat"><span>Valor Pago</span><strong>' + brl(paidValue) + '</strong></div>' +
     '<div class="route-stat paid-difference ' + paidOffDifferenceClass(difference) + '"><span>Diferença</span><strong>' + escapeHtml(paidOffDifferenceLabel(difference)) + '</strong></div>' +
     '<div class="route-stat"><span>Encerrada em</span><strong>' + escapeHtml(closedDate ? formatDateBR(closedDate) : '-') + '</strong></div>' +
-    '<div class="route-actions paid-off-actions"><button class="ghost-btn danger-btn" onclick="window.openDeleteModal(\'debt\', \'' + debt.id + '\')">Excluir</button></div>' +
+    '<div class="route-actions paid-off-actions"><button class="ghost-btn danger-btn" type="button" data-delete-type="debt" data-delete-id="' + escapeHtml(debt.id) + '">Excluir</button></div>' +
   '</div>';
 }
 
@@ -383,29 +379,29 @@ export function renderDebts() {
 
 // --- Ações de filtro e ordenação ---
 
-window.filterWaitingByCreditor = function(id) {
+export function filterWaitingByCreditor(id) {
   applyCreditorFilter('waiting', id);
-};
+}
 
-window.filterHiddenByCreditor = function(id) {
+export function filterHiddenByCreditor(id) {
   applyCreditorFilter('hidden', id);
-};
+}
 
-window.filterPaidOffByCreditor = function(id) {
+export function filterPaidOffByCreditor(id) {
   applyCreditorFilter('paidOff', id);
-};
+}
 
-window.setWaitingDebtSort = function(mode) {
+export function setWaitingDebtSort(mode) {
   state.selectedWaitingDebtSort = mode;
   state.expandedDebtId = null;
   renderDebts();
-};
+}
 
-window.setHiddenDebtSort = function(mode) {
+export function setHiddenDebtSort(mode) {
   state.selectedHiddenDebtSort = mode;
   state.expandedDebtId = null;
   renderDebts();
-};
+}
 
 export function toggleDebt(id) {
   const nextExpanded = state.expandedDebtId === id ? null : id;
@@ -417,16 +413,16 @@ export function toggleDebt(id) {
   if (state.renderFn) state.renderFn();
 }
 
-window.setDebtInstallmentTab = function(tab) {
+export function setDebtInstallmentTab(tab) {
   state.expandedDebtTab = tab === 'paid' ? 'paid' : 'pending';
   state.expandedDebtListMode = 'preview';
   if (state.renderFn) state.renderFn();
-};
+}
 
-window.showAllDebtInstallments = function() {
+export function showAllDebtInstallments() {
   state.expandedDebtListMode = 'all';
   if (state.renderFn) state.renderFn();
-};
+}
 
 // --- Drag & drop Em espera ---
 
@@ -445,7 +441,7 @@ async function persistWaitingOrder(route) {
   showToast('Ordem de espera atualizada.');
 }
 
-window.moveWaitingDebt = async function(id, direction) {
+export async function moveWaitingDebt(id, direction) {
   const route = orderedWaitingDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
   const currentIndex = route.findIndex(debt => debt.id === id);
   const nextIndex = currentIndex + direction;
@@ -454,24 +450,24 @@ window.moveWaitingDebt = async function(id, direction) {
   route[currentIndex] = route[nextIndex];
   route[nextIndex] = current;
   await persistWaitingOrder(route);
-};
+}
 
-window.startWaitingDebtDrag = function(event, id) {
+export function startWaitingDebtDrag(event, id) {
   state.draggedWaitingDebtId = id;
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', id);
   }
-  const item = event.currentTarget;
+  const item = event.target.closest('.waiting-route-item');
   if (item) item.classList.add('dragging');
-};
+}
 
-window.waitingDebtDragOver = function(event) {
+export function waitingDebtDragOver(event) {
   event.preventDefault();
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-};
+}
 
-window.dropWaitingDebt = async function(event, targetId) {
+export async function dropWaitingDebt(event, targetId) {
   event.preventDefault();
   const sourceId = state.draggedWaitingDebtId || event.dataTransfer?.getData('text/plain');
   state.draggedWaitingDebtId = null;
@@ -484,12 +480,12 @@ window.dropWaitingDebt = async function(event, targetId) {
   const [moved] = route.splice(from, 1);
   route.splice(to, 0, moved);
   await persistWaitingOrder(route);
-};
+}
 
-window.endWaitingDebtDrag = function() {
+export function endWaitingDebtDrag() {
   state.draggedWaitingDebtId = null;
   document.querySelectorAll('.waiting-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-};
+}
 
 // --- Drag & drop Fora do radar ---
 
@@ -506,7 +502,7 @@ async function persistHiddenOrder(route) {
   showToast('Ordem fora do radar atualizada.');
 }
 
-window.moveHiddenDebt = async function(id, direction) {
+export async function moveHiddenDebt(id, direction) {
   const route = orderedHiddenDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
   const currentIndex = route.findIndex(debt => debt.id === id);
   const nextIndex = currentIndex + direction;
@@ -515,24 +511,24 @@ window.moveHiddenDebt = async function(id, direction) {
   route[currentIndex] = route[nextIndex];
   route[nextIndex] = current;
   await persistHiddenOrder(route);
-};
+}
 
-window.startHiddenDebtDrag = function(event, id) {
+export function startHiddenDebtDrag(event, id) {
   state.draggedHiddenDebtId = id;
   if (event.dataTransfer) {
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData('text/plain', id);
   }
-  const item = event.currentTarget;
+  const item = event.target.closest('.hidden-route-item');
   if (item) item.classList.add('dragging');
-};
+}
 
-window.hiddenDebtDragOver = function(event) {
+export function hiddenDebtDragOver(event) {
   event.preventDefault();
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-};
+}
 
-window.dropHiddenDebt = async function(event, targetId) {
+export async function dropHiddenDebt(event, targetId) {
   event.preventDefault();
   const sourceId = state.draggedHiddenDebtId || event.dataTransfer?.getData('text/plain');
   state.draggedHiddenDebtId = null;
@@ -545,12 +541,12 @@ window.dropHiddenDebt = async function(event, targetId) {
   const [moved] = route.splice(from, 1);
   route.splice(to, 0, moved);
   await persistHiddenOrder(route);
-};
+}
 
-window.endHiddenDebtDrag = function() {
+export function endHiddenDebtDrag() {
   state.draggedHiddenDebtId = null;
   document.querySelectorAll('.hidden-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-};
+}
 
 function formatAnyDateBR(value) {
   if (!value) return '-';

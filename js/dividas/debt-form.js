@@ -7,7 +7,7 @@ import { closePaymentForm, closePayoffModal } from './payment.js';
 
 // --- Modal de dívida ---
 
-window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa') {
+export function openDebtForm(mode = 'new', id = null, defaultStatus = 'Ativa') {
   closePaymentForm();
   closePayoffModal();
   state.editingDebtId = mode === 'edit' ? id : null;
@@ -48,14 +48,14 @@ window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa')
     $('debtIsConsignado').checked = false;
   }
   document.getElementById('divDebtDialog').showModal();
-};
+}
 
-window.closeDebtForm = function() {
+export function closeDebtForm() {
   state.editingDebtId = null;
-  document.getElementById('divDebtDialog').close();
-};
+  document.getElementById('divDebtDialog')?.close();
+}
 
-window.saveDebt = async function() {
+export async function saveDebt() {
   if (!sortedAllCreditors().length) return showToast('Cadastre um credor antes da dívida.');
   const creditorId = $('debtCreditorSelect').value;
   const name = $('debtName').value.trim();
@@ -81,18 +81,18 @@ window.saveDebt = async function() {
   if (state.editingDebtId) {
     await updateDoc(debtDoc(state.editingDebtId), payload);
     await reconcileInstallmentsForDebt(state.editingDebtId, installmentsQty, installmentValue, firstDue);
-    window.closeDebtForm();
+    closeDebtForm();
     showToast('Dívida atualizada com sucesso.');
   } else {
     const created = await addDoc(debtsColl(), { ...payload, createdAt: serverTimestamp() });
     await generateInstallments(created.id, installmentsQty, installmentValue, firstDue);
-    window.closeDebtForm();
+    closeDebtForm();
     await state.loadAllFn();
     showToast('Dívida cadastrada com sucesso.');
   }
-};
+}
 
-window.changeDebtStatus = async function(id, status) {
+export async function changeDebtStatus(id, status) {
   const debt = state.debts.find(d => d.id === id);
   const payload = { status, updatedAt: serverTimestamp() };
   if (status === 'Ativa') payload.payoffOrder = nextActiveRouteOrder(id);
@@ -109,13 +109,13 @@ window.changeDebtStatus = async function(id, status) {
     Quitada: 'Dívida movida para quitadas.'
   };
   showToast(messages[status] || 'Situação atualizada com sucesso.');
-};
+}
 
-window.rollDebt = function(id) {
+export function rollDebt(id) {
   const debt = state.debts.find(item => item.id === id);
   if (!debt) return showToast('Dívida não encontrada.');
   const baseDue = debt.firstDue || nextInstallment(debt)?.dueDate || new Date().toISOString().slice(0, 10);
-  window.openDebtForm('new', null, debt.status || 'Ativa');
+  openDebtForm('new', null, debt.status || 'Ativa');
   $('debtCreditorSelect').value = debt.creditorId || '';
   $('debtName').value = debt.name || '';
   $('debtType').value = debt.type || 'Cartão';
@@ -130,21 +130,21 @@ window.rollDebt = function(id) {
   $('debtPayoffOrder').value = nextPayoffOrder();
   $('debtNotes').value = debt.notes || '';
   showToast('Rolagem preparada para edição.');
-};
+}
 
-window.goToDebtsAndNew = function(defaultStatus = 'Ativa') {
-  window.openDebtForm('new', null, defaultStatus);
-};
+export function goToDebtsAndNew(defaultStatus = 'Ativa') {
+  openDebtForm('new', null, defaultStatus);
+}
 
-window.openDebtFromDashboard = function(id) {
+export function openDebtFromDashboard(id) {
   window.showDividasView('divrota');
   state.expandedDebtId = id;
   if (state.renderFn) state.renderFn();
   const road = document.getElementById('trailRoad');
   if (road) road.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
+}
 
-window.openDebtFromTrail = function(id) {
+export function openDebtFromTrail(id) {
   const debt = state.debts.find(item => item.id === id);
   const view = debt && debt.status === 'Quitada' ? 'divquitadas'
     : debt && debt.status === 'Fora do radar' ? 'divradar'
@@ -159,7 +159,7 @@ window.openDebtFromTrail = function(id) {
     : 'trailRoad';
   const target = document.getElementById(targetId);
   if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
+}
 
 // --- Firebase: reconciliar e gerar parcelas ---
 

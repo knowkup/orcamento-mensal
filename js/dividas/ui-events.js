@@ -5,7 +5,8 @@ import {
   handleDividasJsonImport,
   openClearAllModal,
   closeDeleteModal,
-  confirmDelete
+  confirmDelete,
+  openDeleteModal
 } from './data.js';
 import {
   clearRenegotiationSelection,
@@ -14,7 +15,23 @@ import {
   saveRenegotiation,
   toggleRenegotiationDebt
 } from './renegotiation.js';
-import { toggleDebt } from './debts.js';
+import {
+  dropHiddenDebt,
+  dropWaitingDebt,
+  endHiddenDebtDrag,
+  endWaitingDebtDrag,
+  hiddenDebtDragOver,
+  moveHiddenDebt,
+  moveWaitingDebt,
+  setDebtInstallmentTab,
+  setHiddenDebtSort,
+  setWaitingDebtSort,
+  showAllDebtInstallments,
+  startHiddenDebtDrag,
+  startWaitingDebtDrag,
+  toggleDebt,
+  waitingDebtDragOver
+} from './debts.js';
 import {
   dropRouteDebt,
   endRouteDrag,
@@ -30,8 +47,29 @@ import {
   confirmPayoffDebt,
   saveInstallmentEdit,
   savePayment,
+  openPaymentForm,
+  openPayoffModal,
   updatePayoffSummary
 } from './payment.js';
+import {
+  changeDebtStatus,
+  closeDebtForm,
+  goToDebtsAndNew,
+  openDebtForm,
+  openDebtFromDashboard,
+  saveDebt
+} from './debt-form.js';
+import {
+  closeCreditorModal,
+  closeUnifyCreditorModal,
+  confirmUnifyCreditor,
+  editCreditor,
+  handleCreditorLogoUpload,
+  openCreditorModal,
+  openUnifyCreditorModal,
+  saveCreditor
+} from './creditors.js';
+import { showToast } from './utils.js';
 
 export function bindDebtDataEvents() {
   const root = document.getElementById('divrenegociacaoView');
@@ -52,12 +90,72 @@ export function bindDebtDataEvents() {
   });
 
   document.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-toggle-debt]');
+    const button = event.target.closest('button');
     if (!button) return;
-    toggleDebt(button.dataset.toggleDebt);
+
+    if (button.dataset.toggleDebt) {
+      toggleDebt(button.dataset.toggleDebt);
+      return;
+    }
+    if (button.dataset.newDebtStatus) {
+      goToDebtsAndNew(button.dataset.newDebtStatus);
+      return;
+    }
+    if (button.dataset.paymentInstallmentId) {
+      openPaymentForm(button.dataset.paymentInstallmentId);
+      return;
+    }
+    if (button.dataset.deleteType && button.dataset.deleteId) {
+      openDeleteModal(button.dataset.deleteType, button.dataset.deleteId);
+      return;
+    }
+    if (button.dataset.installmentTab) {
+      setDebtInstallmentTab(button.dataset.installmentTab);
+      return;
+    }
+    if (button.hasAttribute('data-show-all-installments')) {
+      showAllDebtInstallments();
+      return;
+    }
+    if (button.dataset.dashboardDebtId) {
+      openDebtFromDashboard(button.dataset.dashboardDebtId);
+      return;
+    }
+    if (button.dataset.editCreditorId) {
+      editCreditor(button.dataset.editCreditorId);
+      return;
+    }
+    if (button.dataset.unifyCreditorId) {
+      openUnifyCreditorModal(button.dataset.unifyCreditorId);
+      return;
+    }
+    if (button.hasAttribute('data-creditor-linked')) {
+      showToast('Este credor está vinculado a dívidas.');
+      return;
+    }
+    if (button.dataset.secondaryRouteMove) {
+      const direction = Number(button.dataset.direction || 0);
+      if (button.dataset.routeScope === 'waiting') moveWaitingDebt(button.dataset.secondaryRouteMove, direction);
+      if (button.dataset.routeScope === 'hidden') moveHiddenDebt(button.dataset.secondaryRouteMove, direction);
+      return;
+    }
+
+    const action = button.dataset.debtAction;
+    const debtId = button.dataset.debtId;
+    if (!action || !debtId) return;
+    if (action === 'changeDebtStatus') changeDebtStatus(debtId, button.dataset.debtStatus);
+    if (action === 'openPayoffModal') openPayoffModal(debtId);
+    if (action === 'openDebtForm') openDebtForm('edit', debtId);
+    if (action === 'openDeleteModal') openDeleteModal('debt', debtId);
   });
   document.getElementById('trailDebtSort')?.addEventListener('change', (event) => {
     setTrailDebtSort(event.target.value);
+  });
+  document.getElementById('waitingDebtSort')?.addEventListener('change', (event) => {
+    setWaitingDebtSort(event.target.value);
+  });
+  document.getElementById('hiddenDebtSort')?.addEventListener('change', (event) => {
+    setHiddenDebtSort(event.target.value);
   });
   const trailRoad = document.getElementById('trailRoad');
   trailRoad?.addEventListener('click', (event) => {
@@ -81,6 +179,30 @@ export function bindDebtDataEvents() {
     dropRouteDebt(event, item.dataset.debtId);
   });
   trailRoad?.addEventListener('dragend', endRouteDrag);
+  document.addEventListener('dragstart', (event) => {
+    const item = event.target.closest('[data-debt-route]');
+    if (!item) return;
+    if (item.dataset.debtRoute === 'waiting') startWaitingDebtDrag(event, item.dataset.debtId);
+    if (item.dataset.debtRoute === 'hidden') startHiddenDebtDrag(event, item.dataset.debtId);
+  });
+  document.addEventListener('dragover', (event) => {
+    const item = event.target.closest('[data-debt-route]');
+    if (!item) return;
+    if (item.dataset.debtRoute === 'waiting') waitingDebtDragOver(event);
+    if (item.dataset.debtRoute === 'hidden') hiddenDebtDragOver(event);
+  });
+  document.addEventListener('drop', (event) => {
+    const item = event.target.closest('[data-debt-route]');
+    if (!item) return;
+    if (item.dataset.debtRoute === 'waiting') dropWaitingDebt(event, item.dataset.debtId);
+    if (item.dataset.debtRoute === 'hidden') dropHiddenDebt(event, item.dataset.debtId);
+  });
+  document.addEventListener('dragend', (event) => {
+    const item = event.target.closest('[data-debt-route]');
+    if (!item) return;
+    if (item.dataset.debtRoute === 'waiting') endWaitingDebtDrag();
+    if (item.dataset.debtRoute === 'hidden') endHiddenDebtDrag();
+  });
 
   document.getElementById('closeRenegotiationModalButton')?.addEventListener('click', closeRenegotiationModal);
   document.getElementById('saveRenegotiationButton')?.addEventListener('click', saveRenegotiation);
@@ -94,4 +216,12 @@ export function bindDebtDataEvents() {
   document.getElementById('confirmDebtPayoffButton')?.addEventListener('click', confirmPayoffDebt);
   document.getElementById('closeDebtInstallmentModalButton')?.addEventListener('click', closeInstallmentModal);
   document.getElementById('saveDebtInstallmentButton')?.addEventListener('click', saveInstallmentEdit);
+  document.getElementById('closeDebtFormButton')?.addEventListener('click', closeDebtForm);
+  document.getElementById('saveDebtButton')?.addEventListener('click', saveDebt);
+  document.getElementById('openDebtCreditorModalButton')?.addEventListener('click', openCreditorModal);
+  document.getElementById('closeDebtCreditorModalButton')?.addEventListener('click', closeCreditorModal);
+  document.getElementById('creditorLogoFile')?.addEventListener('change', handleCreditorLogoUpload);
+  document.getElementById('saveDebtCreditorButton')?.addEventListener('click', saveCreditor);
+  document.getElementById('closeUnifyDebtCreditorModalButton')?.addEventListener('click', closeUnifyCreditorModal);
+  document.getElementById('confirmUnifyDebtCreditorButton')?.addEventListener('click', confirmUnifyCreditor);
 }
