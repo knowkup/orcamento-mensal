@@ -11,7 +11,7 @@ test('firebase config keeps production and homolog projects isolated by URL', as
   assert.match(source, /"orcamento-mensal-homolog\.firebaseapp\.com"/);
   assert.match(source, /"localhost"/);
   assert.match(source, /"127\.0\.0\.1"/);
-  assert.match(source, /hostname === "kupka1988\.github\.io"/);
+  assert.match(source, /hostname === "knowkup\.github\.io"/);
   assert.match(source, /githubHomologPath = "\/orcamento-mensal\/homolog"/);
   assert.match(source, /pathname === githubHomologPath/);
   assert.match(source, /homologHosts\.has\(hostname\) \|\| isGitHubHomolog/);

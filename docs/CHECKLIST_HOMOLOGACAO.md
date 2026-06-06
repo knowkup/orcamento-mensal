@@ -25,7 +25,7 @@ ainda precisam de homologacao manual.
 
 ## Antes de testar
 
-- Abrir `https://kupka1988.github.io/orcamento-mensal/homolog/`.
+- Abrir `https://knowkup.github.io/orcamento-mensal/homolog/`.
 - Confirmar no console do navegador que o app usa `projectId: orcamento-mensal-homolog`.
 - Usar somente dados ficticios; as regras temporarias permitem acesso sem autenticacao.
 - Confirmar que a tela carrega sem erro visual evidente.

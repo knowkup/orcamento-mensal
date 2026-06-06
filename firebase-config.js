@@ -26,7 +26,7 @@ const homologHosts = new Set([
   "orcamento-mensal-homolog.firebaseapp.com"
 ]);
 const githubHomologPath = "/orcamento-mensal/homolog";
-const isGitHubHomolog = hostname === "kupka1988.github.io"
+const isGitHubHomolog = hostname === "knowkup.github.io"
   && (pathname === githubHomologPath || pathname.startsWith(`${githubHomologPath}/`));
 
 export const firebaseEnvironment = homologHosts.has(hostname) || isGitHubHomolog

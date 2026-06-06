@@ -10,8 +10,8 @@ O codigo e as duas publicacoes ficam no GitHub:
 
 - producao: branch `main`;
 - homologacao: branch `homolog`;
-- producao publicada em `https://kupka1988.github.io/orcamento-mensal/`;
-- homologacao publicada em `https://kupka1988.github.io/orcamento-mensal/homolog/`.
+- producao publicada em `https://knowkup.github.io/orcamento-mensal/`;
+- homologacao publicada em `https://knowkup.github.io/orcamento-mensal/homolog/`.
 
 O Firebase nao hospeda o site. Ele e usado somente como banco Firestore:
 
@@ -29,8 +29,8 @@ A URL de homologacao deve selecionar o projeto Firebase
 O arquivo `firebase-config.js` seleciona o ambiente pela URL:
 
 ```text
-https://kupka1988.github.io/orcamento-mensal/          -> producao
-https://kupka1988.github.io/orcamento-mensal/homolog/ -> homologacao
+https://knowkup.github.io/orcamento-mensal/          -> producao
+https://knowkup.github.io/orcamento-mensal/homolog/ -> homologacao
 localhost / 127.0.0.1                                 -> homologacao
 ```
 
@@ -118,7 +118,7 @@ origem.
 Abrir:
 
 ```text
-https://kupka1988.github.io/orcamento-mensal/homolog/
+https://knowkup.github.io/orcamento-mensal/homolog/
 ```
 
 Confirmar:
