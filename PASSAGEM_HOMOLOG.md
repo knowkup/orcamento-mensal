@@ -13,6 +13,34 @@ antes de levar qualquer alteracao para a producao.
 O ambiente de homologacao nao deve alterar a branch `main`, a URL de producao nem o
 banco Firebase usado atualmente.
 
+## Publicacao Realizada
+
+Publicacao concluida em 2026-06-06:
+
+- Branch publicada: `homolog`
+- Commit publicado: `8ab49dbe04b535d780c24fb27209fc3fac004fba`
+- URL: `https://orcamento-mensal-homolog.web.app`
+- Projeto Firebase: `orcamento-mensal-homolog`
+- Firestore Rules: compiladas e publicadas com sucesso
+- Firebase Hosting: publicado com sucesso
+- Testes automatizados: 23 aprovados, 0 falhando
+- Aplicacao: carregou sem erro de console e atingiu o estado `Sincronizado`
+- Isolamento: a homologacao iniciou sem dados de producao
+
+Validacao de persistencia:
+
+1. Foi criada a entrada ficticia `TESTE HOMOLOGACAO 2026-06-06`, no valor de R$ 1,23.
+2. A pagina foi recarregada e a entrada permaneceu, confirmando a persistencia.
+3. O botao `Excluir lancamento` foi acionado, mas a entrada continuou no Firestore e
+   reapareceu depois da recarga.
+
+Problema encontrado:
+
+- A exclusao de um lancamento manual do Planejamento nao persiste no ambiente
+  publicado. O registro ficticio acima permanece na homologacao e deve ser removido
+  depois que essa falha for corrigida.
+- A homologacao funcional completa das demais telas ainda esta pendente.
+
 ## Estado do Git
 
 - Repositorio: `https://github.com/knowkup/orcamento-mensal.git`

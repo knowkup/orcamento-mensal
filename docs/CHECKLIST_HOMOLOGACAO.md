@@ -7,6 +7,22 @@ Ultima atualizacao: 2026-06-06
 
 ---
 
+## Execucao de 2026-06-06
+
+- [x] URL de homologacao publicada e carregando.
+- [x] Aplicacao conectada ao projeto `orcamento-mensal-homolog`.
+- [x] Tela carregada sem erro visual evidente ou erro no console.
+- [x] Painel de sincronizacao atingiu o estado `Sincronizado`.
+- [x] Novo lancamento planejado abriu o modal.
+- [x] Entrada ficticia foi salva e persistiu depois da recarga.
+- [ ] Excluir lancamento manual persiste depois da recarga.
+
+Falha encontrada: a entrada ficticia `TESTE HOMOLOGACAO 2026-06-06`, de R$ 1,23,
+reaparece depois da exclusao e permanece no Firestore. Os demais itens deste checklist
+ainda precisam de homologacao manual.
+
+---
+
 ## Antes de testar
 
 - Abrir `https://orcamento-mensal-homolog.web.app`.
