@@ -15,12 +15,16 @@ export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
 
   try {
     updateSync("Conectando", "Preparando sincronizacao.", "syncing");
-    const [{ initializeApp }, firestoreSdk] = await Promise.all([
+    const [{ initializeApp }, firestoreSdk, { getAuth, signInAnonymously }] = await Promise.all([
       import("https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js"),
-      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js")
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
+      import("https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js")
     ]);
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    await signInAnonymously(auth);
+
     state.db = firestoreSdk.getFirestore(app);
     state.firestore = firestoreSdk;
     state.firebaseReady = true;

@@ -2,9 +2,5 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Homologacao temporaria sem Authentication. Nao usar dados reais.
-    match /{document=**} {
-      allow read, write: if true;
-    }
-  }
-}
+    // Acesso permitido apenas para usuarios autenticados (incluindo anonimos).
+    // O cliente faz signInAnonymously() automaticamente antes de acessar o
