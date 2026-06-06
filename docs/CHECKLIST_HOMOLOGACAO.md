@@ -89,8 +89,12 @@ Ultima atualizacao: 2026-06-05
 - Limpar todos os dados abre apenas o modal de confirmacao.
 - Abrir uma divida funciona.
 - Registrar pagamento de divida funciona.
+- Fechar o modal de pagamento sem salvar funciona.
+- Editar uma parcela, salvar e fechar o modal funciona.
 - Excluir pagamento funciona.
 - Quitar divida funciona.
+- Alterar o valor de quitacao atualiza o resumo imediatamente.
+- Fechar o modal de quitacao sem confirmar funciona.
 - Alterar ordem da rota funciona.
 - Reordenar pela seta para cima/baixo funciona em Ordem da Rota.
 - Arrastar uma divida para outra posicao atualiza e preserva a nova ordem.

@@ -1045,7 +1045,7 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Parcela</p><h2>Registrar pagamento</h2></div>
-          <button class="icon-button" type="button" onclick="window.closePaymentForm()" title="Fechar">
+          <button class="icon-button" id="closeDebtPaymentModalButton" type="button" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
@@ -1053,7 +1053,7 @@
         <label>Parcela<input id="payInstallmentLabel" type="text" readonly></label>
         <label>Data do pagamento<input id="payDate" type="date" required></label>
         <label class="money-label">Valor pago<input id="payValue" type="text" inputmode="decimal" data-money-input required></label>
-        <button class="primary-button full" type="button" onclick="window.savePayment()">
+        <button class="primary-button full" id="saveDebtPaymentButton" type="button">
           <i data-lucide="check"></i><span>Confirmar pagamento</span>
         </button>
       </div>
@@ -1064,11 +1064,11 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Encerramento</p><h2>Quitar dívida</h2></div>
-          <button class="icon-button" type="button" onclick="window.closePayoffModal()" title="Fechar">
+          <button class="icon-button" id="closeDebtPayoffModalButton" type="button" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
-        <label class="money-label">Valor de quitação<input id="payoffValue" type="text" inputmode="decimal" data-money-input oninput="window.updatePayoffSummary()"></label>
+        <label class="money-label">Valor de quitação<input id="payoffValue" type="text" inputmode="decimal" data-money-input></label>
         <label>Data do pagamento<input id="payoffDate" type="date"></label>
         <label>Forma de pagamento
           <select id="payoffMethod">
@@ -1081,7 +1081,7 @@
         </label>
         <label>Observações<textarea id="payoffNotes" rows="2" placeholder="Opcional"></textarea></label>
         <div id="payoffSummary"></div>
-        <button class="primary-button full" type="button" onclick="window.confirmPayoffDebt()">
+        <button class="primary-button full" id="confirmDebtPayoffButton" type="button">
           <i data-lucide="check-circle"></i><span>Confirmar quitação</span>
         </button>
       </div>
@@ -1092,7 +1092,7 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Parcela</p><h2>Editar parcela</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeInstallmentModal()" title="Fechar">
+          <button class="icon-button" id="closeDebtInstallmentModalButton" type="button" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
@@ -1106,7 +1106,7 @@
             <option value="Cancelada">Cancelada</option>
           </select>
         </label>
-        <button class="primary-button full" type="button" onclick="window.saveInstallmentEdit()">
+        <button class="primary-button full" id="saveDebtInstallmentButton" type="button">
           <i data-lucide="save"></i><span>Salvar parcela</span>
         </button>
       </div>

@@ -23,6 +23,15 @@ import {
   setTrailDebtSort,
   startRouteDrag
 } from './trail.js';
+import {
+  closeInstallmentModal,
+  closePaymentForm,
+  closePayoffModal,
+  confirmPayoffDebt,
+  saveInstallmentEdit,
+  savePayment,
+  updatePayoffSummary
+} from './payment.js';
 
 export function bindDebtDataEvents() {
   const root = document.getElementById('divrenegociacaoView');
@@ -78,4 +87,11 @@ export function bindDebtDataEvents() {
   document.getElementById('closeDeleteModalButton')?.addEventListener('click', closeDeleteModal);
   document.getElementById('cancelDeleteModalButton')?.addEventListener('click', closeDeleteModal);
   document.getElementById('confirmDeleteButton')?.addEventListener('click', confirmDelete);
+  document.getElementById('closeDebtPaymentModalButton')?.addEventListener('click', closePaymentForm);
+  document.getElementById('saveDebtPaymentButton')?.addEventListener('click', savePayment);
+  document.getElementById('closeDebtPayoffModalButton')?.addEventListener('click', closePayoffModal);
+  document.getElementById('payoffValue')?.addEventListener('input', updatePayoffSummary);
+  document.getElementById('confirmDebtPayoffButton')?.addEventListener('click', confirmPayoffDebt);
+  document.getElementById('closeDebtInstallmentModalButton')?.addEventListener('click', closeInstallmentModal);
+  document.getElementById('saveDebtInstallmentButton')?.addEventListener('click', saveInstallmentEdit);
 }

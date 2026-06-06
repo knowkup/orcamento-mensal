@@ -3,12 +3,13 @@ import { $, brl, parseMoney, escapeHtml, showToast, sortedAllCreditors, addMonth
 import { nextInstallment } from './calc.js';
 import { nextPayoffOrder, nextActiveRouteOrder } from './debts.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, doc, addDoc, getDocs, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
+import { closePaymentForm, closePayoffModal } from './payment.js';
 
 // --- Modal de dívida ---
 
 window.openDebtForm = function(mode = 'new', id = null, defaultStatus = 'Ativa') {
-  window.closePaymentForm();
-  window.closePayoffModal();
+  closePaymentForm();
+  closePayoffModal();
   state.editingDebtId = mode === 'edit' ? id : null;
   $('debtFormTitle').textContent = state.editingDebtId ? 'Editar dívida' : 'Nova dívida';
   if (state.editingDebtId) {
@@ -198,4 +199,3 @@ async function generateInstallments(debtId, qty, value, firstDue) {
   }
   await batch.commit();
 }
-
