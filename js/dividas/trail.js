@@ -188,14 +188,14 @@ export function renderTrail() {
       return '<div class="route-item' + (done ? ' done' : '') + (current ? ' current' : '') + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" ' + dragAttrs + '>' +
         '<button class="drag-handle" title="' + dragTitle + '"' + (canReorder ? '' : ' disabled') + '>⋮⋮</button>' +
         '<div class="route-rank">' + rank + '</div>' +
-        '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name clickable" onclick="window.toggleDebt(\'' + debt.id + '\')">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt, current) + '</div></div></div>' +
+        '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><button class="debt-name clickable debt-name-button" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</button><div class="debt-meta">' + compactTagsForDebt(debt, current) + '</div></div></div>' +
         routeProgressHtml(progressValue) +
         '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
         '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
         '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
         '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
         '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
-        '<div class="route-actions">' + reorderActions + '<button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
+        '<div class="route-actions">' + reorderActions + '<button class="ghost-btn row-toggle" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
         (isExpanded ? debtExpandedDetail(debt) : '') +
       '</div>';
     }).join('') + '</div></div>';
@@ -221,14 +221,14 @@ export function renderTrail() {
         return '<div class="route-item consignado' + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" draggable="false">' +
           '<button class="drag-handle" disabled>⋮⋮</button>' +
           '<div class="route-rank consignado-rank">CLT</div>' +
-          '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name clickable" onclick="window.toggleDebt(\'' + debt.id + '\')">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt, false) + '</div></div></div>' +
+          '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><button class="debt-name clickable debt-name-button" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</button><div class="debt-meta">' + compactTagsForDebt(debt, false) + '</div></div></div>' +
           routeProgressHtml(progressValue) +
           '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
           '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
           '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
           '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
           '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
-          '<div class="route-actions"><button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
+          '<div class="route-actions"><button class="ghost-btn row-toggle" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
           (isExpanded ? debtExpandedDetail(debt) : '') +
         '</div>';
       }).join('') +
@@ -241,11 +241,11 @@ export function renderTrail() {
 
 // --- Ordenação ---
 
-window.setTrailDebtSort = function(mode) {
+export function setTrailDebtSort(mode) {
   state.selectedTrailDebtSort = mode;
   state.expandedDebtId = null;
   renderTrail();
-};
+}
 
 // --- Drag & drop da Rota Financeira ---
 

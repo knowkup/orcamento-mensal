@@ -75,6 +75,8 @@ Ultima atualizacao: 2026-06-05
 
 - Dashboard de Dividas carrega.
 - Rota Financeira carrega.
+- Ordenar a Rota por ordem, prioridade, vencimento, saldo e nome funciona.
+- Abrir e fechar detalhes de uma divida funciona pelo nome e pelo botao de expansao.
 - Em Espera carrega.
 - Fora do Radar carrega.
 - Quitadas carrega.

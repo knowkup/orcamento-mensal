@@ -14,6 +14,8 @@ import {
   saveRenegotiation,
   toggleRenegotiationDebt
 } from './renegotiation.js';
+import { toggleDebt } from './debts.js';
+import { setTrailDebtSort } from './trail.js';
 
 export function bindDebtDataEvents() {
   const root = document.getElementById('divrenegociacaoView');
@@ -31,6 +33,15 @@ export function bindDebtDataEvents() {
     const input = event.target.closest('[data-renegotiation-debt-id]');
     if (!input || !root.contains(input)) return;
     toggleRenegotiationDebt(input.dataset.renegotiationDebtId);
+  });
+
+  document.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-toggle-debt]');
+    if (!button) return;
+    toggleDebt(button.dataset.toggleDebt);
+  });
+  document.getElementById('trailDebtSort')?.addEventListener('change', (event) => {
+    setTrailDebtSort(event.target.value);
   });
 
   document.getElementById('closeRenegotiationModalButton')?.addEventListener('click', closeRenegotiationModal);

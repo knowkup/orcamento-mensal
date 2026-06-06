@@ -222,14 +222,14 @@ export function debtRouteGridRow(debt, index, mode) {
   return '<div class="route-item ' + config.className + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" draggable="true" ondragstart="window.' + config.start + '(event, \'' + debt.id + '\')" ondragover="window.' + config.over + '(event)" ondrop="window.' + config.drop + '(event, \'' + debt.id + '\')" ondragend="window.' + config.end + '()">' +
     '<button class="drag-handle" title="Arrastar para reordenar">⋮⋮</button>' +
     '<div class="route-rank">' + (index + 1) + '</div>' +
-    '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name clickable" onclick="window.toggleDebt(\'' + debt.id + '\')">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt) + '</div></div></div>' +
+    '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><button class="debt-name clickable debt-name-button" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</button><div class="debt-meta">' + compactTagsForDebt(debt) + '</div></div></div>' +
     routeProgressHtml(progressValue) +
     '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
     '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
     '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
     '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
     '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
-    '<div class="route-actions"><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', -1)">↑</button><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', 1)">↓</button><button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
+    '<div class="route-actions"><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', -1)">↑</button><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', 1)">↓</button><button class="ghost-btn row-toggle" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
     (isExpanded ? debtExpandedDetail(debt) : '') +
   '</div>';
 }
@@ -407,7 +407,7 @@ window.setHiddenDebtSort = function(mode) {
   renderDebts();
 };
 
-window.toggleDebt = function(id) {
+export function toggleDebt(id) {
   const nextExpanded = state.expandedDebtId === id ? null : id;
   if (state.expandedDebtId !== id) {
     state.expandedDebtTab = 'pending';
@@ -415,7 +415,7 @@ window.toggleDebt = function(id) {
   }
   state.expandedDebtId = nextExpanded;
   if (state.renderFn) state.renderFn();
-};
+}
 
 window.setDebtInstallmentTab = function(tab) {
   state.expandedDebtTab = tab === 'paid' ? 'paid' : 'pending';
