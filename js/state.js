@@ -72,6 +72,7 @@ export const el = {
   closeFixedCostButton: document.querySelector("#closeFixedCostButton"),
   fixedCostsTable: document.querySelector("#fixedCostsTable"),
   settingsForm: document.querySelector("#settingsForm"),
+  preferencesSummary: document.querySelector("#preferencesSummary"),
   carForm: document.querySelector("#carForm"),
   carTitle: document.querySelector("#carTitle"),
   carKpis: document.querySelector("#carKpis"),

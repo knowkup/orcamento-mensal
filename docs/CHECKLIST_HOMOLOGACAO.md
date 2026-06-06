@@ -91,6 +91,8 @@ Ultima atualizacao: 2026-06-05
 
 ## Preferencias
 
+- O topo de Preferencias mostra resumo de credores, cartoes/crediarios, rendas e limite Kah.
+- O resumo muda apos criar/editar/excluir cadastros relacionados.
 - Credores carregam.
 - Cartoes/crediarios carregam.
 - Rendas carregam.

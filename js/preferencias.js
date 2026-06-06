@@ -8,6 +8,28 @@ import { openFeriasDialog, openDecimoTerceiroDialog } from "./ferias/ferias.js";
 
 export function renderSettings() {
   el.settingsForm.elements.kahLimit.value = formatCurrencyInput(state.data.kahLimit || "");
+  if (el.preferencesSummary) {
+    const creditorCount = state.data.creditors.length;
+    const cardCount = state.data.creditCards.length;
+    const incomeCount = state.data.recurringIncomes.length;
+    const linkedCreditorCount = state.data.creditors.filter((creditor) => creditorUsageCount(creditor.id) > 0).length;
+    el.preferencesSummary.innerHTML = `
+      ${preferenceSummaryCard("Credores", creditorCount, "base do orcamento")}
+      ${preferenceSummaryCard("Cartoes", cardCount, "cartoes e crediarios")}
+      ${preferenceSummaryCard("Rendas", incomeCount, "entradas recorrentes")}
+      ${preferenceSummaryCard("Limite Kah", currency.format(Number(state.data.kahLimit || 0)), `${linkedCreditorCount} credor${linkedCreditorCount === 1 ? "" : "es"} vinculado${linkedCreditorCount === 1 ? "" : "s"}`)}
+    `;
+  }
+}
+
+function preferenceSummaryCard(label, value, helper) {
+  return `
+    <article class="preference-summary-card">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+      <small>${escapeHtml(helper)}</small>
+    </article>
+  `;
 }
 
 export function renderOrigins() {
