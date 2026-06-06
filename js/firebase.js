@@ -2,6 +2,9 @@ import { state } from "./state.js";
 import { createDefaultData, normalizeData } from "./data.js";
 import { persistLocalState } from "./storage.js";
 import { updateSync, showToast, formatTime } from "./utils.js";
+import { createAsyncQueue } from "./domain/async-queue.js";
+
+const enqueueCloudSave = createAsyncQueue();
 
 export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
   if (!isFirebaseConfigured) {
@@ -61,20 +64,24 @@ export function listenCloudState() {
 export async function saveState(message) {
   persistLocalState();
   let cloudFailed = false;
-  if (state.db && !state.saving) {
-    state.saving = true;
+  if (state.db) {
     try {
-      updateSync("Salvando", "Enviando para a nuvem.", "syncing");
-      const { doc, setDoc } = state.firestore;
-      await setDoc(doc(state.db, "app", "state"), withMeta(state.data));
-      updateSync("Sincronizado", `Dados na nuvem as ${formatTime()}.`, "online");
+      await enqueueCloudSave(async () => {
+        state.saving = true;
+        updateSync("Salvando", "Enviando para a nuvem.", "syncing");
+        try {
+          const { doc, setDoc } = state.firestore;
+          await setDoc(doc(state.db, "app", "state"), withMeta(state.data));
+          updateSync("Sincronizado", `Dados na nuvem as ${formatTime()}.`, "online");
+        } finally {
+          state.saving = false;
+        }
+      });
     } catch (error) {
       console.error(error);
       cloudFailed = true;
       updateSync("Pendente", "Salvo localmente; nuvem falhou.", "error");
       showToast("Salvo localmente. Falha ao sincronizar.", "error");
-    } finally {
-      state.saving = false;
     }
   } else if (!state.db) {
     updateSync("Modo local", `Salvo neste dispositivo as ${formatTime()}.`, "offline");

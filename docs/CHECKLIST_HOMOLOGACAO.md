@@ -21,6 +21,7 @@ Ultima atualizacao: 2026-06-05
 - O painel de sincronizacao muda visualmente entre conectando, sincronizado, offline e erro.
 - Passar o mouse no painel de sincronizacao mostra a mensagem completa do estado atual.
 - Ao salvar algo, aparece feedback de salvamento/sincronizacao.
+- Duas alteracoes salvas rapidamente permanecem apos recarregar a pagina.
 - Exportar backup gera um arquivo `.json` com data e horario no nome.
 - Importar backup valido mostra mensagem de sucesso com nome do arquivo.
 - Importar arquivo invalido mostra mensagem de erro.
