@@ -97,7 +97,7 @@ export function orderedHiddenDebts() {
 
 // --- Renderers de parcelas e expansão ---
 
-function installmentRowsForDebt(debt) {
+export function installmentRowsForDebt(debt) {
   const allItems = state.installmentsByDebt.get(debt.id) || [];
   if (!allItems.length) return '<div class="debt-meta" style="margin-top:14px;">Nenhuma parcela gerada para esta dívida.</div>';
 
@@ -146,7 +146,7 @@ function installmentRowsForDebt(debt) {
   return html;
 }
 
-function debtActionMenu(debt) {
+export function debtActionMenu(debt) {
   const actionsByStatus = {
     Ativa: [
       ['Mover para Em Espera', 'changeDebtStatus', 'Em espera'],
@@ -187,7 +187,7 @@ function debtActionMenu(debt) {
   return '<details class="more-actions debt-menu"><summary class="ghost-btn">Ações <span>⋮</span></summary><div class="more-menu">' + buttons + '</div></details>';
 }
 
-function debtExpandedDetail(debt) {
+export function debtExpandedDetail(debt) {
   const next = nextInstallment(debt);
   const installmentCount = installmentProgress(debt);
   const nextLabel = next ? formatDateBR(next.dueDate) : 'Sem Parcela';

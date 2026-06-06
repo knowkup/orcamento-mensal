@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const debtModules = [
+  'js/dividas/debt-components.js',
   'js/dividas/dashboard.js',
   'js/dividas/data.js',
   'js/dividas/debt-form.js',
@@ -22,6 +23,19 @@ test('debt UI does not use inline event handlers', async () => {
   sources.forEach(([file, source]) => {
     assert.doesNotMatch(source, inlineHandler, `${file} contains an inline event handler`);
   });
+});
+
+test('shared debt details are not duplicated in trail renderer', async () => {
+  const debts = await readFile('js/dividas/debts.js', 'utf8');
+  const trail = await readFile('js/dividas/trail.js', 'utf8');
+
+  assert.match(debts, /export function debtExpandedDetail/);
+  assert.match(debts, /export function debtActionMenu/);
+  assert.match(debts, /export function installmentRowsForDebt/);
+  assert.doesNotMatch(trail, /function debtExpandedDetail/);
+  assert.doesNotMatch(trail, /function debtActionMenu/);
+  assert.doesNotMatch(trail, /function installmentRowsForDebt/);
+  assert.match(trail, /renderDebtRouteItem/);
 });
 
 test('debt modules expose navigation only through the intentional bridge', async () => {

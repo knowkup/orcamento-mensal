@@ -51,6 +51,12 @@ Alteracoes principais:
 - Consignado CLT nunca entra no Controle Mensal;
 - remocao da interface duplicada de credores de Dividas.
 
+Pacote estrutural seguinte:
+
+- detalhes expandidos, menu de acoes e parcelas agora possuem um unico renderizador;
+- linhas da Rota e de Consignado usam um componente visual compartilhado;
+- regras de ordenacao, arraste, filtros e persistencia permanecem nos modulos originais.
+
 Validacao automatizada anterior:
 
 ```text
