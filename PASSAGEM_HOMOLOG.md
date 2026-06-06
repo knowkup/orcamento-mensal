@@ -140,13 +140,26 @@ southamerica-east1 (Sao Paulo)
 
 ## Passo Exato Em Que Paramos
 
-No Firebase Console do projeto `orcamento-mensal-homolog`:
+O aplicativo Web foi registrado e o bloco `firebaseConfig` foi recebido em 2026-06-06.
+O arquivo `firebase-config.js` seleciona o ambiente pela URL:
 
-1. Criar o Firestore Database em modo de producao.
-2. Registrar um aplicativo Web com o apelido `Orcamento Mensal Homolog`.
-3. Marcar a configuracao do Firebase Hosting, se essa opcao aparecer.
-4. Copiar o bloco completo `firebaseConfig` exibido pelo Firebase.
-5. Colar esse bloco na conversa com a IA no outro computador.
+```text
+orcamento-mensal-homolog.web.app -> orcamento-mensal-homolog
+orcamento-mensal-homolog.firebaseapp.com -> orcamento-mensal-homolog
+localhost / 127.0.0.1 -> orcamento-mensal-homolog
+kupka1988.github.io -> orcamento-mensal-fdc1a
+```
+
+Tambem foram preparados:
+
+- `.firebaserc`, preso ao projeto de homologacao;
+- `firebase.json`, com Firestore Rules e Firebase Hosting;
+- `firestore.rules`, temporariamente aberto por o app nao usar Authentication;
+- exclusoes do Hosting para backups, documentos, testes e arquivos auxiliares;
+- checklist especifico para testar a URL de homologacao apenas com dados ficticios.
+
+O proximo passo e validar e publicar regras e Hosting, registrar a URL gerada e executar
+a homologacao manual.
 
 Formato esperado:
 
@@ -242,20 +255,16 @@ Validacao automatizada atual:
 O unico global mantido intencionalmente no modulo e `window.showDividasView`, usado como
 ponte com a navegacao principal do sistema.
 
-## O Que Falta Fazer Depois De Colar O Firebase Config
+## O Que Falta Fazer
 
 A IA deve:
 
-1. Confirmar que esta na branch `homolog`.
-2. Verificar que a arvore Git esta limpa.
-3. Preparar configuracao separada do Firebase para homologacao.
-4. Atualizar as regras de homologacao para a arquitetura atual sem Authentication.
-5. Criar `firebase.json` e `.firebaserc`, se forem necessarios.
-6. Configurar o Firebase Hosting sem alterar a producao no GitHub Pages.
-7. Publicar a branch `homolog`.
-8. Informar a URL `web.app` gerada.
-9. Atualizar este documento e o checklist de homologacao.
-10. Fazer commit e push somente na branch `homolog`.
+1. Confirmar no Firebase Console que o Firestore Database existe.
+2. Publicar regras e Hosting no projeto `orcamento-mensal-homolog`.
+3. Informar e validar a URL `web.app` gerada.
+4. Executar a homologacao manual com dados ficticios.
+5. Registrar o resultado neste documento e no checklist.
+6. Fazer commit e push somente na branch `homolog`.
 
 ## Homologacao Manual Depois Da Publicacao
 

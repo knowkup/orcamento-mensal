@@ -1,0 +1,37 @@
+{
+  "firestore": {
+    "rules": "firestore.rules"
+  },
+  "hosting": {
+    "public": ".",
+    "ignore": [
+      "**/.*",
+      "**/node_modules/**",
+      "backups*/**",
+      "design/**",
+      "docs/**",
+      "test/**",
+      "_arquivo/**",
+      "files-mentioned-by-the-user-or/**",
+      "CLAUDE.md",
+      "CONTEXTO.md",
+      "PASSAGEM_HOMOLOG.md",
+      "firebase.md",
+      "package.json",
+      "package-lock.json",
+      "firebase.json",
+      "firestore.rules"
+    ],
+    "headers": [
+      {
+        "source": "**/*.@(html|js|css|json|webmanifest)",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,6 +1,7 @@
 # Checklist de Homologacao
 
-Use este checklist depois de mudancas publicadas em producao.
+Use este checklist no ambiente separado de homologacao antes de levar mudancas para
+producao.
 
 Ultima atualizacao: 2026-06-06
 
@@ -8,10 +9,12 @@ Ultima atualizacao: 2026-06-06
 
 ## Antes de testar
 
-- Abrir o app publicado.
+- Abrir `https://orcamento-mensal-homolog.web.app`.
+- Confirmar no console do navegador que o app usa `projectId: orcamento-mensal-homolog`.
+- Usar somente dados ficticios; as regras temporarias permitem acesso sem autenticacao.
 - Confirmar que a tela carrega sem erro visual evidente.
 - Confirmar que o painel de sincronizacao aparece na sidebar.
-- Se a mudanca tocar dados, exportar um backup antes de testar.
+- Nao importar backup com dados financeiros reais.
 
 ---
 
