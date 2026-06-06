@@ -1,0 +1,73 @@
+name: Publicar producao e homologacao
+
+on:
+  push:
+    branches:
+      - main
+      - homolog
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Obter producao
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: source-main
+
+      - name: Obter homologacao
+        uses: actions/checkout@v4
+        with:
+          ref: homolog
+          path: source-homolog
+
+      - name: Montar as duas paginas
+        shell: bash
+        run: |
+          mkdir -p _site/homolog
+          EXCLUDES=(
+            --exclude='.git/'
+            --exclude='.github/'
+            --exclude='.claude/'
+            --exclude='.firebase/'
+            --exclude='backups*/'
+            --exclude='design/'
+            --exclude='docs/'
+            --exclude='test/'
+            --exclude='_arquivo/'
+            --exclude='*.md'
+            --exclude='*.log'
+            --exclude='firebase.json'
+            --exclude='firestore.rules'
+            --exclude='package.json'
+            --exclude='package-lock.json'
+          )
+          rsync -a "${EXCLUDES[@]}" source-main/ _site/
+          rsync -a "${EXCLUDES[@]}" source-homolog/ _site/homolog/
+          touch _site/.nojekyll
+
+      - name: Preparar GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Enviar artefato
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Publicar GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
