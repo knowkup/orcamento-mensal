@@ -37,7 +37,7 @@ function toCsv(headers, rows) {
   return [headers.join(';')].concat(rows.map(row => headers.map(header => csvValue(row[header])).join(';'))).join('\n');
 }
 
-window.exportDividasJson = function() {
+export function exportDividasJson() {
   const backup = {
     exportedAt: new Date().toISOString(),
     app: 'Rota Financeira - Orçamento Mensal',
@@ -47,13 +47,13 @@ window.exportDividasJson = function() {
     payments: state.payments.map(serializable)
   };
   downloadText('dividas-backup.json', JSON.stringify(backup, null, 2), 'application/json;charset=utf-8');
-};
+}
 
-window.triggerDividasJsonImport = function() {
+export function triggerDividasJsonImport() {
   $('dividasJsonImportFile').click();
-};
+}
 
-window.handleDividasJsonImport = function(event) {
+export function handleDividasJsonImport(event) {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
@@ -67,9 +67,9 @@ window.handleDividasJsonImport = function(event) {
     }
   };
   reader.readAsText(file);
-};
+}
 
-window.exportDebtsCsv = function() {
+export function exportDebtsCsv() {
   const headers = ['credor', 'divida', 'tipo', 'situacao', 'criticidade', 'parcelas', 'valorParcela', 'saldo', 'quitacaoHoje', 'primeiroVencimento'];
   const rows = state.debts.map(debt => ({
     credor: getCreditorName(debt.creditorId),
@@ -84,9 +84,9 @@ window.exportDebtsCsv = function() {
     primeiroVencimento: debt.firstDue || ''
   }));
   downloadText('dividas.csv', toCsv(headers, rows), 'text/csv;charset=utf-8');
-};
+}
 
-window.exportDebtPaymentsCsv = function() {
+export function exportDebtPaymentsCsv() {
   const headers = ['data', 'credor', 'divida', 'parcela', 'valorPrevisto', 'valorPago', 'desconto', 'juros'];
   const rows = state.payments.map(payment => {
     const debt = state.debts.find(item => item.id === payment.debtId);
@@ -103,7 +103,7 @@ window.exportDebtPaymentsCsv = function() {
     };
   });
   downloadText('dividas-pagamentos.csv', toCsv(headers, rows), 'text/csv;charset=utf-8');
-};
+}
 
 // --- Import JSON ---
 
@@ -155,13 +155,13 @@ async function importJsonBackup(payload) {
 
 // --- Modal de exclusão ---
 
-window.openClearAllModal = function() {
+export function openClearAllModal() {
   state.deleteContext = { type: 'all' };
   $('deleteModalTitle').textContent = 'Limpar todos os dados';
   $('deleteModalText').textContent = 'Deseja remover definitivamente credores, dívidas, parcelas e pagamentos?';
   $('deleteModalWarning').textContent = 'Essa ação limpa a base atual e não poderá ser desfeita. Exporte um JSON antes se quiser guardar backup.';
   document.getElementById('divDeleteDialog').showModal();
-};
+}
 
 window.openDeleteModal = function(type, id) {
   state.deleteContext = { type, id };

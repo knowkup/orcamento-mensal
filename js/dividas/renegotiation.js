@@ -49,12 +49,12 @@ window.toggleRenegotiationDebt = function(id) {
   renderRenegotiation();
 };
 
-window.clearRenegotiationSelection = function() {
+export function clearRenegotiationSelection() {
   state.selectedRenegotiationDebtIds.clear();
   renderRenegotiation();
-};
+}
 
-window.openRenegotiationModal = function() {
+export function openRenegotiationModal() {
   const selected = selectedRenegotiationDebts();
   if (!selected.length) return showToast('Selecione ao menos uma dívida para renegociar.');
   window.closeDebtForm();
@@ -82,7 +82,7 @@ window.openRenegotiationModal = function() {
       '<div><span>Credores envolvidos</span><strong>' + creditorIds.length + '</strong></div>' +
     '</div>';
   document.getElementById('divRenegotiationDialog').showModal();
-};
+}
 
 window.closeRenegotiationModal = function() {
   document.getElementById('divRenegotiationDialog').close();

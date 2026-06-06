@@ -78,6 +78,12 @@ Ultima atualizacao: 2026-06-05
 - Fora do Radar carrega.
 - Quitadas carrega.
 - Renegociacao carrega.
+- Limpar selecao de renegociacao funciona.
+- Criar acordo abre o modal quando ha dividas selecionadas.
+- Exportar backup JSON de Dividas funciona.
+- Exportar CSV de dividas e pagamentos funciona.
+- Importar JSON de Dividas permite selecionar o arquivo.
+- Limpar todos os dados abre apenas o modal de confirmacao.
 - Abrir uma divida funciona.
 - Registrar pagamento de divida funciona.
 - Excluir pagamento funciona.

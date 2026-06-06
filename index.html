@@ -445,8 +445,8 @@
               <div class="panel-heading">
                 <div><p class="eyebrow">Consolidar dívidas</p><h2>Renegociação</h2></div>
                 <div class="action-group">
-                  <button class="ghost-btn" type="button" onclick="window.clearRenegotiationSelection()">Limpar seleção</button>
-                  <button class="primary-button" type="button" onclick="window.openRenegotiationModal()">
+                  <button class="ghost-btn" type="button" id="clearRenegotiationSelectionButton">Limpar seleção</button>
+                  <button class="primary-button" type="button" id="openRenegotiationModalButton">
                     <i data-lucide="refresh-ccw"></i><span>Criar acordo</span>
                   </button>
                 </div>
@@ -461,14 +461,14 @@
                 <div><p class="eyebrow">Dados</p><h2>Exportar e importar</h2></div>
               </div>
               <div class="action-group" style="flex-wrap:wrap;gap:8px;">
-                <button class="ghost-btn" type="button" onclick="window.exportDividasJson()">Exportar JSON (backup)</button>
-                <button class="ghost-btn" type="button" onclick="window.exportDebtsCsv()">Exportar dívidas CSV</button>
-                <button class="ghost-btn" type="button" onclick="window.exportDebtPaymentsCsv()">Exportar pagamentos CSV</button>
+                <button class="ghost-btn" type="button" id="exportDividasJsonButton">Exportar JSON (backup)</button>
+                <button class="ghost-btn" type="button" id="exportDebtsCsvButton">Exportar dívidas CSV</button>
+                <button class="ghost-btn" type="button" id="exportDebtPaymentsCsvButton">Exportar pagamentos CSV</button>
                 <label class="ghost-btn" style="cursor:pointer;">
                   Importar JSON
-                  <input type="file" id="dividasJsonImportFile" accept="application/json" style="display:none" onchange="window.handleDividasJsonImport(event)">
+                  <input type="file" id="dividasJsonImportFile" accept="application/json" style="display:none">
                 </label>
-                <button class="ghost-btn danger-btn" type="button" onclick="window.openClearAllModal()">Limpar todos os dados</button>
+                <button class="ghost-btn danger-btn" type="button" id="openClearAllModalButton">Limpar todos os dados</button>
               </div>
             </section>
           </div>

@@ -7,11 +7,13 @@ import { renderTrail } from './trail.js';
 import { renderDebts } from './debts.js';
 import { renderRenegotiation } from './renegotiation.js';
 import { renderCreditors } from './creditors.js';
+import { bindDebtDataEvents } from './ui-events.js';
 import './payment.js';
 import './debt-form.js';
 import './data.js';
 
 export async function loadDividas() {
+  bindDebtDataEvents();
   state.creditors = (await getDocs(debtCreditorsColl())).docs.map(d => ({ id: d.id, ...d.data() }));
   state.debts = (await getDocs(debtsColl())).docs.map(d => ({ id: d.id, ...d.data() }));
   state.installments = (await getDocs(installmentsColl())).docs.map(d => ({ id: d.id, ...d.data() }));
