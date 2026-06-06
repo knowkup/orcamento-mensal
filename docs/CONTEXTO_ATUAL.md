@@ -1,6 +1,6 @@
 # Contexto atual - Orcamento Mensal + Rota Financeira
 
-Ultima atualizacao: 2026-06-03
+Ultima atualizacao: 2026-06-06
 
 Este arquivo e o resumo de onboarding para Codex, Claude ou qualquer agente em outro notebook. Leia antes de mexer no projeto.
 
@@ -22,11 +22,16 @@ Arquivos principais:
 - `js/app.js`: boot principal, bindings globais, navegacao e render geral.
 - `js/state.js`: estado principal do Orcamento e cache de elementos DOM.
 - `js/data.js`: `createDefaultData()`, normalizacao e migracoes do estado principal.
-- `js/planejamento.js`: construcao da projecao futura.
-- `js/controle.js`: Controle Mensal, pagamentos, recebimentos, fechamento do mes e saldo em conta.
+- `js/planejamento/planejamento.js`: construcao da projecao futura.
+- `js/controle/controle.js`: Controle Mensal, pagamentos, recebimentos, fechamento do mes e saldo em conta.
 - `js/dividas/`: modulo da Rota Financeira.
 
 O projeto usa JavaScript puro com ES modules. Nao ha bundler.
+
+O estado principal usa fila de salvamento e revisoes monotonicamente crescentes.
+Snapshots antigos sao ignorados enquanto uma versao local mais nova ainda esta
+pendente. Salvamentos redesenham apenas a tela ativa; todas as telas sao renderizadas
+no boot e novamente quando abertas.
 
 ## Navegacao atual
 
@@ -142,6 +147,8 @@ Arquivos relevantes:
 Utilitarios puros compartilhados ficam em `js/domain/`, incluindo formatacao de
 valores, filtros de dividas e mutacoes locais de pagamentos/exclusoes. Esses modulos
 nao acessam DOM nem Firebase e possuem testes diretos.
+
+O schema e o formato de backup estao documentados em `docs/SCHEMA_DADOS.md`.
 
 ## Cuidados antes de alterar
 

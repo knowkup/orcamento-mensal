@@ -15,11 +15,18 @@ Ultima atualizacao: 2026-06-06
 - [x] Painel de sincronizacao atingiu o estado `Sincronizado`.
 - [x] Novo lancamento planejado abriu o modal.
 - [x] Entrada ficticia foi salva e persistiu depois da recarga.
-- [ ] Excluir lancamento manual persiste depois da recarga.
+- [ ] Retestar: excluir lancamento manual permanece excluido depois da recarga.
 
 Falha encontrada: a entrada ficticia `TESTE HOMOLOGACAO 2026-06-06`, de R$ 1,23,
 reaparece depois da exclusao e permanece no Firestore. Os demais itens deste checklist
 ainda precisam de homologacao manual.
+
+Correcao preparada no pacote seguinte:
+
+- snapshots antigos sao ignorados enquanto uma gravacao local mais nova esta pendente;
+- a exclusao remove baixas, valores, datas e movimentos de caixa vinculados;
+- o saldo em conta e revertido quando o lancamento excluido ja havia sido baixado;
+- o fluxo possui testes automatizados e ainda precisa do reteste manual acima.
 
 ---
 
@@ -43,6 +50,7 @@ ainda precisam de homologacao manual.
 - Duas alteracoes salvas rapidamente permanecem apos recarregar a pagina.
 - Exportar backup gera um arquivo `.json` com data e horario no nome.
 - Importar backup valido mostra mensagem de sucesso com nome do arquivo.
+- Importar backup mostra um resumo e exige confirmacao antes de substituir os dados.
 - Importar arquivo invalido mostra mensagem de erro.
 - Depois de importar, o seletor de arquivo permite selecionar o mesmo arquivo novamente.
 

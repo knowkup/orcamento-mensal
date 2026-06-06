@@ -2,7 +2,7 @@ import { firebaseConfig, isFirebaseConfigured } from "../firebase-config.js";
 import { state, el } from "./state.js";
 import { loadLocalState, exportState, importState } from "./storage.js";
 import { setupFirebase, saveState } from "./firebase.js";
-import { bindMoneyInputs, refreshIcons } from "./utils.js";
+import { bindMoneyInputs, refreshIcons, updateSync } from "./utils.js";
 import { renderProjection } from "./planejamento/planejamento.js";
 import { renderMonthlyControl, confirmReceivedOccurrence, confirmPaidOccurrence, openPlannedDialog, closeMonth, saveAccountBalance, updatePlannedFields, addPlannedPurchase, closePlannedDialog, saveFixedCostAmount, navigateControlMonth } from "./controle/controle.js";
 import { renderInstallments, addInstallment, openInstallmentDialog, closeInstallmentDialog } from "./parcelamentos/parcelamentos.js";
@@ -17,13 +17,13 @@ boot();
 
 async function boot() {
   state.data = loadLocalState();
-  state.renderFn = render;
+  state.renderFn = renderCurrentView;
   state.hydrateFn = hydrateForms;
   state.saveStateFn = saveState;
   state.loadDividasFn = loadDividas;
   bindEvents();
   hydrateForms();
-  render();
+  renderAll();
   await setupFirebase(firebaseConfig, isFirebaseConfigured);
 }
 
@@ -98,6 +98,10 @@ function bindEvents() {
   on(document.querySelector("#openTaxTablesButton"), "click", () => document.querySelector("#taxTablesDialog")?.showModal());
   on(document.querySelector("#closeTaxTablesButton"), "click", () => document.querySelector("#taxTablesDialog")?.close());
   bindFeriasEvents();
+  on(window, "offline", () => updateSync("Offline", "Alteracoes ficam salvas neste dispositivo.", "offline"));
+  on(window, "online", () => {
+    if (state.firebaseReady) updateSync("Reconectando", "Verificando dados na nuvem.", "syncing");
+  });
   // Label select → atualiza campos condicionais e faixa líquido
   on(document.querySelector("#incomeLabelSelect"), "change", toggleIncomeCltFields);
   // Botão "Trocar" → abre file input oculto
@@ -180,11 +184,12 @@ function showView(name) {
   });
   const maisBtn = document.getElementById("maisButton");
   if (maisBtn) maisBtn.classList.toggle("active", !bottomPrimary.includes(name));
+  renderView(name);
   refreshIcons();
 }
 window.showView = showView;
 
-function render() {
+function renderAll() {
   renderProjection();
   renderMonthlyControl();
   renderInstallments();
@@ -197,6 +202,33 @@ function render() {
   renderSettings();
   renderTaxTables();
   renderFerias();
+  bindMoneyInputs();
+  refreshIcons();
+}
+
+function renderCurrentView() {
+  const activeView = document.querySelector(".view.active");
+  renderView(activeView?.id?.replace(/View$/, "") || "planejamento");
+}
+
+function renderView(name) {
+  const renderers = {
+    planejamento: renderProjection,
+    controle: renderMonthlyControl,
+    parcelas: renderInstallments,
+    custos: renderFixedCosts,
+    carro: renderCar,
+    fgts: renderFgts,
+    ferias: renderFerias,
+    ajustes() {
+      renderOrigins();
+      renderCreditCards();
+      renderRecurringIncomes();
+      renderSettings();
+      renderTaxTables();
+    }
+  };
+  renderers[name]?.();
   bindMoneyInputs();
   refreshIcons();
 }

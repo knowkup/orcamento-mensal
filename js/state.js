@@ -16,6 +16,8 @@ export const state = {
   unsubscribe: null,
   firebaseReady: false,
   saving: false,
+  lastLocalRevision: 0,
+  pendingCloudRevision: 0,
   installmentFilter: "open",
   installmentCreditorFilter: "all",
   carFilter: "open",

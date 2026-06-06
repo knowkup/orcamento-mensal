@@ -4,6 +4,7 @@ import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCre
 import { metric, isManualPlannedRow, emptyState } from "../components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
 import { markDebtInstallmentPaid } from "../dividas/budget-integration.js";
+import { removeManualPlanned } from "../domain/planned-transactions.js";
 
 function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
@@ -516,21 +517,7 @@ export async function addPlannedPurchase(event) {
 }
 
 export async function deleteManualPlanned(id) {
-  state.data.incomeLines = state.data.incomeLines.filter((item) => item.id !== id);
-  state.data.plannedPurchases = state.data.plannedPurchases.filter((item) => item.id !== id);
-  state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((key) => !key.startsWith(`${id}:`));
-  state.data.paidOccurrences = (state.data.paidOccurrences || []).filter((key) => !key.startsWith(`${id}:`));
-  if (state.data.receivedAmounts) {
-    Object.keys(state.data.receivedAmounts).forEach((key) => {
-      if (key.startsWith(`${id}:`)) delete state.data.receivedAmounts[key];
-    });
-  }
-  ["paidAmounts", "paidDates"].forEach((field) => {
-    if (!state.data[field]) return;
-    Object.keys(state.data[field]).forEach((key) => {
-      if (key.startsWith(`${id}:`)) delete state.data[field][key];
-    });
-  });
+  state.data = removeManualPlanned(state.data, id);
   if (state.saveStateFn) await state.saveStateFn("Lançamento excluído.");
 }
 

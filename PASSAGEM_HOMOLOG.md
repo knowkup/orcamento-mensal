@@ -63,10 +63,21 @@ Pacote estrutural seguinte:
 - pagamentos e exclusoes possuem mutacoes locais puras e testadas;
 - acoes assincronas de Dividas usam um limite comum de tratamento de falhas.
 
+Pacote de confiabilidade atual:
+
+- protege exclusoes contra snapshots antigos recebidos durante a fila de salvamento;
+- exclusao manual limpa baixas e reverte movimentos aplicados ao saldo;
+- backup principal possui formato versionado e continua aceitando o formato anterior;
+- importacao valida a estrutura, mostra um resumo e exige confirmacao;
+- projecao mensal usa funcoes puras de dominio para valores, parcelas e totais;
+- salvamentos renderizam somente a tela ativa; a renderizacao completa fica no boot;
+- estados online e offline possuem feedback imediato;
+- schema documentado em `docs/SCHEMA_DADOS.md`.
+
 Validacao automatizada anterior:
 
 ```text
-27 testes aprovados
+53 testes aprovados
 0 testes falhando
 ```
 
@@ -144,6 +155,8 @@ Confirmar:
 7. Consignado CLT desmarca e bloqueia a inclusao no Controle Mensal.
 8. Consignado CLT nao aparece no Controle Mensal depois da recarga.
 9. Exportacao e importacao de backup de Dividas preservam os credores.
+10. Excluir lancamento manual, recarregar e confirmar que ele nao reaparece.
+11. Importar backup mostra resumo e permite cancelar sem alterar os dados.
 
 Continuar com `docs/CHECKLIST_HOMOLOGACAO.md`.
 
