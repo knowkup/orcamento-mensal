@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const debtModules = [
   'js/dividas/debt-components.js',
+  'js/dividas/debt-order.js',
   'js/dividas/dashboard.js',
   'js/dividas/data.js',
   'js/dividas/debt-form.js',
@@ -36,6 +37,20 @@ test('shared debt details are not duplicated in trail renderer', async () => {
   assert.doesNotMatch(trail, /function debtActionMenu/);
   assert.doesNotMatch(trail, /function installmentRowsForDebt/);
   assert.match(trail, /renderDebtRouteItem/);
+});
+
+test('debt order persistence is centralized', async () => {
+  const order = await readFile('js/dividas/debt-order.js', 'utf8');
+  const debts = await readFile('js/dividas/debts.js', 'utf8');
+  const trail = await readFile('js/dividas/trail.js', 'utf8');
+
+  assert.match(order, /export async function persistDebtOrder/);
+  assert.match(order, /export function beginDebtDrag/);
+  assert.match(order, /export function takeDebtDropSource/);
+  assert.doesNotMatch(debts, /writeBatch\(/);
+  assert.doesNotMatch(trail, /writeBatch\(/);
+  assert.match(debts, /persistDebtOrder/);
+  assert.match(trail, /persistDebtOrder/);
 });
 
 test('debt modules expose navigation only through the intentional bridge', async () => {

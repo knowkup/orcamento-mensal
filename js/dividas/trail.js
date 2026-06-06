@@ -1,10 +1,10 @@
 import { state } from './state.js';
-import { $, brl, escapeHtml, emptyCard, getCreditorName, compactTagsForDebt, formatDateBR, routeProgressHtml, showToast } from './utils.js';
+import { $, brl, escapeHtml, emptyCard, getCreditorName, compactTagsForDebt, formatDateBR, routeProgressHtml } from './utils.js';
 import { debtBalance, nextInstallment, debtProgress, payoffTodayHtml, routeInstallmentStatusLabel } from './calc.js';
 import { debtMetric, sortedTrailDebts, orderedTrailDebts } from './debts.js';
-import { debtDoc, writeBatch, serverTimestamp } from './firebase.js';
 import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder.js';
 import { renderDebtRouteItem } from './debt-components.js';
+import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
 
 // --- Render principal da Rota Financeira ---
 
@@ -121,19 +121,6 @@ export function setTrailDebtSort(mode) {
 
 // --- Drag & drop da Rota Financeira ---
 
-async function persistRouteOrder(route) {
-  const batch = writeBatch();
-  route.forEach((debt, index) => {
-    const payoffOrder = index + 1;
-    batch.update(debtDoc(debt.id), { payoffOrder, updatedAt: serverTimestamp() });
-    const local = state.debts.find(item => item.id === debt.id);
-    if (local) local.payoffOrder = payoffOrder;
-  });
-  await batch.commit();
-  if (state.renderFn) state.renderFn();
-  showToast('Ordem da rota atualizada.');
-}
-
 export async function moveDebtInTrail(id, direction) {
   const targetDebt = state.debts.find(debt => debt.id === id);
   if (!targetDebt || targetDebt.status === 'Quitada') return;
@@ -142,41 +129,39 @@ export async function moveDebtInTrail(id, direction) {
     .map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
   const reordered = moveItemByDirection(route, id, direction);
   if (!reordered) return;
-  await persistRouteOrder(reordered);
+  await persistDebtOrder(reordered, { message: 'Ordem da rota atualizada.' });
 }
 
 export function startRouteDrag(event, id) {
   const debt = state.debts.find(item => item.id === id);
   if (!debt || debt.status === 'Quitada') return;
-  state.draggedRouteDebtId = id;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', id);
-  }
-  const item = event.target.closest('.route-item');
-  if (item) item.classList.add('dragging');
+  beginDebtDrag(event, id, {
+    stateKey: 'draggedRouteDebtId',
+    itemSelector: '.route-item'
+  });
 }
 
 export function routeDragOver(event) {
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  allowDebtDrop(event);
 }
 
 export async function dropRouteDebt(event, targetId) {
-  event.preventDefault();
-  const sourceId = state.draggedRouteDebtId || event.dataTransfer?.getData('text/plain');
-  state.draggedRouteDebtId = null;
-  document.querySelectorAll('.route-item.dragging').forEach(item => item.classList.remove('dragging'));
-  if (!sourceId || sourceId === targetId) return;
+  const options = {
+    stateKey: 'draggedRouteDebtId',
+    draggingSelector: '.route-item.dragging'
+  };
+  const sourceId = takeDebtDropSource(event, options);
   const targetDebt = state.debts.find(debt => debt.id === targetId);
   if (!targetDebt || targetDebt.status === 'Quitada') return;
   const route = orderedTrailDebts().filter(debt => debt.status === 'Ativa');
   const reordered = moveItemToTargetPosition(route, sourceId, targetId);
   if (!reordered) return;
-  await persistRouteOrder(reordered);
+  await persistDebtOrder(reordered, { message: 'Ordem da rota atualizada.' });
 }
 
 export function endRouteDrag() {
-  state.draggedRouteDebtId = null;
-  document.querySelectorAll('.route-item.dragging').forEach(item => item.classList.remove('dragging'));
+  endDebtDrag({
+    stateKey: 'draggedRouteDebtId',
+    draggingSelector: '.route-item.dragging'
+  });
 }

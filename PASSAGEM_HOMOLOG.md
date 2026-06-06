@@ -56,6 +56,8 @@ Pacote estrutural seguinte:
 - detalhes expandidos, menu de acoes e parcelas agora possuem um unico renderizador;
 - linhas da Rota e de Consignado usam um componente visual compartilhado;
 - regras de ordenacao, arraste, filtros e persistencia permanecem nos modulos originais.
+- persistencia de ordem e ciclo comum de arraste foram centralizados para Rota,
+  Em Espera e Fora do Radar.
 
 Validacao automatizada anterior:
 

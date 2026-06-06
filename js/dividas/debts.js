@@ -1,8 +1,9 @@
 import { state } from './state.js';
-import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml, showToast } from './utils.js';
+import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml } from './utils.js';
 import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceLabel, paidOffDifferenceClass, paidOffClosedDateKey, isOpenInstallment, openInstallmentsForDebt, debtProgress, nextInstallment, installmentProgress, payoffTodayHtml, routeInstallmentStatusLabel } from './calc.js';
 import { renderDashboard } from './dashboard.js';
-import { debtDoc, writeBatch, serverTimestamp } from './firebase.js';
+import { moveItemByDirection, moveItemToTargetPosition } from '../domain/reorder.js';
+import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
 
 // --- Helpers de métrica ---
 
@@ -426,126 +427,88 @@ export function showAllDebtInstallments() {
 
 // --- Drag & drop Em espera ---
 
-async function persistWaitingOrder(route) {
-  const batch = writeBatch();
-  route.forEach((debt, index) => {
-    const payoffOrder = index + 1;
-    batch.update(debtDoc(debt.id), { payoffOrder, updatedAt: serverTimestamp() });
-    const local = state.debts.find(item => item.id === debt.id);
-    if (local) local.payoffOrder = payoffOrder;
-  });
-  await batch.commit();
-  state.selectedWaitingDebtSort = 'trail';
-  if ($('waitingDebtSort')) $('waitingDebtSort').value = 'trail';
-  if (state.renderFn) state.renderFn();
-  showToast('Ordem de espera atualizada.');
-}
-
 export async function moveWaitingDebt(id, direction) {
   const route = orderedWaitingDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
-  const currentIndex = route.findIndex(debt => debt.id === id);
-  const nextIndex = currentIndex + direction;
-  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= route.length) return;
-  const current = route[currentIndex];
-  route[currentIndex] = route[nextIndex];
-  route[nextIndex] = current;
-  await persistWaitingOrder(route);
+  const reordered = moveItemByDirection(route, id, direction);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, {
+    sortStateKey: 'selectedWaitingDebtSort',
+    sortSelectId: 'waitingDebtSort',
+    message: 'Ordem de espera atualizada.'
+  });
 }
 
 export function startWaitingDebtDrag(event, id) {
-  state.draggedWaitingDebtId = id;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', id);
-  }
-  const item = event.target.closest('.waiting-route-item');
-  if (item) item.classList.add('dragging');
+  beginDebtDrag(event, id, {
+    stateKey: 'draggedWaitingDebtId',
+    itemSelector: '.waiting-route-item'
+  });
 }
 
 export function waitingDebtDragOver(event) {
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  allowDebtDrop(event);
 }
 
 export async function dropWaitingDebt(event, targetId) {
-  event.preventDefault();
-  const sourceId = state.draggedWaitingDebtId || event.dataTransfer?.getData('text/plain');
-  state.draggedWaitingDebtId = null;
-  document.querySelectorAll('.waiting-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-  if (!sourceId || sourceId === targetId) return;
+  const options = {
+    stateKey: 'draggedWaitingDebtId',
+    draggingSelector: '.waiting-route-item.dragging'
+  };
+  const sourceId = takeDebtDropSource(event, options);
   const route = orderedWaitingDebts();
-  const from = route.findIndex(debt => debt.id === sourceId);
-  const to = route.findIndex(debt => debt.id === targetId);
-  if (from < 0 || to < 0) return;
-  const [moved] = route.splice(from, 1);
-  route.splice(to, 0, moved);
-  await persistWaitingOrder(route);
+  const reordered = moveItemToTargetPosition(route, sourceId, targetId);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, {
+    sortStateKey: 'selectedWaitingDebtSort',
+    sortSelectId: 'waitingDebtSort',
+    message: 'Ordem de espera atualizada.'
+  });
 }
 
 export function endWaitingDebtDrag() {
-  state.draggedWaitingDebtId = null;
-  document.querySelectorAll('.waiting-route-item.dragging').forEach(item => item.classList.remove('dragging'));
+  endDebtDrag({
+    stateKey: 'draggedWaitingDebtId',
+    draggingSelector: '.waiting-route-item.dragging'
+  });
 }
 
 // --- Drag & drop Fora do radar ---
 
-async function persistHiddenOrder(route) {
-  const batch = writeBatch();
-  route.forEach((debt, index) => {
-    const payoffOrder = index + 1;
-    batch.update(debtDoc(debt.id), { payoffOrder, updatedAt: serverTimestamp() });
-    const local = state.debts.find(item => item.id === debt.id);
-    if (local) local.payoffOrder = payoffOrder;
-  });
-  await batch.commit();
-  if (state.renderFn) state.renderFn();
-  showToast('Ordem fora do radar atualizada.');
-}
-
 export async function moveHiddenDebt(id, direction) {
   const route = orderedHiddenDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
-  const currentIndex = route.findIndex(debt => debt.id === id);
-  const nextIndex = currentIndex + direction;
-  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= route.length) return;
-  const current = route[currentIndex];
-  route[currentIndex] = route[nextIndex];
-  route[nextIndex] = current;
-  await persistHiddenOrder(route);
+  const reordered = moveItemByDirection(route, id, direction);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, { message: 'Ordem fora do radar atualizada.' });
 }
 
 export function startHiddenDebtDrag(event, id) {
-  state.draggedHiddenDebtId = id;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', id);
-  }
-  const item = event.target.closest('.hidden-route-item');
-  if (item) item.classList.add('dragging');
+  beginDebtDrag(event, id, {
+    stateKey: 'draggedHiddenDebtId',
+    itemSelector: '.hidden-route-item'
+  });
 }
 
 export function hiddenDebtDragOver(event) {
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  allowDebtDrop(event);
 }
 
 export async function dropHiddenDebt(event, targetId) {
-  event.preventDefault();
-  const sourceId = state.draggedHiddenDebtId || event.dataTransfer?.getData('text/plain');
-  state.draggedHiddenDebtId = null;
-  document.querySelectorAll('.hidden-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-  if (!sourceId || sourceId === targetId) return;
+  const options = {
+    stateKey: 'draggedHiddenDebtId',
+    draggingSelector: '.hidden-route-item.dragging'
+  };
+  const sourceId = takeDebtDropSource(event, options);
   const route = orderedHiddenDebts();
-  const from = route.findIndex(debt => debt.id === sourceId);
-  const to = route.findIndex(debt => debt.id === targetId);
-  if (from < 0 || to < 0) return;
-  const [moved] = route.splice(from, 1);
-  route.splice(to, 0, moved);
-  await persistHiddenOrder(route);
+  const reordered = moveItemToTargetPosition(route, sourceId, targetId);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, { message: 'Ordem fora do radar atualizada.' });
 }
 
 export function endHiddenDebtDrag() {
-  state.draggedHiddenDebtId = null;
-  document.querySelectorAll('.hidden-route-item.dragging').forEach(item => item.classList.remove('dragging'));
+  endDebtDrag({
+    stateKey: 'draggedHiddenDebtId',
+    draggingSelector: '.hidden-route-item.dragging'
+  });
 }
 
 function formatAnyDateBR(value) {
