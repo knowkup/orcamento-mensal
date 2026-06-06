@@ -1,107 +1,83 @@
-# Passagem de Contexto - Ambiente de Homologacao
+# Passagem de Contexto - Homologacao
 
 Ultima atualizacao: 2026-06-06
 
-Este documento existe para continuar o trabalho em outro computador ou com outra IA.
-Leia antes de alterar arquivos, configurar Firebase ou publicar o sistema.
+Leia este documento antes de publicar ou continuar o trabalho em outro computador.
 
-## Objetivo Atual
+## Decisao De Infraestrutura
 
-Publicar a branch `homolog` em um ambiente web separado para testar a modernizacao
-antes de levar qualquer alteracao para a producao.
+O codigo e as duas publicacoes ficam no GitHub:
 
-O ambiente de homologacao nao deve alterar a branch `main`, a URL de producao nem o
-banco Firebase usado atualmente.
+- producao: branch `main`;
+- homologacao: branch `homolog`;
+- producao publicada em `https://kupka1988.github.io/orcamento-mensal/`;
+- homologacao publicada em `https://kupka1988.github.io/orcamento-mensal/homolog/`.
 
-## Pacote Em Validacao
+O Firebase nao hospeda o site. Ele e usado somente como banco Firestore:
 
-Implementado e enviado para a branch `homolog` em 2026-06-06:
+- producao: projeto `orcamento-mensal-fdc1a`;
+- homologacao: projeto `orcamento-mensal-homolog`.
 
-- commit: `7535a8c` (`Unifica credores e protege consignados`);
-- push para `origin/homolog`: concluido;
-- deploy no Firebase: pendente apenas porque este computador nao esta autenticado no
-  Firebase CLI.
+O workflow `.github/workflows/pages.yml` monta as duas branches em um unico artefato
+do GitHub Pages. A raiz recebe a `main` e a pasta `/homolog/` recebe a `homolog`.
+
+## Regra De Seguranca
+
+A URL de homologacao deve selecionar o projeto Firebase
+`orcamento-mensal-homolog`. Nunca homologar alteracoes usando os dados reais.
+
+O arquivo `firebase-config.js` seleciona o ambiente pela URL:
+
+```text
+https://kupka1988.github.io/orcamento-mensal/          -> producao
+https://kupka1988.github.io/orcamento-mensal/homolog/ -> homologacao
+localhost / 127.0.0.1                                 -> homologacao
+```
+
+## Estado Do Pacote
+
+Pacote funcional enviado para `origin/homolog`:
+
+- `7535a8c` - unifica credores e protege consignados;
+- `b29034f` - registra o pacote para homologacao.
+
+Alteracoes principais:
 
 - catalogo unico de credores para Orcamento e Dividas;
 - migracao automatica dos antigos documentos de `debtCreditors`;
-- atualizacao das dividas para os identificadores do catalogo compartilhado;
-- bloqueio de exclusao de credor que esteja vinculado a uma divida;
+- bloqueio de exclusao de credor usado por dividas;
 - backup de Dividas compativel com o catalogo compartilhado;
 - limpeza de Dividas sem apagar credores globais;
-- Consignado CLT impedido de entrar no Controle Mensal no formulario, importacao,
-  migracao e regra de dominio;
-- remocao da interface e do modulo duplicado de credores exclusivos de Dividas.
+- Consignado CLT nunca entra no Controle Mensal;
+- remocao da interface duplicada de credores de Dividas.
 
-Validacao automatizada deste pacote:
+Validacao automatizada anterior:
 
 ```text
 27 testes aprovados
 0 testes falhando
 ```
 
-Antes de levar para `main`, homologar a migracao com dados ficticios e confirmar que
-nenhuma divida perdeu o credor. A migracao foi desenhada para ocorrer tambem quando a
-versao chegar ao banco de producao, sem exigir edicao manual dos dados.
+## Publicacao
 
-Para publicar este pacote em homologacao em um computador autenticado:
+O workflow publica automaticamente quando houver push em `main` ou `homolog`.
 
-```powershell
-git switch homolog
-git pull --ff-only origin homolog
-npx --yes firebase-tools deploy --project orcamento-mensal-homolog
-```
-
-Resultado esperado:
+Caso o GitHub Pages ainda esteja configurado para publicar diretamente de uma branch,
+abrir:
 
 ```text
-Hosting URL: https://orcamento-mensal-homolog.web.app
+GitHub > Settings > Pages > Build and deployment > Source
 ```
 
-## Publicacao Realizada
+Selecionar:
 
-Publicacao concluida em 2026-06-06:
+```text
+GitHub Actions
+```
 
-- Branch publicada: `homolog`
-- Commit publicado: `8ab49dbe04b535d780c24fb27209fc3fac004fba`
-- URL: `https://orcamento-mensal-homolog.web.app`
-- Projeto Firebase: `orcamento-mensal-homolog`
-- Firestore Rules: compiladas e publicadas com sucesso
-- Firebase Hosting: publicado com sucesso
-- Testes automatizados: 23 aprovados, 0 falhando
-- Aplicacao: carregou sem erro de console e atingiu o estado `Sincronizado`
-- Isolamento: a homologacao iniciou sem dados de producao
+Depois executar novamente o workflow `Publicar producao e homologacao`, se necessario.
 
-Validacao de persistencia:
-
-1. Foi criada a entrada ficticia `TESTE HOMOLOGACAO 2026-06-06`, no valor de R$ 1,23.
-2. A pagina foi recarregada e a entrada permaneceu, confirmando a persistencia.
-3. O botao `Excluir lancamento` foi acionado, mas a entrada continuou no Firestore e
-   reapareceu depois da recarga.
-
-Problema encontrado:
-
-- A exclusao de um lancamento manual do Planejamento nao persiste no ambiente
-  publicado. O registro ficticio acima permanece na homologacao e deve ser removido
-  depois que essa falha for corrigida.
-- A homologacao funcional completa das demais telas ainda esta pendente.
-
-## Estado do Git
-
-- Repositorio: `https://github.com/knowkup/orcamento-mensal.git`
-- Branch de producao: `main`
-- Commit atual da producao: `891e916`
-- Branch de homologacao: `homolog`
-- Commit base da modernizacao: `d4418c0`
-- Commit que criou este documento: `ea9de0d`
-- Para o commit mais recente, sempre consultar `origin/homolog`.
-- A antiga branch `codex/modernizacao-segura` foi renomeada para `homolog` e removida do remoto.
-- A branch `homolog` ja foi publicada no GitHub.
-- As alteracoes ainda nao foram mescladas na `main`.
-
-## Verificacao Obrigatoria No Outro Computador
-
-Antes de alterar, sincronizar, configurar Firebase ou fazer deploy, confirmar que o
-Codex esta trabalhando na copia oficial do projeto.
+## Verificacao Em Outro Computador
 
 Executar:
 
@@ -111,271 +87,55 @@ git rev-parse --show-toplevel
 git remote -v
 git status --short --branch
 git log -3 --oneline
-git worktree list
 ```
 
-O caminho esperado deve terminar em:
+Pasta esperada:
 
 ```text
 OneDrive\Documentos\14. Sistemas Kupka\Orcamento Mensal
 ```
 
-O remoto esperado e:
+Repositorio esperado:
 
 ```text
 https://github.com/knowkup/orcamento-mensal.git
 ```
 
-A branch correta para este trabalho e:
-
-```text
-homolog
-```
-
-O commit remoto minimo esperado ao receber este documento e o commit que contem
-`PASSAGEM_HOMOLOG.md`. Conferir `origin/homolog` antes de continuar.
-
-Se o caminho apontar para `.claude\worktrees`, outra copia, uma pasta antiga ou um clone
-diferente, nao editar arquivos nessa pasta. Voltar para a pasta oficial do OneDrive.
-
-Se `git status` mostrar arquivos modificados ou nao rastreados:
-
-- nao executar `git reset`;
-- nao executar `git clean`;
-- nao apagar ou sobrescrever arquivos;
-- nao trocar de branch ainda;
-- mostrar ao usuario a saida completa do status;
-- identificar se as mudancas pertencem ao usuario antes de sincronizar.
-
-Se a pasta estiver correta e a arvore estiver limpa, executar:
+Para continuar a homologacao:
 
 ```powershell
 git fetch origin
 git switch homolog
 git pull --ff-only origin homolog
-git status --short --branch
 ```
 
-Depois, confirmar:
+Nao usar copias dentro de `.claude/worktrees` como pasta principal. Nao executar
+`git reset`, `git clean` ou descartar alteracoes locais sem primeiro identificar sua
+origem.
 
-```powershell
-git rev-parse HEAD
-git rev-parse origin/homolog
-```
+## Homologacao Manual
 
-Os dois hashes devem ser iguais. O resultado esperado e uma arvore limpa acompanhando
-`origin/homolog`.
-
-Existe historico de um worktree antigo criado por outra IA dentro de `.claude/worktrees`.
-Ele nao deve ser usado como pasta principal. O trabalho commitado relevante desse
-worktree ja foi incorporado ao historico da branch `homolog`.
-
-## Producao Atual
-
-- Hospedagem: GitHub Pages
-- URL: `https://kupka1988.github.io/orcamento-mensal/`
-- Firebase de producao: `orcamento-mensal-fdc1a`
-- A producao nao deve ser modificada durante a configuracao da homologacao.
-
-## Decisao Sobre Autenticacao
-
-O projeto atual nao usa mais Firebase Authentication.
-
-Consequencias:
-
-- Nao ativar Authentication no novo projeto de homologacao.
-- O app acessa diretamente o Firestore.
-- As regras antigas por usuario autenticado nao representam mais a arquitetura atual.
-- Sem autenticacao, regras abertas deixam o banco acessivel para quem conhecer a URL/configuracao.
-- Por isso, nao usar dados financeiros reais na homologacao.
-
-## Novo Projeto Firebase
-
-Projeto criado para homologacao:
+Abrir:
 
 ```text
-orcamento-mensal-homolog
+https://kupka1988.github.io/orcamento-mensal/homolog/
 ```
 
-O projeto deve ter:
+Confirmar:
 
-1. Cloud Firestore.
-2. Um aplicativo Web registrado.
-3. Firebase Hosting.
-4. Nenhum provedor de Authentication.
+1. A aplicacao carrega e sincroniza.
+2. O projeto selecionado e `orcamento-mensal-homolog`.
+3. Nenhum dado real de producao aparece.
+4. Credores aparecem iguais em Preferencias e Dividas.
+5. Dividas antigas continuam vinculadas aos credores depois da migracao.
+6. Credor usado por uma divida nao pode ser excluido.
+7. Consignado CLT desmarca e bloqueia a inclusao no Controle Mensal.
+8. Consignado CLT nao aparece no Controle Mensal depois da recarga.
+9. Exportacao e importacao de backup de Dividas preservam os credores.
 
-Regiao recomendada para o Firestore:
+Continuar com `docs/CHECKLIST_HOMOLOGACAO.md`.
 
-```text
-southamerica-east1 (Sao Paulo)
-```
+## Producao
 
-## Passo Exato Em Que Paramos
-
-O aplicativo Web foi registrado e o bloco `firebaseConfig` foi recebido em 2026-06-06.
-O arquivo `firebase-config.js` seleciona o ambiente pela URL:
-
-```text
-orcamento-mensal-homolog.web.app -> orcamento-mensal-homolog
-orcamento-mensal-homolog.firebaseapp.com -> orcamento-mensal-homolog
-localhost / 127.0.0.1 -> orcamento-mensal-homolog
-kupka1988.github.io -> orcamento-mensal-fdc1a
-```
-
-Tambem foram preparados:
-
-- `.firebaserc`, preso ao projeto de homologacao;
-- `firebase.json`, com Firestore Rules e Firebase Hosting;
-- `firestore.rules`, temporariamente aberto por o app nao usar Authentication;
-- exclusoes do Hosting para backups, documentos, testes e arquivos auxiliares;
-- checklist especifico para testar a URL de homologacao apenas com dados ficticios.
-
-O proximo passo e validar e publicar regras e Hosting, registrar a URL gerada e executar
-a homologacao manual.
-
-Formato esperado:
-
-```javascript
-const firebaseConfig = {
-  apiKey: "...",
-  authDomain: "...",
-  projectId: "orcamento-mensal-homolog",
-  storageBucket: "...",
-  messagingSenderId: "...",
-  appId: "..."
-};
-```
-
-O bloco de configuracao do aplicativo Web identifica o projeto Firebase. Ele sera usado
-para fazer a branch `homolog` conectar ao Firestore de homologacao, em vez do banco real
-de producao.
-
-Nao colar senha, chave de conta de servico, arquivo JSON administrativo ou credencial
-privada. O solicitado e somente o bloco `firebaseConfig` do aplicativo Web.
-
-## Por Que Esse Bloco E Necessario
-
-O arquivo atual `firebase-config.js` aponta para o projeto de producao:
-
-```text
-orcamento-mensal-fdc1a
-```
-
-Se a homologacao for publicada sem trocar essa configuracao:
-
-- a URL sera diferente;
-- mas o sistema continuara lendo e gravando os dados reais de producao;
-- testes de criar, editar, pagar ou excluir dividas poderao alterar dados reais.
-
-O novo `firebaseConfig` permite isolar:
-
-- site de homologacao;
-- Firestore de homologacao;
-- dados usados nos testes.
-
-## Alerta Sobre As Regras Atuais
-
-O arquivo `firestore.rules` existente ainda contem a regra antiga baseada em:
-
-```text
-users/{userId}
-request.auth
-```
-
-O codigo atual grava diretamente nestes caminhos:
-
-```text
-app/state
-debts
-debtInstallments
-debtPayments
-debtCreditors
-debtRenegotiations
-```
-
-Portanto, nao publicar o arquivo `firestore.rules` atual no projeto novo sem antes
-atualiza-lo para a arquitetura sem autenticacao.
-
-Para homologacao temporaria, a configuracao inicial discutida foi permitir leitura e
-gravacao no banco inteiro. Isso deve ser tratado como ambiente de teste sem dados reais,
-nao como configuracao segura de producao.
-
-## O Que Ja Foi Modernizado
-
-Todo o trabalho abaixo esta apenas na branch `homolog`:
-
-- Testes de regras financeiras puras.
-- Regras de impostos extraidas para dominio.
-- Regras de saldo, parcelas e quitacao de dividas testadas.
-- Gravacoes Firebase serializadas para evitar perda em salvamentos rapidos.
-- Exportacao, importacao e exclusao de dados sem handlers globais estaticos.
-- Renegociacao e expansao de dividas com eventos delegados.
-- Ordenacao e arraste da Rota Financeira modularizados.
-- Pagamentos, parcelas e quitacao sem handlers inline.
-- Cadastro de dividas e credores modularizado.
-- Acoes dinamicas das listas e dashboard convertidas para `data-*`.
-- Handlers inline removidos do modulo Dividas.
-- Testes estruturais impedem a volta de handlers inline e APIs globais.
-
-Validacao automatizada atual:
-
-```text
-21 testes aprovados
-0 testes falhando
-```
-
-O unico global mantido intencionalmente no modulo e `window.showDividasView`, usado como
-ponte com a navegacao principal do sistema.
-
-## O Que Falta Fazer
-
-A IA deve:
-
-1. Confirmar no Firebase Console que o Firestore Database existe.
-2. Publicar regras e Hosting no projeto `orcamento-mensal-homolog`.
-3. Informar e validar a URL `web.app` gerada.
-4. Executar a homologacao manual com dados ficticios.
-5. Registrar o resultado neste documento e no checklist.
-6. Fazer commit e push somente na branch `homolog`.
-
-## Homologacao Manual Depois Da Publicacao
-
-Antes de testar fluxos destrutivos, confirmar que a URL publicada aponta para:
-
-```text
-projectId: orcamento-mensal-homolog
-```
-
-Testar especialmente:
-
-- Todas as abas de Dividas carregam.
-- Criar e editar divida.
-- Registrar e excluir pagamento.
-- Quitar divida.
-- Mover entre Rota, Em Espera e Fora do Radar.
-- Ordenar com seletor, setas e arraste.
-- Criar, editar, excluir e unificar credores.
-- Recarregar a pagina e confirmar persistencia.
-- Fazer duas alteracoes rapidamente e confirmar que ambas permanecem.
-
-Usar dados ficticios na homologacao.
-
-## Proximo Trabalho Estrutural Depois Da Homologacao
-
-Depois de aprovar este pacote, o proximo ganho estrutural planejado e remover a
-duplicacao entre:
-
-```text
-js/dividas/debts.js
-js/dividas/trail.js
-```
-
-Os principais trechos duplicados sao:
-
-- menu de acoes da divida;
-- lista e abas de parcelas;
-- detalhes expandidos;
-- composicao visual das linhas.
-
-Essa refatoracao nao deve comecar antes de confirmar que o pacote atual funciona no
-ambiente publicado de homologacao.
+Nao mesclar a modernizacao na `main` antes da aprovacao manual. O workflow de Pages
+pode existir nas duas branches sem levar o restante da modernizacao para producao.

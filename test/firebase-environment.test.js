@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-test('firebase config keeps production and homolog projects isolated by hostname', async () => {
+test('firebase config keeps production and homolog projects isolated by URL', async () => {
   const source = await readFile('firebase-config.js', 'utf8');
 
   assert.match(source, /projectId:\s*"orcamento-mensal-fdc1a"/);
@@ -11,22 +11,22 @@ test('firebase config keeps production and homolog projects isolated by hostname
   assert.match(source, /"orcamento-mensal-homolog\.firebaseapp\.com"/);
   assert.match(source, /"localhost"/);
   assert.match(source, /"127\.0\.0\.1"/);
-  assert.match(source, /homologHosts\.has\(hostname\)\s*\?\s*"homolog"\s*:\s*"production"/);
+  assert.match(source, /hostname === "kupka1988\.github\.io"/);
+  assert.match(source, /githubHomologPath = "\/orcamento-mensal\/homolog"/);
+  assert.match(source, /pathname === githubHomologPath/);
+  assert.match(source, /homologHosts\.has\(hostname\) \|\| isGitHubHomolog/);
 });
 
-test('firebase hosting excludes local and documentation artifacts', async () => {
+test('firebase is configured only as the database provider', async () => {
   const config = JSON.parse(await readFile('firebase.json', 'utf8'));
-  const ignored = new Set(config.hosting.ignore);
+  assert.deepEqual(config, { firestore: { rules: 'firestore.rules' } });
+});
 
-  [
-    'backups*/**',
-    'design/**',
-    'docs/**',
-    'test/**',
-    '_arquivo/**',
-    'files-mentioned-by-the-user-or/**',
-    'PASSAGEM_HOMOLOG.md',
-    'firebase.md',
-    'firestore.rules'
-  ].forEach(pattern => assert.ok(ignored.has(pattern), `${pattern} must not be hosted`));
+test('GitHub Pages workflow publishes main and homolog separately', async () => {
+  const source = await readFile('.github/workflows/pages.yml', 'utf8');
+
+  assert.match(source, /ref: main/);
+  assert.match(source, /ref: homolog/);
+  assert.match(source, /_site\/homolog/);
+  assert.match(source, /actions\/deploy-pages@v4/);
 });

@@ -18,14 +18,20 @@ const homologFirebaseConfig = {
 };
 
 const hostname = globalThis.location?.hostname || "";
+const pathname = globalThis.location?.pathname || "";
 const homologHosts = new Set([
   "localhost",
   "127.0.0.1",
   "orcamento-mensal-homolog.web.app",
   "orcamento-mensal-homolog.firebaseapp.com"
 ]);
+const githubHomologPath = "/orcamento-mensal/homolog";
+const isGitHubHomolog = hostname === "kupka1988.github.io"
+  && (pathname === githubHomologPath || pathname.startsWith(`${githubHomologPath}/`));
 
-export const firebaseEnvironment = homologHosts.has(hostname) ? "homolog" : "production";
+export const firebaseEnvironment = homologHosts.has(hostname) || isGitHubHomolog
+  ? "homolog"
+  : "production";
 export const firebaseConfig = firebaseEnvironment === "homolog"
   ? homologFirebaseConfig
   : productionFirebaseConfig;
