@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { $, brl, escapeHtml, emptyCard, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, sortedCreditors, showToast, addMonths } from './utils.js';
+import { $, brl, parseMoney, escapeHtml, emptyCard, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, sortedCreditors, showToast, addMonths } from './utils.js';
 import { debtBalance, openInstallmentsForDebt, nextInstallment } from './calc.js';
 import { eligibleRenegotiationDebts, selectedRenegotiationDebts, nextPayoffOrder, debtMetric } from './debts.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, renegotiationsColl, doc, addDoc, writeBatch, serverTimestamp } from './firebase.js';
@@ -157,10 +157,4 @@ async function generateInstallments(debtId, qty, value, firstDue) {
     batch.set(ref, { debtId, number: i + 1, total: qty, dueDate: addMonths(firstDue, i), expectedValue: value, status: 'Pendente', createdAt: serverTimestamp() });
   }
   await batch.commit();
-}
-
-function parseMoney(value) {
-  if (typeof value === 'number') return value;
-  if (!value) return 0;
-  return Number(String(value).replace(/R\$/g, '').replace(/\./g, '').replace(',', '.').trim()) || 0;
 }

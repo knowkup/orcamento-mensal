@@ -127,6 +127,9 @@ Arquivos relevantes:
 - `state.js`: estado interno das dividas.
 - `firebase.js`: helpers das colecoes Firestore.
 - `calc.js`: calculos de saldo, progresso, parcelas abertas, quitacao e status.
+- `debt-components.js`: composicao visual compartilhada das linhas da Rota.
+- `debt-order.js`: persistencia e ciclo de arraste compartilhados.
+- `operation.js`: tratamento comum de falhas das acoes assincronas.
 - `dashboard.js`: dashboard estrategico de dividas.
 - `trail.js`: Rota Financeira e ordenacao da frente de quitacao.
 - `debts.js`: listas de espera, fora do radar, quitadas e componentes de divida.
@@ -135,6 +138,10 @@ Arquivos relevantes:
 - `renegotiation.js`: consolidacao/renegociacao.
 - `data.js`: import/export, limpeza e exclusoes.
 - `utils.js`: formatacao, DOM helpers e logos.
+
+Utilitarios puros compartilhados ficam em `js/domain/`, incluindo formatacao de
+valores, filtros de dividas e mutacoes locais de pagamentos/exclusoes. Esses modulos
+nao acessam DOM nem Firebase e possuem testes diretos.
 
 ## Cuidados antes de alterar
 

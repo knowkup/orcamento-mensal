@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 const debtModules = [
   'js/dividas/debt-components.js',
   'js/dividas/debt-order.js',
+  'js/dividas/operation.js',
   'js/dividas/dashboard.js',
   'js/dividas/data.js',
   'js/dividas/debt-form.js',
@@ -51,6 +52,21 @@ test('debt order persistence is centralized', async () => {
   assert.doesNotMatch(trail, /writeBatch\(/);
   assert.match(debts, /persistDebtOrder/);
   assert.match(trail, /persistDebtOrder/);
+});
+
+test('asynchronous debt actions use the shared error boundary', async () => {
+  const events = await readFile('js/dividas/ui-events.js', 'utf8');
+  const operation = await readFile('js/dividas/operation.js', 'utf8');
+
+  assert.match(operation, /export async function runDebtOperation/);
+  assert.match(operation, /catch \(error\)/);
+  [
+    'saveDebt',
+    'savePayment',
+    'confirmPayoffDebt',
+    'confirmDelete',
+    'saveRenegotiation'
+  ].forEach(action => assert.match(events, new RegExp(`runDebtOperation\\(${action}|runDebtOperation\\(\\(\\) => ${action}`)));
 });
 
 test('debt modules expose navigation only through the intentional bridge', async () => {

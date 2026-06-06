@@ -60,6 +60,7 @@ import {
   saveDebt,
   syncDebtBudgetAvailability
 } from './debt-form.js';
+import { runDebtOperation } from './operation.js';
 
 export function bindDebtDataEvents() {
   const root = document.getElementById('divrenegociacaoView');
@@ -113,15 +114,28 @@ export function bindDebtDataEvents() {
     }
     if (button.dataset.secondaryRouteMove) {
       const direction = Number(button.dataset.direction || 0);
-      if (button.dataset.routeScope === 'waiting') moveWaitingDebt(button.dataset.secondaryRouteMove, direction);
-      if (button.dataset.routeScope === 'hidden') moveHiddenDebt(button.dataset.secondaryRouteMove, direction);
+      if (button.dataset.routeScope === 'waiting') {
+        runDebtOperation(
+          () => moveWaitingDebt(button.dataset.secondaryRouteMove, direction),
+          'Não foi possível atualizar a ordem de espera.'
+        );
+      }
+      if (button.dataset.routeScope === 'hidden') {
+        runDebtOperation(
+          () => moveHiddenDebt(button.dataset.secondaryRouteMove, direction),
+          'Não foi possível atualizar a ordem fora do radar.'
+        );
+      }
       return;
     }
 
     const action = button.dataset.debtAction;
     const debtId = button.dataset.debtId;
     if (!action || !debtId) return;
-    if (action === 'changeDebtStatus') changeDebtStatus(debtId, button.dataset.debtStatus);
+    if (action === 'changeDebtStatus') runDebtOperation(
+      () => changeDebtStatus(debtId, button.dataset.debtStatus),
+      'Não foi possível mover a dívida.'
+    );
     if (action === 'openPayoffModal') openPayoffModal(debtId);
     if (action === 'openDebtForm') openDebtForm('edit', debtId);
     if (action === 'openDeleteModal') openDeleteModal('debt', debtId);
@@ -139,7 +153,10 @@ export function bindDebtDataEvents() {
   trailRoad?.addEventListener('click', (event) => {
     const button = event.target.closest('[data-route-move]');
     if (!button || !trailRoad.contains(button)) return;
-    moveDebtInTrail(button.dataset.routeMove, Number(button.dataset.direction || 0));
+    runDebtOperation(
+      () => moveDebtInTrail(button.dataset.routeMove, Number(button.dataset.direction || 0)),
+      'Não foi possível atualizar a ordem da rota.'
+    );
   });
   trailRoad?.addEventListener('dragstart', (event) => {
     const item = event.target.closest('.route-item[draggable="true"]');
@@ -154,7 +171,7 @@ export function bindDebtDataEvents() {
   trailRoad?.addEventListener('drop', (event) => {
     const item = event.target.closest('.route-item[draggable="true"]');
     if (!item || !trailRoad.contains(item)) return;
-    dropRouteDebt(event, item.dataset.debtId);
+    runDebtOperation(() => dropRouteDebt(event, item.dataset.debtId), 'Não foi possível atualizar a ordem da rota.');
   });
   trailRoad?.addEventListener('dragend', endRouteDrag);
   document.addEventListener('dragstart', (event) => {
@@ -172,8 +189,12 @@ export function bindDebtDataEvents() {
   document.addEventListener('drop', (event) => {
     const item = event.target.closest('[data-debt-route]');
     if (!item) return;
-    if (item.dataset.debtRoute === 'waiting') dropWaitingDebt(event, item.dataset.debtId);
-    if (item.dataset.debtRoute === 'hidden') dropHiddenDebt(event, item.dataset.debtId);
+    if (item.dataset.debtRoute === 'waiting') {
+      runDebtOperation(() => dropWaitingDebt(event, item.dataset.debtId), 'Não foi possível atualizar a ordem de espera.');
+    }
+    if (item.dataset.debtRoute === 'hidden') {
+      runDebtOperation(() => dropHiddenDebt(event, item.dataset.debtId), 'Não foi possível atualizar a ordem fora do radar.');
+    }
   });
   document.addEventListener('dragend', (event) => {
     const item = event.target.closest('[data-debt-route]');
@@ -183,18 +204,18 @@ export function bindDebtDataEvents() {
   });
 
   document.getElementById('closeRenegotiationModalButton')?.addEventListener('click', closeRenegotiationModal);
-  document.getElementById('saveRenegotiationButton')?.addEventListener('click', saveRenegotiation);
+  document.getElementById('saveRenegotiationButton')?.addEventListener('click', () => runDebtOperation(saveRenegotiation, 'Não foi possível salvar o acordo.'));
   document.getElementById('closeDeleteModalButton')?.addEventListener('click', closeDeleteModal);
   document.getElementById('cancelDeleteModalButton')?.addEventListener('click', closeDeleteModal);
-  document.getElementById('confirmDeleteButton')?.addEventListener('click', confirmDelete);
+  document.getElementById('confirmDeleteButton')?.addEventListener('click', () => runDebtOperation(confirmDelete, 'Não foi possível concluir a exclusão.'));
   document.getElementById('closeDebtPaymentModalButton')?.addEventListener('click', closePaymentForm);
-  document.getElementById('saveDebtPaymentButton')?.addEventListener('click', savePayment);
+  document.getElementById('saveDebtPaymentButton')?.addEventListener('click', () => runDebtOperation(savePayment, 'Não foi possível registrar o pagamento.'));
   document.getElementById('closeDebtPayoffModalButton')?.addEventListener('click', closePayoffModal);
   document.getElementById('payoffValue')?.addEventListener('input', updatePayoffSummary);
-  document.getElementById('confirmDebtPayoffButton')?.addEventListener('click', confirmPayoffDebt);
+  document.getElementById('confirmDebtPayoffButton')?.addEventListener('click', () => runDebtOperation(confirmPayoffDebt, 'Não foi possível quitar a dívida.'));
   document.getElementById('closeDebtInstallmentModalButton')?.addEventListener('click', closeInstallmentModal);
-  document.getElementById('saveDebtInstallmentButton')?.addEventListener('click', saveInstallmentEdit);
+  document.getElementById('saveDebtInstallmentButton')?.addEventListener('click', () => runDebtOperation(saveInstallmentEdit, 'Não foi possível atualizar a parcela.'));
   document.getElementById('closeDebtFormButton')?.addEventListener('click', closeDebtForm);
   document.getElementById('debtIsConsignado')?.addEventListener('change', syncDebtBudgetAvailability);
-  document.getElementById('saveDebtButton')?.addEventListener('click', saveDebt);
+  document.getElementById('saveDebtButton')?.addEventListener('click', () => runDebtOperation(saveDebt, 'Não foi possível salvar a dívida.'));
 }

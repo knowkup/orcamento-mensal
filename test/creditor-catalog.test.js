@@ -35,3 +35,17 @@ test('moves a missing legacy creditor into the primary catalog preserving its id
   assert.equal(result.idMap.get('legacy-1'), 'legacy-1');
   assert.equal(result.changed, true);
 });
+
+test('migration remains stable when run more than once', () => {
+  const first = mergeCreditorCatalog(
+    [{ id: 'main-1', name: 'Banco Teste', paymentForms: [] }],
+    [{ id: 'legacy-1', name: ' banco teste ', type: 'Banco' }],
+    () => 'generated'
+  );
+  const second = mergeCreditorCatalog(first.creditors, [], () => 'other');
+
+  assert.equal(first.idMap.get('legacy-1'), 'main-1');
+  assert.equal(first.creditors.length, 1);
+  assert.equal(second.creditors.length, 1);
+  assert.equal(second.changed, false);
+});

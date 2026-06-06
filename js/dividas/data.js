@@ -5,6 +5,7 @@ import { reactivateDebtIfOpen } from './payment.js';
 import { state as mainState } from '../state.js';
 import { mergeCreditorCatalog } from '../domain/creditor-catalog.js';
 import { normalizeDebtBudgetFlags } from '../domain/debt-budget.js';
+import { clearDebtGraph, removeDebtGraph, removePaymentAndReopenInstallment } from '../domain/debt-transactions.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, paymentsColl, paymentDoc, addDoc, getDocs, deleteDoc, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
 
 // --- Export CSV ---
@@ -212,9 +213,7 @@ export async function confirmDelete() {
     debtInstallmentSnap.forEach(d => batch.delete(d.ref));
     debtPaymentSnap.forEach(d => batch.delete(d.ref));
     await batch.commit();
-    state.debts = state.debts.filter(d => d.id !== debtId);
-    state.installments = state.installments.filter(i => i.debtId !== debtId);
-    state.payments = state.payments.filter(p => p.debtId !== debtId);
+    Object.assign(state, removeDebtGraph(state, debtId));
     if (state.expandedDebtId === debtId) state.expandedDebtId = null;
     closeDeleteModal();
     if (state.renderFn) state.renderFn();
@@ -226,9 +225,7 @@ export async function confirmDelete() {
     const debtId = ctx.debtId;
     await deleteDoc(paymentDoc(paymentId));
     await updateDoc(installmentDoc(installmentId), { status: 'Pendente', paidAt: null, updatedAt: serverTimestamp() });
-    state.payments = state.payments.filter(p => p.id !== paymentId);
-    const inst = state.installments.find(i => i.id === installmentId);
-    if (inst) { inst.status = 'Pendente'; delete inst.paidAt; }
+    Object.assign(state, removePaymentAndReopenInstallment(state, paymentId, installmentId));
     await reactivateDebtIfOpen(debtId);
     state.expandedDebtId = debtId;
     closeDeleteModal();
@@ -248,9 +245,7 @@ export async function confirmDelete() {
       }
     }
     if (operations) await batch.commit();
-    state.debts = [];
-    state.installments = [];
-    state.payments = [];
+    Object.assign(state, clearDebtGraph());
     state.expandedDebtId = null;
     state.selectedRenegotiationDebtIds.clear();
     closeDeleteModal();

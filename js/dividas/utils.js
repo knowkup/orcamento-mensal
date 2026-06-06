@@ -1,34 +1,33 @@
 import { state } from './state.js';
 import { state as appState } from '../state.js';
 import { showToast as showAppToast } from '../utils.js';
+import {
+  addMonthsToIsoDate,
+  compareTextPtBr,
+  escapeHtmlValue,
+  formatAnyDateBR as formatSharedDateBR,
+  formatIsoDateBR,
+  initialsFromText,
+  normalizeSearchText,
+  parseBrazilianMoney
+} from '../domain/value-utils.js';
 
 export const $ = (id) => document.getElementById(id);
 
 export function brl(value) { return Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
 
 export function parseMoney(value) {
-  if (typeof value === 'number') return value;
-  if (!value) return 0;
-  return Number(String(value).replace(/R\$/g, '').replace(/\./g, '').replace(',', '.').trim()) || 0;
+  return parseBrazilianMoney(value);
 }
 
-export function formatDateBR(dateString) { return dateString ? new Date(dateString + 'T00:00:00').toLocaleDateString('pt-BR') : '-'; }
+export function formatDateBR(dateString) { return formatIsoDateBR(dateString); }
 
 export function formatAnyDateBR(value) {
-  if (!value) return '-';
-  if (typeof value === 'string') return formatDateBR(value.slice(0, 10));
-  if (typeof value.toDate === 'function') return value.toDate().toLocaleDateString('pt-BR');
-  if (value.seconds) return new Date(value.seconds * 1000).toLocaleDateString('pt-BR');
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? '-' : date.toLocaleDateString('pt-BR');
+  return formatSharedDateBR(value);
 }
 
 export function addMonths(dateString, months) {
-  const date = new Date(dateString + 'T00:00:00');
-  const day = date.getDate();
-  date.setMonth(date.getMonth() + months);
-  if (date.getDate() !== day) date.setDate(0);
-  return date.toISOString().slice(0, 10);
+  return addMonthsToIsoDate(dateString, months);
 }
 
 export function currentMonthKey() { return new Date().toISOString().slice(0, 7); }
@@ -44,12 +43,7 @@ export function showToast(message, tone = null) {
 }
 
 export function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  return escapeHtmlValue(value);
 }
 
 export function emptyCard(title, text) {
@@ -61,11 +55,11 @@ export function tag(label, tone) {
 }
 
 export function normalizeText(value) {
-  return String(value || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  return normalizeSearchText(value);
 }
 
 export function compareText(a, b) {
-  return String(a || '').localeCompare(String(b || ''), 'pt-BR', { sensitivity: 'base' });
+  return compareTextPtBr(a, b);
 }
 
 export function getCreditorName(id) {
@@ -132,7 +126,7 @@ export function creditorDomain(name) {
 }
 
 export function initials(value) {
-  return String(value || '?').trim().split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase() || '?';
+  return initialsFromText(value);
 }
 
 export function creditorLogoHtml(creditorId) {

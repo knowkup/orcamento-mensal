@@ -4,6 +4,7 @@ import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceL
 import { renderDashboard } from './dashboard.js';
 import { moveItemByDirection, moveItemToTargetPosition } from '../domain/reorder.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
+import { creditorFilterEntries, filterDebtsByCreditor } from '../domain/debt-filters.js';
 
 // --- Helpers de métrica ---
 
@@ -285,15 +286,12 @@ function applyCreditorFilter(scope, id) {
   renderDebts();
 }
 
-function renderWaitingCreditorFilters(waitingDebts) {
-  const container = $('waitingCreditorFilters');
+function renderCreditorFilters({ containerId, scope, debts, selectedId }) {
+  const container = $(containerId);
   if (!container) return;
-  const creditorIds = [...new Set(waitingDebts.map(d => d.creditorId).filter(Boolean))]
-    .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = creditorFilterButton('waiting', 'all', 'Todos', waitingDebts.length, state.selectedWaitingCreditorFilter === 'all');
-  creditorIds.forEach(id => {
-    const count = waitingDebts.filter(d => d.creditorId === id).length;
-    html += creditorFilterButton('waiting', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedWaitingCreditorFilter === id);
+  let html = creditorFilterButton(scope, 'all', 'Todos', debts.length, selectedId === 'all');
+  creditorFilterEntries(debts, getCreditorName).forEach(({ id, name, count }) => {
+    html += creditorFilterButton(scope, id, creditorLogoHtml(id) + escapeHtml(name), count, selectedId === id);
   });
   container.innerHTML = html;
   bindCreditorFilterButtons(container);
@@ -313,34 +311,6 @@ function renderHiddenDebtMetrics(hiddenDebts) {
     debtMetric('Parcelas Reconhecidas', String(hiddenInstallments.length), '◷', 'red');
 }
 
-function renderHiddenCreditorFilters(hiddenDebts) {
-  const container = $('hiddenCreditorFilters');
-  if (!container) return;
-  const creditorIds = [...new Set(hiddenDebts.map(d => d.creditorId).filter(Boolean))]
-    .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = creditorFilterButton('hidden', 'all', 'Todos', hiddenDebts.length, state.selectedHiddenCreditorFilter === 'all');
-  creditorIds.forEach(id => {
-    const count = hiddenDebts.filter(d => d.creditorId === id).length;
-    html += creditorFilterButton('hidden', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedHiddenCreditorFilter === id);
-  });
-  container.innerHTML = html;
-  bindCreditorFilterButtons(container);
-}
-
-function renderPaidOffCreditorFilters(paidOffDebts) {
-  const container = $('paidOffCreditorFilters');
-  if (!container) return;
-  const creditorIds = [...new Set(paidOffDebts.map(d => d.creditorId).filter(Boolean))]
-    .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = creditorFilterButton('paidOff', 'all', 'Todos', paidOffDebts.length, state.selectedPaidOffCreditorFilter === 'all');
-  creditorIds.forEach(id => {
-    const count = paidOffDebts.filter(d => d.creditorId === id).length;
-    html += creditorFilterButton('paidOff', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedPaidOffCreditorFilter === id);
-  });
-  container.innerHTML = html;
-  bindCreditorFilterButtons(container);
-}
-
 function renderPaidOffDebtMetrics(filteredPaidOffDebts) {
   const container = $('paidOffDebtMetrics');
   if (!container) return;
@@ -358,19 +328,19 @@ function renderPaidOffDebtMetrics(filteredPaidOffDebts) {
 
 export function renderDebts() {
   const waitingAll = state.debts.filter(d => d.status === 'Em espera');
-  const waitingFiltered = state.selectedWaitingCreditorFilter === 'all' ? waitingAll : waitingAll.filter(d => d.creditorId === state.selectedWaitingCreditorFilter);
+  const waitingFiltered = filterDebtsByCreditor(waitingAll, state.selectedWaitingCreditorFilter);
   const waiting = sortDebts(waitingFiltered, state.selectedWaitingDebtSort);
   const hiddenAll = state.debts.filter(d => d.status === 'Fora do radar');
-  const hiddenFiltered = state.selectedHiddenCreditorFilter === 'all' ? hiddenAll : hiddenAll.filter(d => d.creditorId === state.selectedHiddenCreditorFilter);
+  const hiddenFiltered = filterDebtsByCreditor(hiddenAll, state.selectedHiddenCreditorFilter);
   const hidden = sortDebts(hiddenFiltered, state.selectedHiddenDebtSort);
   const paidOffAll = state.debts.filter(d => d.status === 'Quitada');
-  const paidOffFiltered = state.selectedPaidOffCreditorFilter === 'all' ? paidOffAll : paidOffAll.filter(d => d.creditorId === state.selectedPaidOffCreditorFilter);
+  const paidOffFiltered = filterDebtsByCreditor(paidOffAll, state.selectedPaidOffCreditorFilter);
   const paidOff = sortPaidOffDebts(paidOffFiltered);
-  renderWaitingCreditorFilters(waitingAll);
+  renderCreditorFilters({ containerId: 'waitingCreditorFilters', scope: 'waiting', debts: waitingAll, selectedId: state.selectedWaitingCreditorFilter });
   renderWaitingDebtMetrics(waitingAll);
-  renderHiddenCreditorFilters(hiddenAll);
+  renderCreditorFilters({ containerId: 'hiddenCreditorFilters', scope: 'hidden', debts: hiddenAll, selectedId: state.selectedHiddenCreditorFilter });
   renderHiddenDebtMetrics(hiddenAll);
-  renderPaidOffCreditorFilters(paidOffAll);
+  renderCreditorFilters({ containerId: 'paidOffCreditorFilters', scope: 'paidOff', debts: paidOffAll, selectedId: state.selectedPaidOffCreditorFilter });
   renderPaidOffDebtMetrics(paidOff);
   $('waitingDebts').innerHTML = waiting.length ? '<div class="route-panel"><div class="route-list">' + waiting.map((debt, index) => debtRouteGridRow(debt, index, 'waiting')).join('') + '</div></div>' : emptyCard('Nenhuma dívida em espera', state.selectedWaitingCreditorFilter === 'all' ? 'As dívidas fora da frente atual aparecerão aqui.' : 'Não há dívidas em espera para este credor.');
   $('hiddenDebts').innerHTML = hidden.length ? '<div class="route-panel"><div class="route-list">' + hidden.map((debt, index) => debtRouteGridRow(debt, index, 'hidden')).join('') + '</div></div>' : emptyCard('Nada fora do radar', state.selectedHiddenCreditorFilter === 'all' ? 'As dívidas que você não quer acompanhar aparecerão aqui.' : 'Não há dívidas fora do radar para este credor.');

@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { $, brl, parseMoney, showToast, getCreditorName, formatDateBR } from './utils.js';
 import { debtBalance, openInstallmentsForDebt, synchronizePaidOffDebts } from './calc.js';
 import { paymentsColl, installmentDoc, debtDoc, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from './firebase.js';
+import { paymentBreakdown } from '../domain/debt-transactions.js';
 
 // --- Modal payoff (quitar dívida) ---
 
@@ -9,9 +10,7 @@ function payoffSummaryValues() {
   const debt = state.debts.find(d => d.id === state.payoffDebtId);
   const totalRemaining = debt ? debtBalance(debt) : 0;
   const paidValue = parseMoney($('payoffValue')?.value || 0);
-  const discount = Math.max(0, totalRemaining - paidValue);
-  const interest = Math.max(0, paidValue - totalRemaining);
-  return { debt, totalRemaining, paidValue, discount, interest };
+  return { debt, totalRemaining, ...paymentBreakdown(totalRemaining, paidValue) };
 }
 
 function closeDebtFormIfOpen() {
@@ -129,19 +128,14 @@ export async function savePayment() {
   if (!inst) return showToast('Parcela não encontrada.');
   const paidValue = parseMoney($('payValue').value);
   if (!paidValue) return showToast('Informe o valor pago.');
-  const expectedValue = Number(inst.expectedValue || 0);
-  const discount = Math.max(0, expectedValue - paidValue);
-  const interest = Math.max(0, paidValue - expectedValue);
+  const breakdown = paymentBreakdown(inst.expectedValue, paidValue);
   const paymentPayload = {
     debtId: inst.debtId,
     installmentId: inst.id,
     installmentNumber: inst.number,
     expectedDate: inst.dueDate,
     paymentDate: $('payDate').value,
-    expectedValue,
-    paidValue,
-    discount,
-    interest,
+    ...breakdown,
     notes: '',
     createdAt: serverTimestamp()
   };

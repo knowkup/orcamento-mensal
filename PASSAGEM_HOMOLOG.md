@@ -58,6 +58,10 @@ Pacote estrutural seguinte:
 - regras de ordenacao, arraste, filtros e persistencia permanecem nos modulos originais.
 - persistencia de ordem e ciclo comum de arraste foram centralizados para Rota,
   Em Espera e Fora do Radar.
+- formatacao de moeda, datas, texto e HTML usa utilitarios de dominio compartilhados;
+- filtros de credor usam uma unica implementacao;
+- pagamentos e exclusoes possuem mutacoes locais puras e testadas;
+- acoes assincronas de Dividas usam um limite comum de tratamento de falhas.
 
 Validacao automatizada anterior:
 
