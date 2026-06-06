@@ -15,7 +15,12 @@ banco Firebase usado atualmente.
 
 ## Pacote Em Validacao
 
-Implementado localmente na branch `homolog` em 2026-06-06:
+Implementado e enviado para a branch `homolog` em 2026-06-06:
+
+- commit: `7535a8c` (`Unifica credores e protege consignados`);
+- push para `origin/homolog`: concluido;
+- deploy no Firebase: pendente apenas porque este computador nao esta autenticado no
+  Firebase CLI.
 
 - catalogo unico de credores para Orcamento e Dividas;
 - migracao automatica dos antigos documentos de `debtCreditors`;
@@ -37,6 +42,20 @@ Validacao automatizada deste pacote:
 Antes de levar para `main`, homologar a migracao com dados ficticios e confirmar que
 nenhuma divida perdeu o credor. A migracao foi desenhada para ocorrer tambem quando a
 versao chegar ao banco de producao, sem exigir edicao manual dos dados.
+
+Para publicar este pacote em homologacao em um computador autenticado:
+
+```powershell
+git switch homolog
+git pull --ff-only origin homolog
+npx --yes firebase-tools deploy --project orcamento-mensal-homolog
+```
+
+Resultado esperado:
+
+```text
+Hosting URL: https://orcamento-mensal-homolog.web.app
+```
 
 ## Publicacao Realizada
 
