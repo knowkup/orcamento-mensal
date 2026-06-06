@@ -328,7 +328,7 @@ Stack possivel:
 
 Estado atual:
 
-- Testes iniciais cobrem INSS, IRRF, liquido CLT e a ponte `auto-debt-*` entre Dividas e Orcamento.
+- Testes iniciais cobrem INSS, IRRF, liquido CLT, a ponte `auto-debt-*`, saldo, progresso e quitacao de Dividas.
 - Regras puras iniciais ficam em `js/domain/`.
 
 Risco: baixo.

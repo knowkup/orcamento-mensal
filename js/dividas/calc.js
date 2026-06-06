@@ -1,6 +1,13 @@
 import { state } from './state.js';
 import { brl, byDueDate, escapeHtml } from './utils.js';
 import { debtDoc, writeBatch, serverTimestamp } from './firebase.js';
+import {
+  debtBalanceFromInstallments,
+  debtInstallmentProgress,
+  isDebtInstallmentOpen,
+  isDebtPaidOff,
+  openDebtInstallments
+} from '../domain/debts.js';
 
 export function debtInstallments(debtId) { return state.installmentsByDebt.get(debtId) || []; }
 export function debtPayments(debtId) { return state.paymentsByDebt.get(debtId) || []; }
@@ -39,14 +46,14 @@ export function paidOffClosedDateKey(debt) {
   return sorted[0].paymentDate;
 }
 
-export function isOpenInstallment(item) { return !['Paga', 'Renegociada', 'Quitada', 'Cancelada'].includes(item.status); }
+export function isOpenInstallment(item) { return isDebtInstallmentOpen(item); }
 
 export function openInstallmentsForDebt(debt) {
-  return debtInstallments(debt.id).filter(isOpenInstallment);
+  return openDebtInstallments(debtInstallments(debt.id));
 }
 
 export function debtBalance(debt) {
-  return openInstallmentsForDebt(debt).reduce((sum, item) => sum + Number(item.expectedValue || 0), 0);
+  return debtBalanceFromInstallments(debtInstallments(debt.id));
 }
 
 export function payoffTodayValue(debt) { return Number(debt.payoffToday || 0); }
@@ -62,9 +69,7 @@ export function payoffTodayHtml(debt) {
 }
 
 export function installmentProgress(debt) {
-  const items = debtInstallments(debt.id);
-  const paid = items.filter(item => item.status === 'Paga' || item.status === 'Quitada').length;
-  return { paid, total: items.length || Number(debt.installmentsQty || 0) || 0 };
+  return debtInstallmentProgress(debtInstallments(debt.id), debt.installmentsQty);
 }
 
 export function debtProgress(debt) {
@@ -95,10 +100,7 @@ export function monthsToClearDebt(debt) {
 }
 
 export function isPaidOffDebt(debt) {
-  const items = debtInstallments(debt.id);
-  const expectedQty = Number(debt.installmentsQty || 0);
-  if (expectedQty > 0 && items.length < expectedQty) return false;
-  return items.length > 0 && openInstallmentsForDebt(debt).length === 0;
+  return isDebtPaidOff(debtInstallments(debt.id), debt.installmentsQty);
 }
 
 export async function synchronizePaidOffDebts() {
