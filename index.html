@@ -564,23 +564,6 @@
               </div>
               </div>
             </section>
-            <section class="panel preference-block">
-              <div class="block-marker">6</div>
-              <div class="preference-content">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Credores das dívidas</p>
-                  <h2>Rota Financeira</h2>
-                </div>
-                <button class="primary-button" id="openDebtCreditorModalButton" type="button">
-                  <i data-lucide="plus"></i>
-                  <span>Novo credor</span>
-                </button>
-              </div>
-              <div class="debt-metrics" id="creditorMetrics"></div>
-              <div id="creditorsList"></div>
-              </div>
-            </section>
           </div>
         </section>
       </main>
@@ -1182,58 +1165,6 @@
         <label class="check-row"><input type="checkbox" id="debtIsConsignado"><span>Consignado CLT · desconto automático em folha</span></label>
         <button class="primary-button full" id="saveDebtButton" type="button">
           <i data-lucide="save"></i><span>Salvar dívida</span>
-        </button>
-      </div>
-    </dialog>
-
-    <!-- Credor de dívida -->
-    <dialog class="dialog" id="divCreditorDialog">
-      <div class="stack-form">
-        <div class="panel-heading">
-          <div><p class="eyebrow">Credor</p><h2 id="creditorFormTitle">Novo credor</h2></div>
-          <button class="icon-button" id="closeDebtCreditorModalButton" type="button" title="Fechar">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-        <div class="logo-row">
-          <div class="creditor-logo" id="creditorLogoPreview">RF</div>
-          <div class="logo-info"><span>Logo do credor</span><small>URL ou upload · opcional</small></div>
-        </div>
-        <label>Nome<input id="creditorName" type="text" required placeholder="Ex.: Nubank, Casas Bahia"></label>
-        <label>Tipo
-          <select id="creditorType">
-            <option value="Banco">Banco</option>
-            <option value="Financeira">Financeira</option>
-            <option value="Loja">Loja</option>
-            <option value="Cartão de crédito">Cartão de crédito</option>
-            <option value="Outros">Outros</option>
-          </select>
-        </label>
-        <label>URL da logo<input id="creditorLogoUrl" type="url" placeholder="https://... (opcional)"></label>
-        <label>Upload de logo<input id="creditorLogoFile" type="file" accept="image/*"></label>
-        <label>Observações<textarea id="creditorNotes" rows="2" placeholder="Opcional"></textarea></label>
-        <button class="primary-button full" id="saveDebtCreditorButton" type="button">
-          <i data-lucide="save"></i><span>Salvar credor</span>
-        </button>
-      </div>
-    </dialog>
-
-    <!-- Unificar credor de dívida com credor do Orçamento -->
-    <dialog class="dialog" id="divUnifyCreditorDialog">
-      <div class="stack-form">
-        <div class="panel-heading">
-          <div><p class="eyebrow">Unificar credor</p><h2>Vincular ao Orçamento</h2></div>
-          <button class="icon-button" id="closeUnifyDebtCreditorModalButton" type="button" title="Fechar">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-        <p class="muted-hint">Credor das dívidas: <strong id="unifySourceName"></strong></p>
-        <label>Credor equivalente no Orçamento
-          <select id="unifyTargetSelect"></select>
-        </label>
-        <p class="muted-hint" style="font-size:12px">Ao confirmar, todas as dívidas deste credor passarão a usar o credor selecionado e o registro do bloco 6 será removido.</p>
-        <button class="primary-button full" id="confirmUnifyDebtCreditorButton" type="button">
-          <i data-lucide="link"></i><span>Confirmar unificação</span>
         </button>
       </div>
     </dialog>

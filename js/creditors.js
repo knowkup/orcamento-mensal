@@ -1,4 +1,5 @@
 import { state } from "./state.js";
+import { state as debtState } from "./dividas/state.js";
 import { escapeHtml, icon } from "./utils.js";
 
 export function getCreditorName(id) {
@@ -63,7 +64,8 @@ export function creditorUsageCount(id) {
     + state.data.plannedPurchases.filter((item) => item.creditorId === id).length
     + state.data.fgts.contracts.filter((item) => item.creditorId === id).length
     + (state.data.car.creditorId === id ? 1 : 0)
-    + state.data.projectionLines.filter((item) => item.creditorId === id || item.match === id).length;
+    + state.data.projectionLines.filter((item) => item.creditorId === id || item.match === id).length
+    + debtState.debts.filter((item) => item.creditorId === id).length;
 }
 
 function _fgtsPendingTotalForCreditor(contract) {

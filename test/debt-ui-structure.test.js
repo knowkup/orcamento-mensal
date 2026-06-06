@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const debtModules = [
-  'js/dividas/creditors.js',
   'js/dividas/dashboard.js',
   'js/dividas/data.js',
   'js/dividas/debt-form.js',
@@ -43,12 +42,7 @@ test('migrated static controls have event bindings', async () => {
     'hiddenDebtSort',
     'closeDebtFormButton',
     'saveDebtButton',
-    'openDebtCreditorModalButton',
-    'closeDebtCreditorModalButton',
-    'creditorLogoFile',
-    'saveDebtCreditorButton',
-    'closeUnifyDebtCreditorModalButton',
-    'confirmUnifyDebtCreditorButton'
+    'debtIsConsignado'
   ];
 
   ids.forEach(id => {

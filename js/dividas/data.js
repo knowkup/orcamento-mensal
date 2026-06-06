@@ -2,9 +2,10 @@ import { state } from './state.js';
 import { $, showToast, getCreditorName } from './utils.js';
 import { debtBalance } from './calc.js';
 import { reactivateDebtIfOpen } from './payment.js';
-import { debtsColl, debtDoc, installmentsColl, installmentDoc, paymentsColl, paymentDoc, debtCreditorsColl, debtCreditorDoc, addDoc, getDocs, doc, deleteDoc, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
-
-const DIVIDAS_PREFS_KEY = 'dividas-preferences';
+import { state as mainState } from '../state.js';
+import { mergeCreditorCatalog } from '../domain/creditor-catalog.js';
+import { normalizeDebtBudgetFlags } from '../domain/debt-budget.js';
+import { debtsColl, debtDoc, installmentsColl, installmentDoc, paymentsColl, paymentDoc, addDoc, getDocs, deleteDoc, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
 
 // --- Export CSV ---
 
@@ -38,10 +39,11 @@ function toCsv(headers, rows) {
 }
 
 export function exportDividasJson() {
+  const referencedCreditorIds = new Set(state.debts.map(debt => debt.creditorId).filter(Boolean));
   const backup = {
     exportedAt: new Date().toISOString(),
     app: 'Rota Financeira - Orçamento Mensal',
-    creditors: state.creditors.map(serializable),
+    creditors: state.creditors.filter(creditor => referencedCreditorIds.has(creditor.id)).map(serializable),
     debts: state.debts.map(serializable),
     installments: state.installments.map(serializable),
     payments: state.payments.map(serializable)
@@ -127,12 +129,20 @@ async function importJsonBackup(payload) {
 
   showToast(`Importando: ${importedCreditors.length} credores, ${importedDebts.length} dívidas, ${importedInstallments.length} parcelas...`);
 
-  for (const item of importedCreditors) {
-    const created = await addDoc(debtCreditorsColl(), cleanImportedPayload(item, idMap));
-    if (item.id) idMap.creditors.set(item.id, created.id);
+  const creditorMigration = mergeCreditorCatalog(
+    mainState.data?.creditors || [],
+    importedCreditors,
+    () => crypto.randomUUID()
+  );
+  creditorMigration.idMap.forEach((newId, oldId) => idMap.creditors.set(oldId, newId));
+  if (creditorMigration.changed) {
+    mainState.data.creditors = creditorMigration.creditors;
+    if (mainState.saveStateFn) await mainState.saveStateFn();
   }
   for (const item of importedDebts) {
-    const created = await addDoc(debtsColl(), cleanImportedPayload(item, idMap));
+    const importedDebt = cleanImportedPayload(item, idMap);
+    Object.assign(importedDebt, normalizeDebtBudgetFlags(importedDebt));
+    const created = await addDoc(debtsColl(), importedDebt);
     if (item.id) idMap.debts.set(item.id, created.id);
   }
 
@@ -158,7 +168,7 @@ async function importJsonBackup(payload) {
 export function openClearAllModal() {
   state.deleteContext = { type: 'all' };
   $('deleteModalTitle').textContent = 'Limpar todos os dados';
-  $('deleteModalText').textContent = 'Deseja remover definitivamente credores, dívidas, parcelas e pagamentos?';
+  $('deleteModalText').textContent = 'Deseja remover definitivamente dívidas, parcelas e pagamentos?';
   $('deleteModalWarning').textContent = 'Essa ação limpa a base atual e não poderá ser desfeita. Exporte um JSON antes se quiser guardar backup.';
   document.getElementById('divDeleteDialog').showModal();
 }
@@ -180,13 +190,7 @@ export function openDeleteModal(type, id) {
     $('deleteModalTitle').textContent = 'Excluir pagamento';
     $('deleteModalText').textContent = 'Deseja excluir o pagamento da parcela ' + inst.number + '/' + inst.total + (debt ? ' de ' + getCreditorName(debt.creditorId) + ' · ' + debt.name : '') + '?';
     $('deleteModalWarning').textContent = 'A parcela voltará para pendente e o registro de pagamento será removido.';
-  } else {
-    const creditor = state.creditors.find(c => c.id === id);
-    if (!creditor) return;
-    $('deleteModalTitle').textContent = 'Excluir credor';
-    $('deleteModalText').textContent = 'Deseja excluir definitivamente ' + creditor.name + '?';
-    $('deleteModalWarning').textContent = 'Só exclua credores que não estejam vinculados a dívidas.';
-  }
+  } else return;
   document.getElementById('divDeleteDialog').showModal();
 }
 
@@ -234,7 +238,7 @@ export async function confirmDelete() {
   } else if (ctx.type === 'all') {
     let batch = writeBatch();
     let operations = 0;
-    const colls = [paymentsColl(), installmentsColl(), debtsColl(), debtCreditorsColl()];
+    const colls = [paymentsColl(), installmentsColl(), debtsColl()];
     for (const coll of colls) {
       const snapshot = await getDocs(coll);
       for (const d of snapshot.docs) {
@@ -244,7 +248,6 @@ export async function confirmDelete() {
       }
     }
     if (operations) await batch.commit();
-    state.creditors = [];
     state.debts = [];
     state.installments = [];
     state.payments = [];
@@ -253,14 +256,5 @@ export async function confirmDelete() {
     closeDeleteModal();
     if (state.renderFn) state.renderFn();
     showToast('Todos os dados foram removidos.');
-
-  } else {
-    const hasDebt = state.debts.some(d => d.creditorId === ctx.id);
-    if (hasDebt) { closeDeleteModal(); return showToast('Este credor está vinculado a dívidas.'); }
-    await deleteDoc(debtCreditorDoc(ctx.id));
-    state.creditors = state.creditors.filter(c => c.id !== ctx.id);
-    closeDeleteModal();
-    if (state.renderFn) state.renderFn();
-    showToast('Credor removido com sucesso.');
   }
 }

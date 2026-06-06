@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { debtInstallmentForMonth, debtBudgetRow } from '../js/domain/debt-budget.js';
+import { debtInstallmentForMonth, debtBudgetRow, normalizeDebtBudgetFlags } from '../js/domain/debt-budget.js';
 
 const debt = {
   id: 'debt-1',
@@ -28,6 +28,21 @@ test('ignores debts outside the budget or already paid off', () => {
   }), null);
   assert.equal(debtInstallmentForMonth({
     debt: { ...debt, status: 'Quitada' },
+    installments,
+    month: '2026-06'
+  }), null);
+});
+
+test('never includes Consignado CLT in the monthly control', () => {
+  assert.deepEqual(normalizeDebtBudgetFlags({
+    includeInBudget: true,
+    isConsignado: true
+  }), {
+    includeInBudget: false,
+    isConsignado: true
+  });
+  assert.equal(debtInstallmentForMonth({
+    debt: { ...debt, isConsignado: true },
     installments,
     month: '2026-06'
   }), null);

@@ -1,5 +1,14 @@
+export function normalizeDebtBudgetFlags(debt = {}) {
+  const isConsignado = !!debt.isConsignado;
+  return {
+    isConsignado,
+    includeInBudget: !isConsignado && !!debt.includeInBudget
+  };
+}
+
 export function debtInstallmentForMonth({ debt, installments, month, paidOccurrences = [] }) {
-  if (!debt?.includeInBudget || debt.status === 'Quitada') return null;
+  const flags = normalizeDebtBudgetFlags(debt);
+  if (!flags.includeInBudget || debt.status === 'Quitada') return null;
 
   const paidViaControl = paidOccurrences.includes(`auto-debt-${debt.id}:${month}`);
   return installments

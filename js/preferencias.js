@@ -618,13 +618,7 @@ export async function saveIncomeException(event) {
 }
 
 export function isCreditorInUse(id) {
-  return state.data.creditCards.some((card) => card.creditorId === id)
-    || state.data.installments.some((item) => item.creditorId === id)
-    || state.data.fixedCosts.some((item) => item.creditorId === id)
-    || state.data.plannedPurchases.some((item) => item.creditorId === id)
-    || state.data.fgts.contracts.some((item) => item.creditorId === id)
-    || state.data.car.creditorId === id
-    || state.data.projectionLines.some((item) => item.creditorId === id || item.match === id);
+  return creditorUsageCount(id) > 0;
 }
 
 export function handleCreditorLogoUpload(event) {

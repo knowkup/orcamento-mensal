@@ -4,6 +4,7 @@ import { nextInstallment } from './calc.js';
 import { nextPayoffOrder, nextActiveRouteOrder } from './debts.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, doc, addDoc, getDocs, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
 import { closePaymentForm, closePayoffModal } from './payment.js';
+import { normalizeDebtBudgetFlags } from '../domain/debt-budget.js';
 
 // --- Modal de dívida ---
 
@@ -47,7 +48,15 @@ export function openDebtForm(mode = 'new', id = null, defaultStatus = 'Ativa') {
     $('debtIncludeInBudget').checked = false;
     $('debtIsConsignado').checked = false;
   }
+  syncDebtBudgetAvailability();
   document.getElementById('divDebtDialog').showModal();
+}
+
+export function syncDebtBudgetAvailability() {
+  const includeInBudget = $('debtIncludeInBudget');
+  const isConsignado = $('debtIsConsignado').checked;
+  if (isConsignado) includeInBudget.checked = false;
+  includeInBudget.disabled = isConsignado;
 }
 
 export function closeDebtForm() {
@@ -63,6 +72,10 @@ export async function saveDebt() {
   const installmentsQty = Number($('debtInstallmentsQty').value || 0);
   const installmentValue = parseMoney($('debtInstallmentValue').value);
   if (!creditorId || !name || !firstDue || !installmentsQty || !installmentValue) return showToast('Preencha credor, nome, primeira parcela, quantidade e valor.');
+  const budgetFlags = normalizeDebtBudgetFlags({
+    includeInBudget: $('debtIncludeInBudget').checked,
+    isConsignado: $('debtIsConsignado').checked
+  });
   const payload = {
     creditorId, name, firstDue, installmentsQty, installmentValue,
     type: $('debtType').value,
@@ -73,8 +86,7 @@ export async function saveDebt() {
     payoffToday: parseMoney($('debtPayoffToday').value),
     payoffOrder: Number($('debtPayoffOrder').value || 0),
     notes: $('debtNotes').value.trim(),
-    includeInBudget: $('debtIncludeInBudget').checked,
-    isConsignado: $('debtIsConsignado').checked,
+    ...budgetFlags,
     updatedAt: serverTimestamp()
   };
 

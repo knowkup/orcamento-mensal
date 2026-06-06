@@ -24,8 +24,14 @@ export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
     state.firestore = firestoreSdk;
     state.firebaseReady = true;
 
-    listenCloudState();
-    if (state.loadDividasFn) state.loadDividasFn().catch(console.error);
+    await listenCloudState();
+    if (state.loadDividasFn) {
+      try {
+        await state.loadDividasFn();
+      } catch (error) {
+        console.error(error);
+      }
+    }
   } catch (error) {
     console.error(error);
     updateSync("Firebase indisponivel", "Dados locais preservados.", "error");
@@ -35,29 +41,42 @@ export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
 export function listenCloudState() {
   const { doc, onSnapshot, setDoc } = state.firestore;
   const ref = doc(state.db, "app", "state");
-  state.unsubscribe = onSnapshot(ref, async (snapshot) => {
-    if (!snapshot.exists()) {
-      await setDoc(ref, withMeta(state.data));
-      return;
-    }
-    const raw = snapshot.data();
-    if (Number(raw.schemaVersion || 0) < 3) {
-      state.data = createDefaultData();
-      await setDoc(ref, withMeta(state.data));
-      persistLocalState(false);
-      updateSync("Sincronizado", `Dados antigos zerados as ${formatTime()}.`, "online");
-      if (state.hydrateFn) state.hydrateFn();
-      if (state.renderFn) state.renderFn();
-      return;
-    }
-    state.data = normalizeData(raw);
-    persistLocalState(false);
-    updateSync("Sincronizado", `Dados na nuvem as ${formatTime()}.`, "online");
-    if (state.hydrateFn) state.hydrateFn();
-    if (state.renderFn) state.renderFn();
-  }, (error) => {
-    console.error(error);
-    updateSync("Sem conexao", "Usando copia local.", "offline");
+  return new Promise((resolve) => {
+    let initialSnapshotHandled = false;
+    const finishInitialLoad = () => {
+      if (initialSnapshotHandled) return;
+      initialSnapshotHandled = true;
+      resolve();
+    };
+
+    state.unsubscribe = onSnapshot(ref, async (snapshot) => {
+      try {
+        if (!snapshot.exists()) {
+          await setDoc(ref, withMeta(state.data));
+          return;
+        }
+        const raw = snapshot.data();
+        if (Number(raw.schemaVersion || 0) < 3) {
+          state.data = createDefaultData();
+          await setDoc(ref, withMeta(state.data));
+          persistLocalState(false);
+          updateSync("Sincronizado", `Dados antigos zerados as ${formatTime()}.`, "online");
+        } else {
+          state.data = normalizeData(raw);
+          persistLocalState(false);
+          updateSync("Sincronizado", `Dados na nuvem as ${formatTime()}.`, "online");
+        }
+        if (state.hydrateFn) state.hydrateFn();
+        if (state.renderFn) state.renderFn();
+        if (state.renderDividasFn) state.renderDividasFn();
+      } finally {
+        finishInitialLoad();
+      }
+    }, (error) => {
+      console.error(error);
+      updateSync("Sem conexao", "Usando copia local.", "offline");
+      finishInitialLoad();
+    });
   });
 }
 
@@ -88,6 +107,7 @@ export async function saveState(message) {
   }
   if (state.hydrateFn) state.hydrateFn();
   if (state.renderFn) state.renderFn();
+  if (state.renderDividasFn) state.renderDividasFn();
   if (message && !cloudFailed) showToast(message, "success");
 }
 

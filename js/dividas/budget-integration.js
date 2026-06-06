@@ -5,7 +5,7 @@ import { debtInstallmentForMonth, debtBudgetRow } from '../domain/debt-budget.js
 
 export function getDebtInstallmentsForMonth(month) {
   return state.debts
-    .filter(d => d.includeInBudget && d.status !== 'Quitada')
+    .filter(d => d.includeInBudget && !d.isConsignado && d.status !== 'Quitada')
     .flatMap(debt => {
       const installment = debtInstallmentForMonth({
         debt,

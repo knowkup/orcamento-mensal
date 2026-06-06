@@ -13,6 +13,31 @@ antes de levar qualquer alteracao para a producao.
 O ambiente de homologacao nao deve alterar a branch `main`, a URL de producao nem o
 banco Firebase usado atualmente.
 
+## Pacote Em Validacao
+
+Implementado localmente na branch `homolog` em 2026-06-06:
+
+- catalogo unico de credores para Orcamento e Dividas;
+- migracao automatica dos antigos documentos de `debtCreditors`;
+- atualizacao das dividas para os identificadores do catalogo compartilhado;
+- bloqueio de exclusao de credor que esteja vinculado a uma divida;
+- backup de Dividas compativel com o catalogo compartilhado;
+- limpeza de Dividas sem apagar credores globais;
+- Consignado CLT impedido de entrar no Controle Mensal no formulario, importacao,
+  migracao e regra de dominio;
+- remocao da interface e do modulo duplicado de credores exclusivos de Dividas.
+
+Validacao automatizada deste pacote:
+
+```text
+27 testes aprovados
+0 testes falhando
+```
+
+Antes de levar para `main`, homologar a migracao com dados ficticios e confirmar que
+nenhuma divida perdeu o credor. A migracao foi desenhada para ocorrer tambem quando a
+versao chegar ao banco de producao, sem exigir edicao manual dos dados.
+
 ## Publicacao Realizada
 
 Publicacao concluida em 2026-06-06:

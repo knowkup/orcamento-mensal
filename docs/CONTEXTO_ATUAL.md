@@ -65,12 +65,11 @@ Existem dois dominios de dados que convivem:
    - Fica em `state.data`, vindo de `js/state.js`.
 
 2. Dados da Rota Financeira:
-   - Subcolecoes por usuario:
-     - `users/{uid}/debts`
-     - `users/{uid}/debtInstallments`
-     - `users/{uid}/debtPayments`
-     - `users/{uid}/debtCreditors`
-     - `users/{uid}/debtRenegotiations`
+   - Colecoes:
+     - `debts`
+     - `debtInstallments`
+     - `debtPayments`
+     - `debtRenegotiations`
    - Ponte Firebase em `js/dividas/firebase.js`.
    - Estado proprio em `js/dividas/state.js`.
 
@@ -83,7 +82,7 @@ A integracao mais importante esta em `js/dividas/budget-integration.js`, `js/pla
 Fluxo:
 
 - Uma divida pode ter `includeInBudget = true`.
-- Dividas com `includeInBudget` e status diferente de `Quitada` entram no Planejamento/Controle como linhas automaticas `auto-debt-{debtId}`.
+- Dividas com `includeInBudget`, que nao sejam Consignado CLT e tenham status diferente de `Quitada` entram no Planejamento/Controle como linhas automaticas `auto-debt-{debtId}`.
 - `getDebtInstallmentsForMonth(month)` procura a primeira parcela da divida naquele mes e cria uma linha de saida.
 - No Controle Mensal, ao pagar uma linha `auto-debt-*`, `confirmPaidOccurrence()` chama `markDebtInstallmentPaid()`.
 - `markDebtInstallmentPaid()` atualiza a parcela em `debtInstallments` e cria/remove registro em `debtPayments`.
@@ -94,18 +93,18 @@ Consequencia: nao duplique manualmente uma divida no Orcamento se ela ja esta ma
 
 ## Credores
 
-Existem credores do Orcamento e credores da Rota Financeira.
+Existe um unico catalogo de credores em `state.data.creditors`, administrado em Preferencias
+e usado tanto pelo Orcamento quanto pela Rota Financeira.
 
-- Orcamento: `state.data.creditors`.
-- Dividas: `js/dividas/state.js` em `state.creditors`, persistidos em `debtCreditors`.
+No primeiro carregamento da versao que introduziu essa unificacao:
 
-Ha um fluxo de unificacao:
+- credores antigos da colecao `debtCreditors` sao comparados pelo nome normalizado;
+- os inexistentes sao adicionados ao catalogo principal;
+- as dividas sao apontadas para o identificador compartilhado;
+- os documentos antigos de `debtCreditors` sao removidos depois da migracao.
 
-- Dialog `divUnifyCreditorDialog` no `index.html`.
-- Funcoes em `js/dividas/creditors.js`.
-- O botao de unificar troca as dividas de um credor da Rota para um credor do Orcamento e remove o registro antigo de `debtCreditors`.
-
-Antes de criar credor novo em Dividas, verifique se ele deveria ser um credor do Orcamento.
+Backups de Dividas exportam apenas os credores referenciados e, na importacao, mesclam
+esses credores no catalogo principal.
 
 ## Status de dividas
 
@@ -117,7 +116,8 @@ Status principais:
 - `Quitada`: encerrada.
 - `Renegociada`: divida original consolidada em uma renegociacao.
 
-Consignados CLT podem aparecer separados na Rota, pois ja sao descontados em folha e nao devem inflar o compromisso mensal normal.
+Consignados CLT podem aparecer separados na Rota, mas nunca podem entrar no Controle
+Mensal. Ao marcar `isConsignado`, o sistema persiste `includeInBudget = false`.
 
 ## Modulo `js/dividas`
 
@@ -133,7 +133,6 @@ Arquivos relevantes:
 - `debt-form.js`: cadastro/edicao de dividas e geracao de parcelas.
 - `payment.js`: pagamentos, quitacao e edicao de parcelas.
 - `renegotiation.js`: consolidacao/renegociacao.
-- `creditors.js`: credores de divida e unificacao com Orcamento.
 - `data.js`: import/export, limpeza e exclusoes.
 - `utils.js`: formatacao, DOM helpers e logos.
 

@@ -12,7 +12,6 @@ export const installmentDoc = (id) => sdk().doc(_db(), `debtInstallments/${id}`)
 export const paymentsColl = () => sdk().collection(_db(), "debtPayments");
 export const paymentDoc = (id) => sdk().doc(_db(), `debtPayments/${id}`);
 export const debtCreditorsColl = () => sdk().collection(_db(), "debtCreditors");
-export const debtCreditorDoc = (id) => sdk().doc(_db(), `debtCreditors/${id}`);
 export const renegotiationsColl = () => sdk().collection(_db(), "debtRenegotiations");
 
 // SDK function wrappers — delegate to appState.firestore

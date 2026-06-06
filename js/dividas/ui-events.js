@@ -57,19 +57,9 @@ import {
   goToDebtsAndNew,
   openDebtForm,
   openDebtFromDashboard,
-  saveDebt
+  saveDebt,
+  syncDebtBudgetAvailability
 } from './debt-form.js';
-import {
-  closeCreditorModal,
-  closeUnifyCreditorModal,
-  confirmUnifyCreditor,
-  editCreditor,
-  handleCreditorLogoUpload,
-  openCreditorModal,
-  openUnifyCreditorModal,
-  saveCreditor
-} from './creditors.js';
-import { showToast } from './utils.js';
 
 export function bindDebtDataEvents() {
   const root = document.getElementById('divrenegociacaoView');
@@ -119,18 +109,6 @@ export function bindDebtDataEvents() {
     }
     if (button.dataset.dashboardDebtId) {
       openDebtFromDashboard(button.dataset.dashboardDebtId);
-      return;
-    }
-    if (button.dataset.editCreditorId) {
-      editCreditor(button.dataset.editCreditorId);
-      return;
-    }
-    if (button.dataset.unifyCreditorId) {
-      openUnifyCreditorModal(button.dataset.unifyCreditorId);
-      return;
-    }
-    if (button.hasAttribute('data-creditor-linked')) {
-      showToast('Este credor está vinculado a dívidas.');
       return;
     }
     if (button.dataset.secondaryRouteMove) {
@@ -217,11 +195,6 @@ export function bindDebtDataEvents() {
   document.getElementById('closeDebtInstallmentModalButton')?.addEventListener('click', closeInstallmentModal);
   document.getElementById('saveDebtInstallmentButton')?.addEventListener('click', saveInstallmentEdit);
   document.getElementById('closeDebtFormButton')?.addEventListener('click', closeDebtForm);
+  document.getElementById('debtIsConsignado')?.addEventListener('change', syncDebtBudgetAvailability);
   document.getElementById('saveDebtButton')?.addEventListener('click', saveDebt);
-  document.getElementById('openDebtCreditorModalButton')?.addEventListener('click', openCreditorModal);
-  document.getElementById('closeDebtCreditorModalButton')?.addEventListener('click', closeCreditorModal);
-  document.getElementById('creditorLogoFile')?.addEventListener('change', handleCreditorLogoUpload);
-  document.getElementById('saveDebtCreditorButton')?.addEventListener('click', saveCreditor);
-  document.getElementById('closeUnifyDebtCreditorModalButton')?.addEventListener('click', closeUnifyCreditorModal);
-  document.getElementById('confirmUnifyDebtCreditorButton')?.addEventListener('click', confirmUnifyCreditor);
 }

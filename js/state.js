@@ -31,7 +31,8 @@ export const state = {
   incomeExceptionId: null,
   plannedEditingId: null,
   plannedEditingKind: null,
-  controlMonth: null
+  controlMonth: null,
+  renderDividasFn: null
 };
 
 export const el = {

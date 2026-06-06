@@ -124,8 +124,14 @@ ainda precisam de homologacao manual.
 - Ordenar e reordenar Fora do Radar por seletor, setas e arraste funciona.
 - Criar, editar e excluir credor sem dividas funciona.
 - Credor vinculado bloqueia exclusao e mostra aviso.
-- Unificar credor com o cadastro do Orcamento preserva as dividas vinculadas.
+- O mesmo cadastro de credor aparece no Orcamento e nas Dividas.
+- Criar ou editar credor em Preferencias atualiza os seletores e listas de Dividas.
+- Credores antigos exclusivos de Dividas sao migrados sem perder os vinculos.
+- Limpar todos os dados de Dividas preserva os credores compartilhados.
+- Exportar e importar backup de Dividas preserva os vinculos com credores compartilhados.
 - A parcela de divida integrada aparece no Controle Mensal quando aplicavel.
+- Marcar uma divida como Consignado CLT desmarca e bloqueia a inclusao no Controle Mensal.
+- Uma divida Consignado CLT nunca aparece no Controle Mensal, mesmo se um backup antigo trouxer `includeInBudget`.
 - Se houve mudanca em eventos/bindings de Dividas, todas as abas de Dividas devem continuar mostrando dados.
 - Se houve mudanca em eventos/bindings de Dividas, testar filtros, ordenacao e abrir/fechar detalhes antes de seguir.
 
@@ -139,6 +145,7 @@ ainda precisam de homologacao manual.
 - Cartoes/crediarios carregam.
 - Rendas carregam.
 - Criar/editar credor funciona.
+- Excluir credor usado por uma divida e bloqueado.
 - Criar/editar cartao funciona.
 - Criar/editar renda funciona.
 - Logos continuam aparecendo quando cadastradas.
