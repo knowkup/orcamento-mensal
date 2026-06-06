@@ -190,12 +190,12 @@ window.openDeleteModal = function(type, id) {
   document.getElementById('divDeleteDialog').showModal();
 };
 
-window.closeDeleteModal = function() {
+export function closeDeleteModal() {
   state.deleteContext = null;
   document.getElementById('divDeleteDialog').close();
-};
+}
 
-window.confirmDelete = async function() {
+export async function confirmDelete() {
   if (!state.deleteContext) return;
   const ctx = state.deleteContext;
 
@@ -212,7 +212,7 @@ window.confirmDelete = async function() {
     state.installments = state.installments.filter(i => i.debtId !== debtId);
     state.payments = state.payments.filter(p => p.debtId !== debtId);
     if (state.expandedDebtId === debtId) state.expandedDebtId = null;
-    window.closeDeleteModal();
+    closeDeleteModal();
     if (state.renderFn) state.renderFn();
     showToast('Dívida removida com sucesso.');
 
@@ -227,7 +227,7 @@ window.confirmDelete = async function() {
     if (inst) { inst.status = 'Pendente'; delete inst.paidAt; }
     await reactivateDebtIfOpen(debtId);
     state.expandedDebtId = debtId;
-    window.closeDeleteModal();
+    closeDeleteModal();
     if (state.renderFn) state.renderFn();
     showToast('Pagamento excluído com sucesso.');
 
@@ -250,17 +250,17 @@ window.confirmDelete = async function() {
     state.payments = [];
     state.expandedDebtId = null;
     state.selectedRenegotiationDebtIds.clear();
-    window.closeDeleteModal();
+    closeDeleteModal();
     if (state.renderFn) state.renderFn();
     showToast('Todos os dados foram removidos.');
 
   } else {
     const hasDebt = state.debts.some(d => d.creditorId === ctx.id);
-    if (hasDebt) { window.closeDeleteModal(); return showToast('Este credor está vinculado a dívidas.'); }
+    if (hasDebt) { closeDeleteModal(); return showToast('Este credor está vinculado a dívidas.'); }
     await deleteDoc(debtCreditorDoc(ctx.id));
     state.creditors = state.creditors.filter(c => c.id !== ctx.id);
-    window.closeDeleteModal();
+    closeDeleteModal();
     if (state.renderFn) state.renderFn();
     showToast('Credor removido com sucesso.');
   }
-};
+}

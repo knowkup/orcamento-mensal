@@ -1243,7 +1243,7 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Renegociação</p><h2>Criar acordo</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeRenegotiationModal()" title="Fechar">
+          <button class="icon-button" type="button" id="closeRenegotiationModalButton" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
@@ -1283,7 +1283,7 @@
           </select>
         </label>
         <label>Observações<textarea id="renNotes" rows="2"></textarea></label>
-        <button class="primary-button full" type="button" onclick="window.saveRenegotiation()">
+        <button class="primary-button full" type="button" id="saveRenegotiationButton">
           <i data-lucide="save"></i><span>Salvar acordo</span>
         </button>
       </div>
@@ -1294,15 +1294,15 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Atenção</p><h2 id="deleteModalTitle">Excluir</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeDeleteModal()" title="Fechar">
+          <button class="icon-button" type="button" id="closeDeleteModalButton" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
         <p id="deleteModalText"></p>
         <p class="danger-hint" id="deleteModalWarning"></p>
         <div class="action-group">
-          <button class="ghost-btn" type="button" onclick="window.closeDeleteModal()">Cancelar</button>
-          <button class="primary-button danger-btn" type="button" onclick="window.confirmDelete()">
+          <button class="ghost-btn" type="button" id="cancelDeleteModalButton">Cancelar</button>
+          <button class="primary-button danger-btn" type="button" id="confirmDeleteButton">
             <i data-lucide="trash-2"></i><span>Confirmar exclusão</span>
           </button>
         </div>

@@ -34,7 +34,7 @@ export function renderRenegotiation() {
     const checked = state.selectedRenegotiationDebtIds.has(debt.id) ? 'checked' : '';
     const next = nextInstallment(debt);
     return '<label class="renegotiation-row">' +
-      '<input type="checkbox" ' + checked + ' onchange="window.toggleRenegotiationDebt(\'' + debt.id + '\')" />' +
+      '<input type="checkbox" ' + checked + ' data-renegotiation-debt-id="' + escapeHtml(debt.id) + '" />' +
       '<div class="debt-head">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt) + '<span>' + escapeHtml(debt.status) + '</span></div></div></div>' +
       '<div><div class="metric-label">Saldo</div><strong>' + brl(debtBalance(debt)) + '</strong></div>' +
       '<div><div class="metric-label">Parcela</div><strong>' + brl(debt.installmentValue) + '</strong></div>' +
@@ -43,11 +43,11 @@ export function renderRenegotiation() {
   }).join('');
 }
 
-window.toggleRenegotiationDebt = function(id) {
+export function toggleRenegotiationDebt(id) {
   if (state.selectedRenegotiationDebtIds.has(id)) state.selectedRenegotiationDebtIds.delete(id);
   else state.selectedRenegotiationDebtIds.add(id);
   renderRenegotiation();
-};
+}
 
 export function clearRenegotiationSelection() {
   state.selectedRenegotiationDebtIds.clear();
@@ -84,11 +84,11 @@ export function openRenegotiationModal() {
   document.getElementById('divRenegotiationDialog').showModal();
 }
 
-window.closeRenegotiationModal = function() {
+export function closeRenegotiationModal() {
   document.getElementById('divRenegotiationDialog').close();
-};
+}
 
-window.saveRenegotiation = async function() {
+export async function saveRenegotiation() {
   const selected = selectedRenegotiationDebts();
   if (!selected.length) return showToast('Selecione ao menos uma dívida para renegociar.');
   const creditorId = $('renCreditorSelect').value;
@@ -143,10 +143,10 @@ window.saveRenegotiation = async function() {
   });
 
   state.selectedRenegotiationDebtIds.clear();
-  window.closeRenegotiationModal();
+  closeRenegotiationModal();
   await state.loadAllFn();
   showToast('Acordo salvo com sucesso.');
-};
+}
 
 async function generateInstallments(debtId, qty, value, firstDue) {
   const batch = writeBatch();
