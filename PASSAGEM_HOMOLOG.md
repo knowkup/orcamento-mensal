@@ -19,21 +19,84 @@ banco Firebase usado atualmente.
 - Branch de producao: `main`
 - Commit atual da producao: `891e916`
 - Branch de homologacao: `homolog`
-- Commit atual da homologacao: `d4418c0`
+- Commit base da modernizacao: `d4418c0`
+- Commit que criou este documento: `ea9de0d`
+- Para o commit mais recente, sempre consultar `origin/homolog`.
 - A antiga branch `codex/modernizacao-segura` foi renomeada para `homolog` e removida do remoto.
 - A branch `homolog` ja foi publicada no GitHub.
 - As alteracoes ainda nao foram mescladas na `main`.
 
-Antes de continuar em outro computador:
+## Verificacao Obrigatoria No Outro Computador
+
+Antes de alterar, sincronizar, configurar Firebase ou fazer deploy, confirmar que o
+Codex esta trabalhando na copia oficial do projeto.
+
+Executar:
+
+```powershell
+Get-Location
+git rev-parse --show-toplevel
+git remote -v
+git status --short --branch
+git log -3 --oneline
+git worktree list
+```
+
+O caminho esperado deve terminar em:
+
+```text
+OneDrive\Documentos\14. Sistemas Kupka\Orcamento Mensal
+```
+
+O remoto esperado e:
+
+```text
+https://github.com/knowkup/orcamento-mensal.git
+```
+
+A branch correta para este trabalho e:
+
+```text
+homolog
+```
+
+O commit remoto minimo esperado ao receber este documento e o commit que contem
+`PASSAGEM_HOMOLOG.md`. Conferir `origin/homolog` antes de continuar.
+
+Se o caminho apontar para `.claude\worktrees`, outra copia, uma pasta antiga ou um clone
+diferente, nao editar arquivos nessa pasta. Voltar para a pasta oficial do OneDrive.
+
+Se `git status` mostrar arquivos modificados ou nao rastreados:
+
+- nao executar `git reset`;
+- nao executar `git clean`;
+- nao apagar ou sobrescrever arquivos;
+- nao trocar de branch ainda;
+- mostrar ao usuario a saida completa do status;
+- identificar se as mudancas pertencem ao usuario antes de sincronizar.
+
+Se a pasta estiver correta e a arvore estiver limpa, executar:
 
 ```powershell
 git fetch origin
 git switch homolog
-git pull
-git status
+git pull --ff-only origin homolog
+git status --short --branch
 ```
 
-O resultado esperado e uma arvore limpa acompanhando `origin/homolog`.
+Depois, confirmar:
+
+```powershell
+git rev-parse HEAD
+git rev-parse origin/homolog
+```
+
+Os dois hashes devem ser iguais. O resultado esperado e uma arvore limpa acompanhando
+`origin/homolog`.
+
+Existe historico de um worktree antigo criado por outra IA dentro de `.claude/worktrees`.
+Ele nao deve ser usado como pasta principal. O trabalho commitado relevante desse
+worktree ja foi incorporado ao historico da branch `homolog`.
 
 ## Producao Atual
 
