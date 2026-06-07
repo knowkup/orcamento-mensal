@@ -26,7 +26,7 @@ export function renderTrail() {
   const next = route.find(debt => debtBalance(debt) > 0) || null;
 
   metrics.innerHTML =
-    '<div class="route-summary-copy"><div class="metric-label">Frente atual</div><strong>' + (route.length ? route.length + ' dívida(s) na rota' : 'Nenhuma dívida ativa na rota') + '</strong><span>' + (route.length ? 'Aqui ficam apenas os compromissos que ainda pedem ação.' : 'Cadastre ou reative uma dívida para montar sua próxima frente.') + '</span></div>' +
+    '<div class="route-summary-copy"><div class="metric-label">Frente atual</div><strong>' + (route.length ? route.length + (route.length === 1 ? ' dívida na rota' : ' dívidas na rota') : 'Nenhuma dívida ativa na rota') + '</strong><span>' + (route.length ? 'Aqui ficam apenas os compromissos que ainda pedem ação.' : 'Cadastre ou reative uma dívida para montar sua próxima frente.') + '</span></div>' +
     '<div class="route-summary-metrics">' +
     debtMetric('Dívidas ativas', String(route.length), '⇄', 'blue') +
     debtMetric('Saldo ativo', brl(totalBalance), '▣', 'red') +

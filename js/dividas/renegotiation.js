@@ -24,7 +24,7 @@ export function renderRenegotiation() {
     debtMetric('Parcelas em Aberto', String(openInstallments), '◌', 'amber');
 
   selectionText.textContent = selected.length
-    ? selected.length + ' dívida(s) selecionada(s), somando ' + brl(totalSelected) + '.'
+    ? selected.length + (selected.length === 1 ? ' dívida selecionada' : ' dívidas selecionadas') + ', somando ' + brl(totalSelected) + '.'
     : 'Nenhuma dívida selecionada.';
 
   if (!eligible.length) {

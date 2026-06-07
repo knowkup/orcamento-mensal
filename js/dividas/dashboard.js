@@ -42,7 +42,7 @@ function renderDeadlinePressure(activeDebts) {
       '<div class="pressure-title">' + escapeHtml(group.title) + '</div>' +
       '<div class="metric-note">' + escapeHtml(group.hint) + '</div>' +
       '<div class="pressure-value">' + brl(group.balance) + '</div>' +
-      '<div class="pressure-count">' + group.items.length + ' dívida(s)</div>' +
+      '<div class="pressure-count">' + group.items.length + (group.items.length === 1 ? ' dívida' : ' dívidas') + '</div>' +
     '</div>';
   }).join('');
 }
@@ -103,7 +103,8 @@ function renderDashboardAction(activeDebts, openInstallments) {
 function renderDashboardSummary(data) {
   const container = $('dashboardSummary');
   if (!container) return;
-  const statusText = data.active.length ? (data.monthCommitment > 0 ? 'Você está no caminho certo' : 'Sem pressão no mês atual') : 'Cadastre uma dívida ativa';
+  const _n = data.monthInstallments.length;
+  const statusText = data.active.length ? (data.monthCommitment > 0 ? _n + (_n === 1 ? ' parcela prevista este mês' : ' parcelas previstas este mês') : 'Sem pressão no mês atual') : 'Cadastre uma dívida ativa';
   container.innerHTML =
     '<div class="summary-card">' +
       '<h2 class="panel-title">Resumo geral</h2>' +
@@ -197,7 +198,7 @@ function renderDashboardInsights(activeDebts, openInstallments, totalActive) {
     { title: 'Maior pressão hoje', main: biggest ? getCreditorName(biggest.creditorId) : '-', value: biggest ? brl(debtBalance(biggest)) : brl(0), note: totalActive ? Math.round((debtBalance(biggest) / totalActive) * 100) + '% do total ativo' : 'Sem saldo ativo' },
     { title: 'Melhor oportunidade', main: opportunity ? getCreditorName(opportunity.creditorId) + ' · ' + opportunity.name : '-', value: opportunity ? brl(debtBalance(opportunity)) : brl(0), note: 'Menor saldo restante para quitação' },
     { title: 'Dívida mais crítica', main: critical ? getCreditorName(critical.creditorId) + ' · ' + critical.name : '-', value: nextInstallment(critical) ? brl(nextInstallment(critical).expectedValue) : brl(debtBalance(critical)), note: nextInstallment(critical) ? dueHint(nextInstallment(critical).dueDate) : 'Sem parcela pendente' },
-    { title: 'Atrasos', main: overdue.length ? overdue.length + ' parcela(s)' : 'Nenhum atraso', value: brl(overdue.reduce((sum, item) => sum + Number(item.expectedValue || 0), 0)), note: overdue.length ? 'Regularize antes de avançar' : 'Continue mantendo a rota em dia' }
+    { title: 'Atrasos', main: overdue.length ? overdue.length + (overdue.length === 1 ? ' parcela' : ' parcelas') : 'Nenhum atraso', value: brl(overdue.reduce((sum, item) => sum + Number(item.expectedValue || 0), 0)), note: overdue.length ? 'Regularize antes de avançar' : 'Continue mantendo a rota em dia' }
   ];
   container.innerHTML = rows.map(item => (
     '<div class="insight-tile"><div class="metric-label">' + escapeHtml(item.title) + '</div><strong>' + escapeHtml(item.main) + '</strong><div class="insight-value">' + escapeHtml(item.value) + '</div><small>' + escapeHtml(item.note) + '</small></div>'
