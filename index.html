@@ -564,6 +564,33 @@
               </div>
               </div>
             </section>
+            <section class="panel preference-block backup-block">
+              <div class="block-marker backup-block-marker">
+                <i data-lucide="hard-drive"></i>
+              </div>
+              <div class="preference-content">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">Segurança dos dados</p>
+                    <h2>Backup e restauração</h2>
+                  </div>
+                </div>
+                <p class="backup-description">Exporte um arquivo JSON com todos os seus dados para guardar como cópia de segurança. Para restaurar, importe o arquivo exportado anteriormente.</p>
+                <div class="backup-actions">
+                  <button class="backup-action-btn backup-export" type="button" id="prefExportButton">
+                    <i data-lucide="download"></i>
+                    <span class="backup-btn-label">Exportar backup</span>
+                    <span class="backup-btn-sub">Baixar arquivo JSON</span>
+                  </button>
+                  <label class="backup-action-btn backup-import">
+                    <i data-lucide="upload"></i>
+                    <span class="backup-btn-label">Importar backup</span>
+                    <span class="backup-btn-sub">Restaurar de arquivo</span>
+                    <input type="file" id="prefImportInput" accept="application/json">
+                  </label>
+                </div>
+              </div>
+            </section>
           </div>
         </section>
       </main>

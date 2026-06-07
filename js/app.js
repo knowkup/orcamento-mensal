@@ -150,8 +150,9 @@ function bindEvents() {
       el.importInput.click();
       closeMoreDrawer(maisDrawer, maisOverlay);
     });
-
   }
+  on(document.getElementById("prefExportButton"), "click", exportState);
+  on(document.getElementById("prefImportInput"), "change", importState);
 }
 
 function on(target, eventName, handler) {
