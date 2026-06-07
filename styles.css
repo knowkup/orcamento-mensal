@@ -3563,6 +3563,116 @@ select {
   .data-actions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE — Rota Financeira: route-item layout compacto (≤760px)
+   ═══════════════════════════════════════════════════════════════════ */
+@media (max-width: 760px) {
+  .route-item:not(.paid-route-item) {
+    grid-template-columns: 38px 1fr auto;
+    grid-template-rows: auto auto auto auto;
+    gap: 4px 8px;
+    padding: 10px 12px;
+    align-items: start;
+  }
+
+  .route-item:not(.paid-route-item) .drag-handle { display: none; }
+
+  .route-item:not(.paid-route-item) .route-rank {
+    grid-column: 1;
+    grid-row: 1 / 5;
+    align-self: center;
+  }
+
+  .route-item:not(.paid-route-item) .route-title {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .route-item:not(.paid-route-item) .route-progress {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .route-item:not(.paid-route-item) .route-stat:nth-child(5),
+  .route-item:not(.paid-route-item) .route-stat:nth-child(6) {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: baseline;
+    border: none;
+    padding: 0;
+    width: auto;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .route-item:not(.paid-route-item) .route-stat:nth-child(5) { grid-column: 2; grid-row: 3; }
+  .route-item:not(.paid-route-item) .route-stat:nth-child(6) { grid-column: 2; grid-row: 4; }
+
+  .route-item:not(.paid-route-item) .route-stat:nth-child(5) span,
+  .route-item:not(.paid-route-item) .route-stat:nth-child(5) strong,
+  .route-item:not(.paid-route-item) .route-stat:nth-child(6) span,
+  .route-item:not(.paid-route-item) .route-stat:nth-child(6) strong { font-size: 12px; margin-bottom: 0; }
+
+  .route-item:not(.paid-route-item) .route-stat:nth-child(7),
+  .route-item:not(.paid-route-item) .route-stat:nth-child(8),
+  .route-item:not(.paid-route-item) .route-stat.payoff-stat { display: none; }
+
+  .route-item:not(.paid-route-item) .route-actions {
+    grid-column: 3;
+    grid-row: 1 / 5;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .paid-route-item {
+    grid-template-columns: 38px 1fr auto;
+    grid-template-rows: auto auto auto;
+    gap: 4px 8px;
+    padding: 10px 12px;
+    align-items: start;
+  }
+
+  .paid-route-item .route-rank {
+    grid-column: 1;
+    grid-row: 1 / 4;
+    align-self: center;
+  }
+
+  .paid-route-item .route-title { grid-column: 2; grid-row: 1; }
+
+  .paid-route-item .route-stat:nth-child(3),
+  .paid-route-item .route-stat:nth-child(6) { display: none; }
+
+  .paid-route-item .route-stat:nth-child(4),
+  .paid-route-item .route-stat:nth-child(5) {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: baseline;
+    border: none;
+    padding: 0;
+    width: auto;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .paid-route-item .route-stat:nth-child(4) { grid-column: 2; grid-row: 2; }
+  .paid-route-item .route-stat:nth-child(5) { grid-column: 2; grid-row: 3; }
+
+  .paid-route-item .route-stat:nth-child(4) span,
+  .paid-route-item .route-stat:nth-child(4) strong,
+  .paid-route-item .route-stat:nth-child(5) span,
+  .paid-route-item .route-stat:nth-child(5) strong { font-size: 12px; margin-bottom: 0; white-space: normal; }
+
+  .paid-route-item .route-actions { grid-column: 3; grid-row: 1 / 4; align-self: center; }
+}
+
 @media (max-width: 560px) {
   .control-flow-strip { grid-template-columns: 1fr; }
 
