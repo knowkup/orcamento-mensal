@@ -1,6 +1,6 @@
 # Contexto atual - Orcamento Mensal + Rota Financeira
 
-Ultima atualizacao: 2026-06-03
+Ultima atualizacao: 2026-06-06
 
 Este arquivo e o resumo de onboarding para Codex, Claude ou qualquer agente em outro notebook. Leia antes de mexer no projeto.
 
@@ -22,11 +22,16 @@ Arquivos principais:
 - `js/app.js`: boot principal, bindings globais, navegacao e render geral.
 - `js/state.js`: estado principal do Orcamento e cache de elementos DOM.
 - `js/data.js`: `createDefaultData()`, normalizacao e migracoes do estado principal.
-- `js/planejamento.js`: construcao da projecao futura.
-- `js/controle.js`: Controle Mensal, pagamentos, recebimentos, fechamento do mes e saldo em conta.
+- `js/planejamento/planejamento.js`: construcao da projecao futura.
+- `js/controle/controle.js`: Controle Mensal, pagamentos, recebimentos, fechamento do mes e saldo em conta.
 - `js/dividas/`: modulo da Rota Financeira.
 
 O projeto usa JavaScript puro com ES modules. Nao ha bundler.
+
+O estado principal usa fila de salvamento e revisoes monotonicamente crescentes.
+Snapshots antigos sao ignorados enquanto uma versao local mais nova ainda esta
+pendente. Salvamentos redesenham apenas a tela ativa; todas as telas sao renderizadas
+no boot e novamente quando abertas.
 
 ## Navegacao atual
 
@@ -65,12 +70,11 @@ Existem dois dominios de dados que convivem:
    - Fica em `state.data`, vindo de `js/state.js`.
 
 2. Dados da Rota Financeira:
-   - Subcolecoes por usuario:
-     - `users/{uid}/debts`
-     - `users/{uid}/debtInstallments`
-     - `users/{uid}/debtPayments`
-     - `users/{uid}/debtCreditors`
-     - `users/{uid}/debtRenegotiations`
+   - Colecoes:
+     - `debts`
+     - `debtInstallments`
+     - `debtPayments`
+     - `debtRenegotiations`
    - Ponte Firebase em `js/dividas/firebase.js`.
    - Estado proprio em `js/dividas/state.js`.
 
@@ -83,7 +87,7 @@ A integracao mais importante esta em `js/dividas/budget-integration.js`, `js/pla
 Fluxo:
 
 - Uma divida pode ter `includeInBudget = true`.
-- Dividas com `includeInBudget` e status diferente de `Quitada` entram no Planejamento/Controle como linhas automaticas `auto-debt-{debtId}`.
+- Dividas com `includeInBudget`, que nao sejam Consignado CLT e tenham status diferente de `Quitada` entram no Planejamento/Controle como linhas automaticas `auto-debt-{debtId}`.
 - `getDebtInstallmentsForMonth(month)` procura a primeira parcela da divida naquele mes e cria uma linha de saida.
 - No Controle Mensal, ao pagar uma linha `auto-debt-*`, `confirmPaidOccurrence()` chama `markDebtInstallmentPaid()`.
 - `markDebtInstallmentPaid()` atualiza a parcela em `debtInstallments` e cria/remove registro em `debtPayments`.
@@ -94,18 +98,18 @@ Consequencia: nao duplique manualmente uma divida no Orcamento se ela ja esta ma
 
 ## Credores
 
-Existem credores do Orcamento e credores da Rota Financeira.
+Existe um unico catalogo de credores em `state.data.creditors`, administrado em Preferencias
+e usado tanto pelo Orcamento quanto pela Rota Financeira.
 
-- Orcamento: `state.data.creditors`.
-- Dividas: `js/dividas/state.js` em `state.creditors`, persistidos em `debtCreditors`.
+No primeiro carregamento da versao que introduziu essa unificacao:
 
-Ha um fluxo de unificacao:
+- credores antigos da colecao `debtCreditors` sao comparados pelo nome normalizado;
+- os inexistentes sao adicionados ao catalogo principal;
+- as dividas sao apontadas para o identificador compartilhado;
+- os documentos antigos de `debtCreditors` sao removidos depois da migracao.
 
-- Dialog `divUnifyCreditorDialog` no `index.html`.
-- Funcoes em `js/dividas/creditors.js`.
-- O botao de unificar troca as dividas de um credor da Rota para um credor do Orcamento e remove o registro antigo de `debtCreditors`.
-
-Antes de criar credor novo em Dividas, verifique se ele deveria ser um credor do Orcamento.
+Backups de Dividas exportam apenas os credores referenciados e, na importacao, mesclam
+esses credores no catalogo principal.
 
 ## Status de dividas
 
@@ -117,7 +121,8 @@ Status principais:
 - `Quitada`: encerrada.
 - `Renegociada`: divida original consolidada em uma renegociacao.
 
-Consignados CLT podem aparecer separados na Rota, pois ja sao descontados em folha e nao devem inflar o compromisso mensal normal.
+Consignados CLT podem aparecer separados na Rota, mas nunca podem entrar no Controle
+Mensal. Ao marcar `isConsignado`, o sistema persiste `includeInBudget = false`.
 
 ## Modulo `js/dividas`
 
@@ -127,15 +132,23 @@ Arquivos relevantes:
 - `state.js`: estado interno das dividas.
 - `firebase.js`: helpers das colecoes Firestore.
 - `calc.js`: calculos de saldo, progresso, parcelas abertas, quitacao e status.
+- `debt-components.js`: composicao visual compartilhada das linhas da Rota.
+- `debt-order.js`: persistencia e ciclo de arraste compartilhados.
+- `operation.js`: tratamento comum de falhas das acoes assincronas.
 - `dashboard.js`: dashboard estrategico de dividas.
 - `trail.js`: Rota Financeira e ordenacao da frente de quitacao.
 - `debts.js`: listas de espera, fora do radar, quitadas e componentes de divida.
 - `debt-form.js`: cadastro/edicao de dividas e geracao de parcelas.
 - `payment.js`: pagamentos, quitacao e edicao de parcelas.
 - `renegotiation.js`: consolidacao/renegociacao.
-- `creditors.js`: credores de divida e unificacao com Orcamento.
 - `data.js`: import/export, limpeza e exclusoes.
 - `utils.js`: formatacao, DOM helpers e logos.
+
+Utilitarios puros compartilhados ficam em `js/domain/`, incluindo formatacao de
+valores, filtros de dividas e mutacoes locais de pagamentos/exclusoes. Esses modulos
+nao acessam DOM nem Firebase e possuem testes diretos.
+
+O schema e o formato de backup estao documentados em `docs/SCHEMA_DADOS.md`.
 
 ## Cuidados antes de alterar
 

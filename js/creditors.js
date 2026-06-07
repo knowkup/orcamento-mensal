@@ -1,5 +1,7 @@
 import { state } from "./state.js";
+import { state as debtState } from "./dividas/state.js";
 import { escapeHtml, icon } from "./utils.js";
+import { initialsFromText } from "./domain/value-utils.js";
 
 export function getCreditorName(id) {
   return state.data.creditors.find((creditor) => creditor.id === id)?.name || id || "Credor";
@@ -36,7 +38,7 @@ export function getInstallmentCard(item) {
 }
 
 export function initials(value) {
-  return String(value || "?").trim().split(/\s+/).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "?";
+  return initialsFromText(value);
 }
 
 export function creditorLogoHtml(id) {
@@ -63,7 +65,8 @@ export function creditorUsageCount(id) {
     + state.data.plannedPurchases.filter((item) => item.creditorId === id).length
     + state.data.fgts.contracts.filter((item) => item.creditorId === id).length
     + (state.data.car.creditorId === id ? 1 : 0)
-    + state.data.projectionLines.filter((item) => item.creditorId === id || item.match === id).length;
+    + state.data.projectionLines.filter((item) => item.creditorId === id || item.match === id).length
+    + debtState.debts.filter((item) => item.creditorId === id).length;
 }
 
 function _fgtsPendingTotalForCreditor(contract) {

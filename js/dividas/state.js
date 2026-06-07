@@ -7,7 +7,6 @@ export const state = {
   paymentsByDebt: new Map(),
   paymentByInstallment: new Map(),
   editingDebtId: null,
-  editingCreditorId: null,
   paymentInstallmentId: null,
   deleteContext: null,
   selectedWaitingCreditorFilter: 'all',

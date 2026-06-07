@@ -8,9 +8,11 @@ import { calcNetClt } from "../taxes.js";
 import { getCreditorName, getInstallmentCard, ownerRank } from "../creditors.js";
 import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from "../components.js";
 import { ensureCarPayments } from "../carro/carro.js";
-import { openPlannedDialog, deleteManualPlanned, rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDate } from "../controle/controle.js";
+import { openPlannedDialog, deleteManualPlanned } from "../controle/planned-dialog.js";
+import { rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDate } from "../domain/row-utils.js";
 import { normalizedIncomeChanges } from "../data.js";
 import { getDebtInstallmentsForMonth } from "../dividas/budget-integration.js";
+import { buildProjectionTotals, plannedInstallmentMonths, valuesFromMonthlyMap } from "../domain/projection.js";
 
 export function renderProjection() {
   const months = currentMonths(12);
@@ -526,15 +528,6 @@ export function valuesForProjectionLine(line, months, keepPaidValues = false) {
   return values;
 }
 
-export function valuesFromMonthlyMap(map, months) {
-  const values = {};
-  months.forEach((month) => {
-    const monthNumber = Number(month.slice(5, 7));
-    values[month] = map?.[month] ?? map?.[`month-${monthNumber}`] ?? map?.default ?? 0;
-  });
-  return values;
-}
-
 export function recurringIncomeValues(income, months) {
   const changes = normalizedIncomeChanges(income);
   const latestFirstChanges = [...changes].reverse();
@@ -814,12 +807,6 @@ export function plannedDueDateForMonth(item, month) {
   return addMonthsToDate(item.date || `${plannedMonth(item)}-01`, index);
 }
 
-export function plannedInstallmentMonths(item) {
-  const total = Math.max(1, Number(item.installments || 1));
-  const startDate = item.date || `${plannedMonth(item)}-01`;
-  return Array.from({ length: total }, (_, index) => addMonthsToDate(startDate, index).slice(0, 7));
-}
-
 export function carPaymentMonth(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
 }
@@ -910,12 +897,8 @@ export function differenceValue(line, months, month, index) {
 }
 
 export function buildTotals(rows, months) {
-  let accumulated = Number(state.data.accountBalance || state.data.initialBalance || 0);
-  return months.map((month) => {
-    const income = rows.filter((row) => row.kind === "income").reduce((total, row) => total + rowIncomeOutstanding(row, month, row.values[month] || 0), 0);
-    const expense = rows.filter((row) => row.kind === "expense").reduce((total, row) => total + rowOutstanding(row, month, row.values[month] || 0), 0);
-    const balance = income - expense;
-    accumulated += balance;
-    return { month, income, expense, balance, accumulated };
+  return buildProjectionTotals(rows, months, state.data.accountBalance || state.data.initialBalance || 0, {
+    incomeValue: (row, month) => rowIncomeOutstanding(row, month, row.values[month] || 0),
+    expenseValue: (row, month) => rowOutstanding(row, month, row.values[month] || 0)
   });
 }

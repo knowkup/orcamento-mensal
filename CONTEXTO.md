@@ -46,9 +46,9 @@ Orcamento Mensal/
 
 ### Repositorio
 
-- GitHub: `https://github.com/kupka1988/orcamento-mensal.git`
+- GitHub: `https://github.com/knowkup/orcamento-mensal.git`
 - Firebase project: `orcamento-mensal-fdc1a`
-- URL publicada: `https://kupka1988.github.io/orcamento-mensal/`
+- URL publicada: `https://knowkup.github.io/orcamento-mensal/`
 
 ### Comandos essenciais
 
@@ -318,8 +318,8 @@ git push origin main            # publica no GitHub Pages automaticamente
 ### Decisoes tomadas
 
 - Usuario informou que as regras do Firestore foram alteradas e publicadas no Firebase Console.
-- Repositorio GitHub criado pelo usuario: `kupka1988/orcamento-mensal`.
-- Remoto esperado: `https://github.com/kupka1988/orcamento-mensal.git`.
+- Repositorio GitHub atual: `knowkup/orcamento-mensal`.
+- Remoto esperado: `https://github.com/knowkup/orcamento-mensal.git`.
 
 ### Mudancas feitas
 
@@ -523,7 +523,7 @@ git push origin main            # publica no GitHub Pages automaticamente
 
 ### Pendencias
 
-- Validar login em producao. Se aparecer erro `auth/unauthorized-domain`, adicionar `kupka1988.github.io` em Firebase Authentication > Settings > Authorized domains.
+- Validar login em producao. Se aparecer erro `auth/unauthorized-domain`, adicionar `knowkup.github.io` em Firebase Authentication > Settings > Authorized domains.
 - Validar fluxo real no Firebase com dados do usuario.
 - Ajustar modelo de credores/tipos conforme uso real.
 

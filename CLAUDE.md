@@ -32,7 +32,7 @@ Se houver ambiguidade de produto, pergunte antes de modelar. A planilha original
 - HTML, CSS e JavaScript puro com ES modules.
 - Firebase Auth e Firestore.
 - GitHub Pages publica a branch `main`.
-- Repositorio: `kupka1988/orcamento-mensal`.
+- Repositorio: `knowkup/orcamento-mensal`.
 - Pasta oficial: OneDrive, `14. Sistemas Kupka/Orcamento Mensal`.
 
 ## Padroes de UI

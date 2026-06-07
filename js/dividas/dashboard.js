@@ -42,7 +42,7 @@ function renderDeadlinePressure(activeDebts) {
       '<div class="pressure-title">' + escapeHtml(group.title) + '</div>' +
       '<div class="metric-note">' + escapeHtml(group.hint) + '</div>' +
       '<div class="pressure-value">' + brl(group.balance) + '</div>' +
-      '<div class="pressure-count">' + group.items.length + ' dívida(s)</div>' +
+      '<div class="pressure-count">' + group.items.length + (group.items.length === 1 ? ' dívida' : ' dívidas') + '</div>' +
     '</div>';
   }).join('');
 }
@@ -81,7 +81,7 @@ function renderDashboardAction(activeDebts, openInstallments) {
   }
   const next = openInstallments[0] || null;
   if (!next) {
-    container.innerHTML = '<div class="next-action-card"><div><div class="action-pill">Próxima ação recomendada</div><h2>Sem parcelas pendentes</h2><p>Todas as dívidas ativas estão sem cobrança aberta no momento.</p></div><button class="primary-action" onclick="window.goToDebtsAndNew()">Nova dívida</button></div>';
+    container.innerHTML = '<div class="next-action-card"><div><div class="action-pill">Próxima ação recomendada</div><h2>Sem parcelas pendentes</h2><p>Todas as dívidas ativas estão sem cobrança aberta no momento.</p></div><button class="primary-action" type="button" data-new-debt-status="Ativa">Nova dívida</button></div>';
     return;
   }
   const debt = activeDebts.find(d => d.id === next.debtId);
@@ -96,14 +96,15 @@ function renderDashboardAction(activeDebts, openInstallments) {
         '<div class="next-action-value">' + brl(next.expectedValue) + '</div>' +
         '<div class="impact-line">Impacto: ' + escapeHtml(impact) + '.</div>' +
       '</div>' +
-      '<button class="primary-action" onclick="window.openPaymentForm(\'' + next.id + '\')">Registrar pagamento</button>' +
+      '<button class="primary-action" type="button" data-payment-installment-id="' + escapeHtml(next.id) + '">Registrar pagamento</button>' +
     '</div>';
 }
 
 function renderDashboardSummary(data) {
   const container = $('dashboardSummary');
   if (!container) return;
-  const statusText = data.active.length ? (data.monthCommitment > 0 ? 'Você está no caminho certo' : 'Sem pressão no mês atual') : 'Cadastre uma dívida ativa';
+  const _n = data.monthInstallments.length;
+  const statusText = data.active.length ? (data.monthCommitment > 0 ? _n + (_n === 1 ? ' parcela prevista este mês' : ' parcelas previstas este mês') : 'Sem pressão no mês atual') : 'Cadastre uma dívida ativa';
   container.innerHTML =
     '<div class="summary-card">' +
       '<h2 class="panel-title">Resumo geral</h2>' +
@@ -160,7 +161,7 @@ function renderDashboardDecision(activeDebts, openInstallments) {
   upcomingContainer.innerHTML = openInstallments.slice(0, 5).length ? openInstallments.slice(0, 5).map(item => {
     const debt = state.debts.find(d => d.id === item.debtId);
     const title = debt ? getCreditorName(debt.creditorId) + ' · ' + debt.name : 'Dívida não encontrada';
-    return '<div class="decision-row due-row"><div><strong>' + escapeHtml(title) + '</strong><small>' + formatDateBR(item.dueDate) + ' · ' + dueHint(item.dueDate) + '</small></div><strong>' + brl(item.expectedValue) + '</strong><button class="ghost-btn" onclick="window.openDebtFromDashboard(\'' + item.debtId + '\')">Abrir</button></div>';
+    return '<div class="decision-row due-row"><div><strong>' + escapeHtml(title) + '</strong><small>' + formatDateBR(item.dueDate) + ' · ' + dueHint(item.dueDate) + '</small></div><strong>' + brl(item.expectedValue) + '</strong><button class="ghost-btn" type="button" data-dashboard-debt-id="' + escapeHtml(item.debtId) + '">Abrir</button></div>';
   }).join('') : emptyCard('Sem parcelas pendentes', 'Nenhuma parcela ativa encontrada na frente atual.');
 
   const ranked = [...activeDebts]
@@ -177,7 +178,7 @@ function renderDashboardDecision(activeDebts, openInstallments) {
       '<div><strong>' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</strong><small>' + escapeHtml(priorityReason(debt)) + (next ? ' · ' + dueHint(next.dueDate) : '') + '</small></div>' +
       '<span class="priority-badge ' + tone.tone + '">' + tone.label + '</span>' +
       '<div class="front-value">' + brl(relevantValue || debtBalance(debt)) + '</div>' +
-      '<button class="ghost-btn" onclick="window.openDebtFromDashboard(\'' + debt.id + '\')">Abrir dívida</button>' +
+      '<button class="ghost-btn" type="button" data-dashboard-debt-id="' + escapeHtml(debt.id) + '">Abrir dívida</button>' +
     '</div>';
   }).join('') : emptyCard('Sem frente de pagamento', 'Nenhuma dívida ativa com saldo em aberto.');
 }
@@ -197,7 +198,7 @@ function renderDashboardInsights(activeDebts, openInstallments, totalActive) {
     { title: 'Maior pressão hoje', main: biggest ? getCreditorName(biggest.creditorId) : '-', value: biggest ? brl(debtBalance(biggest)) : brl(0), note: totalActive ? Math.round((debtBalance(biggest) / totalActive) * 100) + '% do total ativo' : 'Sem saldo ativo' },
     { title: 'Melhor oportunidade', main: opportunity ? getCreditorName(opportunity.creditorId) + ' · ' + opportunity.name : '-', value: opportunity ? brl(debtBalance(opportunity)) : brl(0), note: 'Menor saldo restante para quitação' },
     { title: 'Dívida mais crítica', main: critical ? getCreditorName(critical.creditorId) + ' · ' + critical.name : '-', value: nextInstallment(critical) ? brl(nextInstallment(critical).expectedValue) : brl(debtBalance(critical)), note: nextInstallment(critical) ? dueHint(nextInstallment(critical).dueDate) : 'Sem parcela pendente' },
-    { title: 'Atrasos', main: overdue.length ? overdue.length + ' parcela(s)' : 'Nenhum atraso', value: brl(overdue.reduce((sum, item) => sum + Number(item.expectedValue || 0), 0)), note: overdue.length ? 'Regularize antes de avançar' : 'Continue mantendo a rota em dia' }
+    { title: 'Atrasos', main: overdue.length ? overdue.length + (overdue.length === 1 ? ' parcela' : ' parcelas') : 'Nenhum atraso', value: brl(overdue.reduce((sum, item) => sum + Number(item.expectedValue || 0), 0)), note: overdue.length ? 'Regularize antes de avançar' : 'Continue mantendo a rota em dia' }
   ];
   container.innerHTML = rows.map(item => (
     '<div class="insight-tile"><div class="metric-label">' + escapeHtml(item.title) + '</div><strong>' + escapeHtml(item.main) + '</strong><div class="insight-value">' + escapeHtml(item.value) + '</div><small>' + escapeHtml(item.note) + '</small></div>'

@@ -18,6 +18,7 @@ Thumbs.db
 
 # Dependencias locais, caso sejam adicionadas futuramente
 node_modules/
+.firebase/
 
 # Saidas temporarias de testes
 playwright-*.png

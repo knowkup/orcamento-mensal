@@ -331,7 +331,7 @@
             <section class="panel">
               <div class="panel-heading">
                 <div><p class="eyebrow">Próximos vencimentos</p><h2>Frente de pagamento</h2></div>
-                <button class="primary-button" type="button" onclick="window.openDebtForm()">
+                <button class="primary-button" type="button" data-new-debt-status="Ativa">
                   <i data-lucide="plus"></i><span>Nova dívida</span>
                 </button>
               </div>
@@ -362,7 +362,7 @@
         <section class="view" id="divrotaView" data-title="Rota Financeira" data-eyebrow="Dívidas Priorizadas" data-subtitle="Organize a ordem das dívidas que você pretende quitar.">
           <div class="vertical-stack">
             <div class="route-top-bar">
-              <button class="primary-button" type="button" onclick="window.openDebtForm()">
+              <button class="primary-button" type="button" data-new-debt-status="Ativa">
                 <i data-lucide="plus"></i><span>Nova dívida</span>
               </button>
             </div>
@@ -371,7 +371,7 @@
             <div id="nextTarget"></div>
             <div class="route-sort-bar">
               <span>Ordenar</span>
-              <select class="ghost-btn" id="trailDebtSort" onchange="window.setTrailDebtSort(this.value)">
+              <select class="ghost-btn" id="trailDebtSort">
                 <option value="trail">Ordem da Rota</option>
                 <option value="priority">Prioridade</option>
                 <option value="due">Vencimento</option>
@@ -387,7 +387,7 @@
         <section class="view" id="divesperaView" data-title="Dívidas em espera" data-eyebrow="Fora da frente atual" data-subtitle="Acompanhe compromissos reconhecidos que ainda não entraram na frente de pagamento principal.">
           <div class="vertical-stack">
             <div class="route-top-bar">
-              <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Em espera')">
+              <button class="primary-button" type="button" data-new-debt-status="Em espera">
                 <i data-lucide="plus"></i><span>Nova dívida</span>
               </button>
             </div>
@@ -395,7 +395,7 @@
             <div class="debt-metrics" id="waitingDebtMetrics"></div>
             <div class="route-sort-bar">
               <span>Ordenar</span>
-              <select class="ghost-btn" id="waitingDebtSort" onchange="window.setWaitingDebtSort(this.value)">
+              <select class="ghost-btn" id="waitingDebtSort">
                 <option value="priority">Prioridade</option>
                 <option value="trail">Ordem manual</option>
                 <option value="due">Vencimento</option>
@@ -410,7 +410,7 @@
         <section class="view" id="divradarView" data-title="Fora do Radar" data-eyebrow="Fora da frente atual" data-subtitle="Dívidas reconhecidas mas que não estão sendo atacadas no momento.">
           <div class="vertical-stack">
             <div class="route-top-bar">
-              <button class="primary-button" type="button" onclick="window.openDebtForm('new', null, 'Fora do radar')">
+              <button class="primary-button" type="button" data-new-debt-status="Fora do radar">
                 <i data-lucide="plus"></i><span>Nova dívida</span>
               </button>
             </div>
@@ -418,7 +418,7 @@
             <div class="debt-metrics" id="hiddenDebtMetrics"></div>
             <div class="route-sort-bar">
               <span>Ordenar</span>
-              <select class="ghost-btn" id="hiddenDebtSort" onchange="window.setHiddenDebtSort(this.value)">
+              <select class="ghost-btn" id="hiddenDebtSort">
                 <option value="priority">Prioridade</option>
                 <option value="trail">Ordem manual</option>
                 <option value="due">Vencimento</option>
@@ -445,8 +445,8 @@
               <div class="panel-heading">
                 <div><p class="eyebrow">Consolidar dívidas</p><h2>Renegociação</h2></div>
                 <div class="action-group">
-                  <button class="ghost-btn" type="button" onclick="window.clearRenegotiationSelection()">Limpar seleção</button>
-                  <button class="primary-button" type="button" onclick="window.openRenegotiationModal()">
+                  <button class="ghost-btn" type="button" id="clearRenegotiationSelectionButton">Limpar seleção</button>
+                  <button class="primary-button" type="button" id="openRenegotiationModalButton">
                     <i data-lucide="refresh-ccw"></i><span>Criar acordo</span>
                   </button>
                 </div>
@@ -461,14 +461,14 @@
                 <div><p class="eyebrow">Dados</p><h2>Exportar e importar</h2></div>
               </div>
               <div class="action-group" style="flex-wrap:wrap;gap:8px;">
-                <button class="ghost-btn" type="button" onclick="window.exportDividasJson()">Exportar JSON (backup)</button>
-                <button class="ghost-btn" type="button" onclick="window.exportDebtsCsv()">Exportar dívidas CSV</button>
-                <button class="ghost-btn" type="button" onclick="window.exportDebtPaymentsCsv()">Exportar pagamentos CSV</button>
+                <button class="ghost-btn" type="button" id="exportDividasJsonButton">Exportar JSON (backup)</button>
+                <button class="ghost-btn" type="button" id="exportDebtsCsvButton">Exportar dívidas CSV</button>
+                <button class="ghost-btn" type="button" id="exportDebtPaymentsCsvButton">Exportar pagamentos CSV</button>
                 <label class="ghost-btn" style="cursor:pointer;">
                   Importar JSON
-                  <input type="file" id="dividasJsonImportFile" accept="application/json" style="display:none" onchange="window.handleDividasJsonImport(event)">
+                  <input type="file" id="dividasJsonImportFile" accept="application/json" style="display:none">
                 </label>
-                <button class="ghost-btn danger-btn" type="button" onclick="window.openClearAllModal()">Limpar todos os dados</button>
+                <button class="ghost-btn danger-btn" type="button" id="openClearAllModalButton">Limpar todos os dados</button>
               </div>
             </section>
           </div>
@@ -564,21 +564,31 @@
               </div>
               </div>
             </section>
-            <section class="panel preference-block">
-              <div class="block-marker">6</div>
-              <div class="preference-content">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Credores das dívidas</p>
-                  <h2>Rota Financeira</h2>
-                </div>
-                <button class="primary-button" type="button" onclick="window.openCreditorModal()">
-                  <i data-lucide="plus"></i>
-                  <span>Novo credor</span>
-                </button>
+            <section class="panel preference-block backup-block">
+              <div class="block-marker backup-block-marker">
+                <i data-lucide="hard-drive"></i>
               </div>
-              <div class="debt-metrics" id="creditorMetrics"></div>
-              <div id="creditorsList"></div>
+              <div class="preference-content">
+                <div class="panel-heading">
+                  <div>
+                    <p class="eyebrow">Segurança dos dados</p>
+                    <h2>Backup e restauração</h2>
+                  </div>
+                </div>
+                <p class="backup-description">Exporte um arquivo JSON com todos os seus dados para guardar como cópia de segurança. Para restaurar, importe o arquivo exportado anteriormente.</p>
+                <div class="backup-actions">
+                  <button class="backup-action-btn backup-export" type="button" id="prefExportButton">
+                    <i data-lucide="download"></i>
+                    <span class="backup-btn-label">Exportar backup</span>
+                    <span class="backup-btn-sub">Baixar arquivo JSON</span>
+                  </button>
+                  <label class="backup-action-btn backup-import">
+                    <i data-lucide="upload"></i>
+                    <span class="backup-btn-label">Importar backup</span>
+                    <span class="backup-btn-sub">Restaurar de arquivo</span>
+                    <input type="file" id="prefImportInput" accept="application/json">
+                  </label>
+                </div>
               </div>
             </section>
           </div>
@@ -1045,7 +1055,7 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Parcela</p><h2>Registrar pagamento</h2></div>
-          <button class="icon-button" type="button" onclick="window.closePaymentForm()" title="Fechar">
+          <button class="icon-button" id="closeDebtPaymentModalButton" type="button" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
@@ -1053,7 +1063,7 @@
         <label>Parcela<input id="payInstallmentLabel" type="text" readonly></label>
         <label>Data do pagamento<input id="payDate" type="date" required></label>
         <label class="money-label">Valor pago<input id="payValue" type="text" inputmode="decimal" data-money-input required></label>
-        <button class="primary-button full" type="button" onclick="window.savePayment()">
+        <button class="primary-button full" id="saveDebtPaymentButton" type="button">
           <i data-lucide="check"></i><span>Confirmar pagamento</span>
         </button>
       </div>
@@ -1064,11 +1074,11 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Encerramento</p><h2>Quitar dívida</h2></div>
-          <button class="icon-button" type="button" onclick="window.closePayoffModal()" title="Fechar">
+          <button class="icon-button" id="closeDebtPayoffModalButton" type="button" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
-        <label class="money-label">Valor de quitação<input id="payoffValue" type="text" inputmode="decimal" data-money-input oninput="window.updatePayoffSummary()"></label>
+        <label class="money-label">Valor de quitação<input id="payoffValue" type="text" inputmode="decimal" data-money-input></label>
         <label>Data do pagamento<input id="payoffDate" type="date"></label>
         <label>Forma de pagamento
           <select id="payoffMethod">
@@ -1081,7 +1091,7 @@
         </label>
         <label>Observações<textarea id="payoffNotes" rows="2" placeholder="Opcional"></textarea></label>
         <div id="payoffSummary"></div>
-        <button class="primary-button full" type="button" onclick="window.confirmPayoffDebt()">
+        <button class="primary-button full" id="confirmDebtPayoffButton" type="button">
           <i data-lucide="check-circle"></i><span>Confirmar quitação</span>
         </button>
       </div>
@@ -1092,7 +1102,7 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Parcela</p><h2>Editar parcela</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeInstallmentModal()" title="Fechar">
+          <button class="icon-button" id="closeDebtInstallmentModalButton" type="button" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
@@ -1106,7 +1116,7 @@
             <option value="Cancelada">Cancelada</option>
           </select>
         </label>
-        <button class="primary-button full" type="button" onclick="window.saveInstallmentEdit()">
+        <button class="primary-button full" id="saveDebtInstallmentButton" type="button">
           <i data-lucide="save"></i><span>Salvar parcela</span>
         </button>
       </div>
@@ -1117,7 +1127,7 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Dívida</p><h2 id="debtFormTitle">Nova dívida</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeDebtForm()" title="Fechar">
+          <button class="icon-button" id="closeDebtFormButton" type="button" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
@@ -1180,60 +1190,8 @@
         <label>Observações<textarea id="debtNotes" rows="2" placeholder="Opcional"></textarea></label>
         <label class="check-row"><input type="checkbox" id="debtIncludeInBudget"><span>Incluir parcela do mês no controle mensal</span></label>
         <label class="check-row"><input type="checkbox" id="debtIsConsignado"><span>Consignado CLT · desconto automático em folha</span></label>
-        <button class="primary-button full" type="button" onclick="window.saveDebt()">
+        <button class="primary-button full" id="saveDebtButton" type="button">
           <i data-lucide="save"></i><span>Salvar dívida</span>
-        </button>
-      </div>
-    </dialog>
-
-    <!-- Credor de dívida -->
-    <dialog class="dialog" id="divCreditorDialog">
-      <div class="stack-form">
-        <div class="panel-heading">
-          <div><p class="eyebrow">Credor</p><h2 id="creditorFormTitle">Novo credor</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeCreditorModal()" title="Fechar">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-        <div class="logo-row">
-          <div class="creditor-logo" id="creditorLogoPreview">RF</div>
-          <div class="logo-info"><span>Logo do credor</span><small>URL ou upload · opcional</small></div>
-        </div>
-        <label>Nome<input id="creditorName" type="text" required placeholder="Ex.: Nubank, Casas Bahia"></label>
-        <label>Tipo
-          <select id="creditorType">
-            <option value="Banco">Banco</option>
-            <option value="Financeira">Financeira</option>
-            <option value="Loja">Loja</option>
-            <option value="Cartão de crédito">Cartão de crédito</option>
-            <option value="Outros">Outros</option>
-          </select>
-        </label>
-        <label>URL da logo<input id="creditorLogoUrl" type="url" placeholder="https://... (opcional)"></label>
-        <label>Upload de logo<input id="creditorLogoFile" type="file" accept="image/*" onchange="window.handleCreditorLogoUpload(event)"></label>
-        <label>Observações<textarea id="creditorNotes" rows="2" placeholder="Opcional"></textarea></label>
-        <button class="primary-button full" type="button" onclick="window.saveCreditor()">
-          <i data-lucide="save"></i><span>Salvar credor</span>
-        </button>
-      </div>
-    </dialog>
-
-    <!-- Unificar credor de dívida com credor do Orçamento -->
-    <dialog class="dialog" id="divUnifyCreditorDialog">
-      <div class="stack-form">
-        <div class="panel-heading">
-          <div><p class="eyebrow">Unificar credor</p><h2>Vincular ao Orçamento</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeUnifyCreditorModal()" title="Fechar">
-            <i data-lucide="x"></i>
-          </button>
-        </div>
-        <p class="muted-hint">Credor das dívidas: <strong id="unifySourceName"></strong></p>
-        <label>Credor equivalente no Orçamento
-          <select id="unifyTargetSelect"></select>
-        </label>
-        <p class="muted-hint" style="font-size:12px">Ao confirmar, todas as dívidas deste credor passarão a usar o credor selecionado e o registro do bloco 6 será removido.</p>
-        <button class="primary-button full" type="button" onclick="window.confirmUnifyCreditor()">
-          <i data-lucide="link"></i><span>Confirmar unificação</span>
         </button>
       </div>
     </dialog>
@@ -1243,7 +1201,7 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Renegociação</p><h2>Criar acordo</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeRenegotiationModal()" title="Fechar">
+          <button class="icon-button" type="button" id="closeRenegotiationModalButton" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
@@ -1283,7 +1241,7 @@
           </select>
         </label>
         <label>Observações<textarea id="renNotes" rows="2"></textarea></label>
-        <button class="primary-button full" type="button" onclick="window.saveRenegotiation()">
+        <button class="primary-button full" type="button" id="saveRenegotiationButton">
           <i data-lucide="save"></i><span>Salvar acordo</span>
         </button>
       </div>
@@ -1294,15 +1252,15 @@
       <div class="stack-form">
         <div class="panel-heading">
           <div><p class="eyebrow">Atenção</p><h2 id="deleteModalTitle">Excluir</h2></div>
-          <button class="icon-button" type="button" onclick="window.closeDeleteModal()" title="Fechar">
+          <button class="icon-button" type="button" id="closeDeleteModalButton" title="Fechar">
             <i data-lucide="x"></i>
           </button>
         </div>
         <p id="deleteModalText"></p>
         <p class="danger-hint" id="deleteModalWarning"></p>
         <div class="action-group">
-          <button class="ghost-btn" type="button" onclick="window.closeDeleteModal()">Cancelar</button>
-          <button class="primary-button danger-btn" type="button" onclick="window.confirmDelete()">
+          <button class="ghost-btn" type="button" id="cancelDeleteModalButton">Cancelar</button>
+          <button class="primary-button danger-btn" type="button" id="confirmDeleteButton">
             <i data-lucide="trash-2"></i><span>Confirmar exclusão</span>
           </button>
         </div>

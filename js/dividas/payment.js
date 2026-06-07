@@ -2,6 +2,7 @@ import { state } from './state.js';
 import { $, brl, parseMoney, showToast, getCreditorName, formatDateBR } from './utils.js';
 import { debtBalance, openInstallmentsForDebt, synchronizePaidOffDebts } from './calc.js';
 import { paymentsColl, installmentDoc, debtDoc, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from './firebase.js';
+import { paymentBreakdown } from '../domain/debt-transactions.js';
 
 // --- Modal payoff (quitar dívida) ---
 
@@ -9,12 +10,15 @@ function payoffSummaryValues() {
   const debt = state.debts.find(d => d.id === state.payoffDebtId);
   const totalRemaining = debt ? debtBalance(debt) : 0;
   const paidValue = parseMoney($('payoffValue')?.value || 0);
-  const discount = Math.max(0, totalRemaining - paidValue);
-  const interest = Math.max(0, paidValue - totalRemaining);
-  return { debt, totalRemaining, paidValue, discount, interest };
+  return { debt, totalRemaining, ...paymentBreakdown(totalRemaining, paidValue) };
 }
 
-window.updatePayoffSummary = function() {
+function closeDebtFormIfOpen() {
+  state.editingDebtId = null;
+  document.getElementById('divDebtDialog')?.close();
+}
+
+export function updatePayoffSummary() {
   const target = $('payoffSummary');
   if (!target) return;
   const { totalRemaining, paidValue, discount, interest } = payoffSummaryValues();
@@ -31,30 +35,30 @@ window.updatePayoffSummary = function() {
       '<small>' + (interest > 0 ? 'Sem desconto aplicado' : discountPct.toLocaleString('pt-BR') + '% de desconto') + '</small>' +
     '</div>' +
     '<p class="payoff-note">Ao confirmar, as parcelas futuras serão encerradas e a dívida será marcada como quitada.</p>';
-};
+}
 
-window.openPayoffModal = function(id) {
+export function openPayoffModal(id) {
   const debt = state.debts.find(d => d.id === id);
   if (!debt) return showToast('Dívida não encontrada.');
-  window.closeDebtForm();
-  window.closePaymentForm();
-  window.closeInstallmentModal();
+  closeDebtFormIfOpen();
+  closePaymentForm();
+  closeInstallmentModal();
   state.payoffDebtId = id;
   const remaining = debtBalance(debt);
   $('payoffValue').value = brl(debt.payoffToday || remaining);
   $('payoffDate').value = new Date().toISOString().slice(0, 10);
   $('payoffMethod').value = '';
   $('payoffNotes').value = '';
-  window.updatePayoffSummary();
+  updatePayoffSummary();
   document.getElementById('divPayoffDialog').showModal();
-};
+}
 
-window.closePayoffModal = function() {
+export function closePayoffModal() {
   state.payoffDebtId = null;
   document.getElementById('divPayoffDialog')?.close();
-};
+}
 
-window.confirmPayoffDebt = async function() {
+export async function confirmPayoffDebt() {
   const { debt, totalRemaining, paidValue, discount, interest } = payoffSummaryValues();
   if (!debt) return showToast('Dívida não encontrada.');
   if (!paidValue) return showToast('Informe o valor de quitação.');
@@ -91,16 +95,16 @@ window.confirmPayoffDebt = async function() {
   const created = await addDoc(paymentsColl(), paymentPayload);
   state.payments.push({ id: created.id, ...paymentPayload });
   state.expandedDebtId = debt.id;
-  window.closePayoffModal();
+  closePayoffModal();
   if (state.renderFn) state.renderFn();
   showToast('Dívida quitada com sucesso.');
-};
+}
 
 // --- Modal de pagamento de parcela ---
 
-window.openPaymentForm = function(installmentId) {
-  window.closeDebtForm();
-  window.closePayoffModal();
+export function openPaymentForm(installmentId) {
+  closeDebtFormIfOpen();
+  closePayoffModal();
   const inst = state.installments.find(i => i.id === installmentId);
   if (!inst) return;
   const debt = state.debts.find(d => d.id === inst.debtId);
@@ -111,32 +115,27 @@ window.openPaymentForm = function(installmentId) {
   $('payDate').value = inst.dueDate;
   $('payValue').value = brl(inst.expectedValue);
   document.getElementById('divPaymentDialog').showModal();
-};
+}
 
-window.closePaymentForm = function() {
+export function closePaymentForm() {
   state.paymentInstallmentId = null;
-  document.getElementById('divPaymentDialog').close();
-};
+  document.getElementById('divPaymentDialog')?.close();
+}
 
-window.savePayment = async function() {
+export async function savePayment() {
   if (!state.paymentInstallmentId) return showToast('Nenhuma parcela selecionada.');
   const inst = state.installments.find(i => i.id === state.paymentInstallmentId);
   if (!inst) return showToast('Parcela não encontrada.');
   const paidValue = parseMoney($('payValue').value);
   if (!paidValue) return showToast('Informe o valor pago.');
-  const expectedValue = Number(inst.expectedValue || 0);
-  const discount = Math.max(0, expectedValue - paidValue);
-  const interest = Math.max(0, paidValue - expectedValue);
+  const breakdown = paymentBreakdown(inst.expectedValue, paidValue);
   const paymentPayload = {
     debtId: inst.debtId,
     installmentId: inst.id,
     installmentNumber: inst.number,
     expectedDate: inst.dueDate,
     paymentDate: $('payDate').value,
-    expectedValue,
-    paidValue,
-    discount,
-    interest,
+    ...breakdown,
     notes: '',
     createdAt: serverTimestamp()
   };
@@ -148,16 +147,16 @@ window.savePayment = async function() {
   state.expandedDebtId = inst.debtId;
   const paidOff = await synchronizePaidOffDebts();
   const debtWasPaidOff = paidOff.some(debt => debt.id === inst.debtId);
-  window.closePaymentForm();
+  closePaymentForm();
   if (state.renderFn) state.renderFn();
   showToast(debtWasPaidOff ? 'Pagamento registrado. Dívida movida para encerradas.' : 'Pagamento registrado com sucesso.');
-};
+}
 
 // --- Modal de edição de parcela ---
 
-window.openInstallmentModal = function(installmentId) {
-  window.closeDebtForm();
-  window.closePaymentForm();
+export function openInstallmentModal(installmentId) {
+  closeDebtFormIfOpen();
+  closePaymentForm();
   const inst = state.installments.find(item => item.id === installmentId);
   if (!inst) return showToast('Parcela não encontrada.');
   state.editingInstallmentId = installmentId;
@@ -165,14 +164,14 @@ window.openInstallmentModal = function(installmentId) {
   $('editInstallmentValue').value = brl(inst.expectedValue || 0);
   $('editInstallmentStatus').value = inst.status || 'Pendente';
   document.getElementById('divInstallmentDialog').showModal();
-};
+}
 
-window.closeInstallmentModal = function() {
+export function closeInstallmentModal() {
   state.editingInstallmentId = null;
-  document.getElementById('divInstallmentDialog').close();
-};
+  document.getElementById('divInstallmentDialog')?.close();
+}
 
-window.saveInstallmentEdit = async function() {
+export async function saveInstallmentEdit() {
   if (!state.editingInstallmentId) return showToast('Nenhuma parcela selecionada.');
   const inst = state.installments.find(item => item.id === state.editingInstallmentId);
   if (!inst) return showToast('Parcela não encontrada.');
@@ -187,10 +186,10 @@ window.saveInstallmentEdit = async function() {
   if (status !== 'Paga') delete inst.paidAt;
   await reactivateDebtIfOpen(inst.debtId);
   await synchronizePaidOffDebts();
-  window.closeInstallmentModal();
+  closeInstallmentModal();
   if (state.renderFn) state.renderFn();
   showToast('Parcela atualizada com sucesso.');
-};
+}
 
 // --- Reativar dívida se parcelas abertas ---
 

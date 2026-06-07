@@ -16,6 +16,8 @@ export const state = {
   unsubscribe: null,
   firebaseReady: false,
   saving: false,
+  lastLocalRevision: 0,
+  pendingCloudRevision: 0,
   installmentFilter: "open",
   installmentCreditorFilter: "all",
   carFilter: "open",
@@ -31,7 +33,8 @@ export const state = {
   incomeExceptionId: null,
   plannedEditingId: null,
   plannedEditingKind: null,
-  controlMonth: null
+  controlMonth: null,
+  renderDividasFn: null
 };
 
 export const el = {

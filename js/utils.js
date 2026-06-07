@@ -1,4 +1,5 @@
 import { state, el, currency, monthLabel, monthLabelLong } from "./state.js";
+import { escapeHtmlValue, parseBrazilianMoney, formatIsoDateBR } from "./domain/value-utils.js";
 
 export function nextMonths(count) {
   const now = new Date();
@@ -70,10 +71,7 @@ export function formatMonthLong(month) {
 }
 
 export function formatDate(value) {
-  if (!value) return "-";
-  const [year, month, day] = String(value).slice(0, 10).split("-").map(Number);
-  if (!year || !month || !day) return "-";
-  return `${String(day).padStart(2, "0")}/${String(month).padStart(2, "0")}/${year}`;
+  return formatIsoDateBR(value);
 }
 
 export function compactCurrency(value) {
@@ -81,10 +79,7 @@ export function compactCurrency(value) {
 }
 
 export function parseCurrencyInput(value) {
-  const text = String(value || "").replace(/[^\d,.-]/g, "").trim();
-  if (!text) return 0;
-  if (text.includes(",")) return Number(text.replaceAll(".", "").replace(",", ".")) || 0;
-  return Number(text) || 0;
+  return parseBrazilianMoney(value);
 }
 
 export function formatCurrencyInput(value) {
@@ -166,12 +161,7 @@ export function icon(name) {
 }
 
 export function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return escapeHtmlValue(value);
 }
 
 export function syncProjectionTopScroll() {

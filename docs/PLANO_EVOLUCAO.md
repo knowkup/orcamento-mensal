@@ -2,7 +2,7 @@
 
 Documento vivo para orientar a evolucao do sistema entre computadores, GitHub e OneDrive.
 
-Ultima atualizacao: 2026-06-05
+Ultima atualizacao: 2026-06-06
 
 ---
 
@@ -89,7 +89,7 @@ Nao e objetivo:
 - Nao existe build tool obrigatorio.
 - Nao existe framework frontend.
 - Nao existe TypeScript.
-- Nao existe suite formal de testes.
+- Existe suite automatizada com o test runner nativo do Node.
 - O projeto esta simples de publicar e operar.
 
 Isso e uma vantagem para um sistema pessoal. A stack atual nao deve ser substituida sem motivo forte.
@@ -116,9 +116,9 @@ Isso e uma vantagem para um sistema pessoal. A stack atual nao deve ser substitu
 - `styles.css` concentra estilos demais.
 - Alguns modulos JavaScript estao grandes demais.
 - Ha muito uso de `innerHTML` e rebinding de eventos.
-- Em Dividas ainda ha muitos handlers via `window.*` e `onclick`.
-- O render global redesenha muitas areas mesmo quando so uma parte mudou.
-- Regras financeiras criticas ainda nao tem testes formais.
+- A ponte global de navegacao ainda existe, mas os handlers inline de Dividas foram removidos.
+- Dividas ainda redesenha suas listas em conjunto; o Orcamento ja renderiza por tela ativa.
+- A cobertura automatizada cresceu, mas ferias, decimo terceiro e integracao Firebase real ainda precisam de mais testes.
 - O modelo de persistencia e diferente entre Orcamento principal e Dividas.
 
 ---
@@ -277,6 +277,13 @@ Acao:
 - Documentar schema de dados.
 - Melhorar migracoes de schema.
 
+Estado:
+
+- Backup principal versionado e validado.
+- Confirmacao obrigatoria antes de substituir dados por importacao.
+- Schema atual documentado em `docs/SCHEMA_DADOS.md`.
+- Revisoes de sincronizacao protegem gravacoes locais contra snapshots antigos.
+
 Risco: medio.
 
 Regra: backup antes de qualquer mudanca que toque persistencia.
@@ -323,8 +330,14 @@ Acao:
 
 Stack possivel:
 
-- Comecar sem framework, com scripts simples Node.
+- Comecar sem framework, com o test runner nativo do Node (`npm test`).
 - Evoluir para Vitest se o projeto ganhar build tool.
+
+Estado atual:
+
+- 53 testes cobrem impostos, utilitarios, projecao, backup, sincronizacao,
+  credores, ordenacao, filtros, transacoes e integracao Orcamento/Dividas.
+- Regras puras iniciais ficam em `js/domain/`.
 
 Risco: baixo.
 
@@ -549,14 +562,13 @@ Para mudancas de dados:
 
 ## Ordem Recomendada de Proximos Trabalhos
 
-1. Padronizar feedback de sincronizacao e toast.
+1. Homologar exclusao manual, backup e sincronizacao do pacote atual.
 2. Melhorar visual e usabilidade do Controle Mensal.
-3. Padronizar componentes visuais de Dividas com Orcamento.
-4. Criar visao "Hoje / Agora".
-5. Remover `onclick`/`window.*` de uma area pequena de Dividas como piloto.
-6. Extrair regras puras de planejamento para arquivos de dominio.
-7. Criar testes simples para calculos financeiros.
-8. Avaliar Vite/Vitest somente depois que houver necessidade real.
+3. Criar visao experimental "Hoje / Agora".
+4. Ampliar testes de ferias, decimo terceiro e fechamento mensal.
+5. Reduzir renderizacao conjunta das listas de Dividas.
+6. Definir seguranca do Firestore antes da promocao para producao.
+7. Avaliar Vite/Vitest somente depois que houver necessidade real.
 
 ---
 

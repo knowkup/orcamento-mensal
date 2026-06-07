@@ -34,21 +34,6 @@ function preferenceSummaryCard(label, value, helper) {
 
 export function renderOrigins() {
   renderOriginsV2();
-  return;
-  el.creditorList.innerHTML = sortedCreditors().map((creditor) => `
-    <div class="creditor-card">
-      ${creditorLogoHtml(creditor.id)}
-      <div>
-        <strong>${escapeHtml(creditor.name)}</strong>
-        <span>${escapeHtml(creditor.type)}</span>
-      </div>
-      <button class="small-button danger-mini" type="button" data-delete-creditor="${creditor.id}">Excluir</button>
-    </div>
-  `).join("");
-
-  el.creditorList.querySelectorAll("[data-delete-creditor]").forEach((button) => {
-    button.addEventListener("click", () => deleteCreditor(button.dataset.deleteCreditor));
-  });
 }
 
 export function renderOriginsV2() {
@@ -618,13 +603,7 @@ export async function saveIncomeException(event) {
 }
 
 export function isCreditorInUse(id) {
-  return state.data.creditCards.some((card) => card.creditorId === id)
-    || state.data.installments.some((item) => item.creditorId === id)
-    || state.data.fixedCosts.some((item) => item.creditorId === id)
-    || state.data.plannedPurchases.some((item) => item.creditorId === id)
-    || state.data.fgts.contracts.some((item) => item.creditorId === id)
-    || state.data.car.creditorId === id
-    || state.data.projectionLines.some((item) => item.creditorId === id || item.match === id);
+  return creditorUsageCount(id) > 0;
 }
 
 export function handleCreditorLogoUpload(event) {

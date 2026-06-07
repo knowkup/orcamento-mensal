@@ -1,8 +1,10 @@
 import { state } from './state.js';
-import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml, showToast } from './utils.js';
+import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml } from './utils.js';
 import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceLabel, paidOffDifferenceClass, paidOffClosedDateKey, isOpenInstallment, openInstallmentsForDebt, debtProgress, nextInstallment, installmentProgress, payoffTodayHtml, routeInstallmentStatusLabel } from './calc.js';
 import { renderDashboard } from './dashboard.js';
-import { debtDoc, writeBatch, serverTimestamp } from './firebase.js';
+import { moveItemByDirection, moveItemToTargetPosition } from '../domain/reorder.js';
+import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
+import { creditorFilterEntries, filterDebtsByCreditor } from '../domain/debt-filters.js';
 
 // --- Helpers de métrica ---
 
@@ -97,7 +99,7 @@ export function orderedHiddenDebts() {
 
 // --- Renderers de parcelas e expansão ---
 
-function installmentRowsForDebt(debt) {
+export function installmentRowsForDebt(debt) {
   const allItems = state.installmentsByDebt.get(debt.id) || [];
   if (!allItems.length) return '<div class="debt-meta" style="margin-top:14px;">Nenhuma parcela gerada para esta dívida.</div>';
 
@@ -112,8 +114,8 @@ function installmentRowsForDebt(debt) {
   const countText = currentTab === 'paid' ? '5 últimas' : '5 próximas';
 
   let html = '<div class="installment-tabs">' +
-    '<button class="installment-tab ' + (currentTab === 'pending' ? 'is-active' : '') + '" onclick="window.setDebtInstallmentTab(\'pending\')">Pendentes <span>' + (currentTab === 'pending' ? escapeHtml(countText) : pending.length) + '</span></button>' +
-    '<button class="installment-tab ' + (currentTab === 'paid' ? 'is-active' : '') + '" onclick="window.setDebtInstallmentTab(\'paid\')">Pagas <span>' + (currentTab === 'paid' ? escapeHtml(countText) : paid.length) + '</span></button>' +
+    '<button class="installment-tab ' + (currentTab === 'pending' ? 'is-active' : '') + '" type="button" data-installment-tab="pending">Pendentes <span>' + (currentTab === 'pending' ? escapeHtml(countText) : pending.length) + '</span></button>' +
+    '<button class="installment-tab ' + (currentTab === 'paid' ? 'is-active' : '') + '" type="button" data-installment-tab="paid">Pagas <span>' + (currentTab === 'paid' ? escapeHtml(countText) : paid.length) + '</span></button>' +
   '</div>';
 
   html += '<div class="installment-list compact-installments">' +
@@ -126,8 +128,8 @@ function installmentRowsForDebt(debt) {
       const statusClass = item.status === 'Paga' || item.status === 'Quitada' ? 'green' : item.status === 'Renegociada' ? 'blue' : 'amber';
       const payment = paymentForInstallment(item.id);
       const actionHtml = currentTab === 'paid'
-        ? (payment ? '<button class="ghost-btn mini-action" onclick="window.openDeleteModal(\'payment\', \'' + payment.id + '\')">Excluir pagamento</button>' : '')
-        : '<button class="ghost-btn mini-action" onclick="window.openPaymentForm(\'' + item.id + '\')">Registrar pagamento</button>';
+        ? (payment ? '<button class="ghost-btn mini-action" type="button" data-delete-type="payment" data-delete-id="' + escapeHtml(payment.id) + '">Excluir pagamento</button>' : '')
+        : '<button class="ghost-btn mini-action" type="button" data-payment-installment-id="' + escapeHtml(item.id) + '">Registrar pagamento</button>';
       html += '<div class="installment-row">' +
         '<div data-label="Parcela"><strong>' + item.number + '/' + item.total + '</strong></div>' +
         '<div data-label="Vencimento">' + formatDateBR(item.dueDate) + '</div>' +
@@ -139,14 +141,14 @@ function installmentRowsForDebt(debt) {
   }
 
   if (source.length && isPreview) {
-    html += '<button class="installment-more" onclick="window.showAllDebtInstallments()">' + escapeHtml(buttonText) + '<span>›</span></button>';
+    html += '<button class="installment-more" type="button" data-show-all-installments>' + escapeHtml(buttonText) + '<span>›</span></button>';
   }
 
   html += '</div>';
   return html;
 }
 
-function debtActionMenu(debt) {
+export function debtActionMenu(debt) {
   const actionsByStatus = {
     Ativa: [
       ['Mover para Em Espera', 'changeDebtStatus', 'Em espera'],
@@ -181,17 +183,13 @@ function debtActionMenu(debt) {
   const buttons = actions.map(action => {
     const [label, type, valueOrTone, maybeTone] = action;
     const tone = valueOrTone === 'danger' || maybeTone === 'danger' ? ' danger-btn' : '';
-    let onclick = '';
-    if (type === 'changeDebtStatus') onclick = 'window.changeDebtStatus(\'' + debt.id + '\', \'' + valueOrTone + '\')';
-    if (type === 'openPayoffModal') onclick = 'window.openPayoffModal(\'' + debt.id + '\')';
-    if (type === 'openDebtForm') onclick = 'window.openDebtForm(\'edit\', \'' + debt.id + '\')';
-    if (type === 'openDeleteModal') onclick = 'window.openDeleteModal(\'debt\', \'' + debt.id + '\')';
-    return '<button class="ghost-btn' + tone + '" onclick="' + onclick + '">' + escapeHtml(label) + '</button>';
+    const status = type === 'changeDebtStatus' ? ' data-debt-status="' + escapeHtml(valueOrTone) + '"' : '';
+    return '<button class="ghost-btn' + tone + '" type="button" data-debt-action="' + type + '" data-debt-id="' + escapeHtml(debt.id) + '"' + status + '>' + escapeHtml(label) + '</button>';
   }).join('');
   return '<details class="more-actions debt-menu"><summary class="ghost-btn">Ações <span>⋮</span></summary><div class="more-menu">' + buttons + '</div></details>';
 }
 
-function debtExpandedDetail(debt) {
+export function debtExpandedDetail(debt) {
   const next = nextInstallment(debt);
   const installmentCount = installmentProgress(debt);
   const nextLabel = next ? formatDateBR(next.dueDate) : 'Sem Parcela';
@@ -216,20 +214,20 @@ export function debtRouteGridRow(debt, index, mode) {
   const nextLabel = next ? formatDateBR(next.dueDate) : 'Sem parcela';
   const progressValue = debt.status === 'Quitada' ? 100 : debtProgress(debt);
   const config = {
-    waiting: { className: 'waiting-route-item', start: 'startWaitingDebtDrag', over: 'waitingDebtDragOver', drop: 'dropWaitingDebt', end: 'endWaitingDebtDrag', move: 'moveWaitingDebt' },
-    hidden: { className: 'hidden-route-item', start: 'startHiddenDebtDrag', over: 'hiddenDebtDragOver', drop: 'dropHiddenDebt', end: 'endHiddenDebtDrag', move: 'moveHiddenDebt' }
+    waiting: { className: 'waiting-route-item' },
+    hidden: { className: 'hidden-route-item' }
   }[mode] || {};
-  return '<div class="route-item ' + config.className + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + debt.id + '" draggable="true" ondragstart="window.' + config.start + '(event, \'' + debt.id + '\')" ondragover="window.' + config.over + '(event)" ondrop="window.' + config.drop + '(event, \'' + debt.id + '\')" ondragend="window.' + config.end + '()">' +
+  return '<div class="route-item ' + config.className + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + escapeHtml(debt.id) + '" data-debt-route="' + mode + '" draggable="true">' +
     '<button class="drag-handle" title="Arrastar para reordenar">⋮⋮</button>' +
     '<div class="route-rank">' + (index + 1) + '</div>' +
-    '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name clickable" onclick="window.toggleDebt(\'' + debt.id + '\')">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</div><div class="debt-meta">' + compactTagsForDebt(debt) + '</div></div></div>' +
+    '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><button class="debt-name clickable debt-name-button" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</button><div class="debt-meta">' + compactTagsForDebt(debt) + '</div></div></div>' +
     routeProgressHtml(progressValue) +
     '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
     '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
     '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
     '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
     '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
-    '<div class="route-actions"><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', -1)">↑</button><button class="ghost-btn subtle" onclick="window.' + config.move + '(\'' + debt.id + '\', 1)">↓</button><button class="ghost-btn row-toggle" onclick="window.toggleDebt(\'' + debt.id + '\')">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
+    '<div class="route-actions"><button class="ghost-btn subtle" type="button" data-secondary-route-move="' + escapeHtml(debt.id) + '" data-route-scope="' + mode + '" data-direction="-1">↑</button><button class="ghost-btn subtle" type="button" data-secondary-route-move="' + escapeHtml(debt.id) + '" data-route-scope="' + mode + '" data-direction="1">↓</button><button class="ghost-btn row-toggle" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + (isExpanded ? '⌃' : '⌄') + '</button></div>' +
     (isExpanded ? debtExpandedDetail(debt) : '') +
   '</div>';
 }
@@ -246,7 +244,7 @@ export function paidOffDebtRow(debt, index) {
     '<div class="route-stat"><span>Valor Pago</span><strong>' + brl(paidValue) + '</strong></div>' +
     '<div class="route-stat paid-difference ' + paidOffDifferenceClass(difference) + '"><span>Diferença</span><strong>' + escapeHtml(paidOffDifferenceLabel(difference)) + '</strong></div>' +
     '<div class="route-stat"><span>Encerrada em</span><strong>' + escapeHtml(closedDate ? formatDateBR(closedDate) : '-') + '</strong></div>' +
-    '<div class="route-actions paid-off-actions"><button class="ghost-btn danger-btn" onclick="window.openDeleteModal(\'debt\', \'' + debt.id + '\')">Excluir</button></div>' +
+    '<div class="route-actions paid-off-actions"><button class="ghost-btn danger-btn" type="button" data-delete-type="debt" data-delete-id="' + escapeHtml(debt.id) + '">Excluir</button></div>' +
   '</div>';
 }
 
@@ -288,15 +286,12 @@ function applyCreditorFilter(scope, id) {
   renderDebts();
 }
 
-function renderWaitingCreditorFilters(waitingDebts) {
-  const container = $('waitingCreditorFilters');
+function renderCreditorFilters({ containerId, scope, debts, selectedId }) {
+  const container = $(containerId);
   if (!container) return;
-  const creditorIds = [...new Set(waitingDebts.map(d => d.creditorId).filter(Boolean))]
-    .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = creditorFilterButton('waiting', 'all', 'Todos', waitingDebts.length, state.selectedWaitingCreditorFilter === 'all');
-  creditorIds.forEach(id => {
-    const count = waitingDebts.filter(d => d.creditorId === id).length;
-    html += creditorFilterButton('waiting', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedWaitingCreditorFilter === id);
+  let html = creditorFilterButton(scope, 'all', 'Todos', debts.length, selectedId === 'all');
+  creditorFilterEntries(debts, getCreditorName).forEach(({ id, name, count }) => {
+    html += creditorFilterButton(scope, id, creditorLogoHtml(id) + escapeHtml(name), count, selectedId === id);
   });
   container.innerHTML = html;
   bindCreditorFilterButtons(container);
@@ -316,34 +311,6 @@ function renderHiddenDebtMetrics(hiddenDebts) {
     debtMetric('Parcelas Reconhecidas', String(hiddenInstallments.length), '◷', 'red');
 }
 
-function renderHiddenCreditorFilters(hiddenDebts) {
-  const container = $('hiddenCreditorFilters');
-  if (!container) return;
-  const creditorIds = [...new Set(hiddenDebts.map(d => d.creditorId).filter(Boolean))]
-    .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = creditorFilterButton('hidden', 'all', 'Todos', hiddenDebts.length, state.selectedHiddenCreditorFilter === 'all');
-  creditorIds.forEach(id => {
-    const count = hiddenDebts.filter(d => d.creditorId === id).length;
-    html += creditorFilterButton('hidden', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedHiddenCreditorFilter === id);
-  });
-  container.innerHTML = html;
-  bindCreditorFilterButtons(container);
-}
-
-function renderPaidOffCreditorFilters(paidOffDebts) {
-  const container = $('paidOffCreditorFilters');
-  if (!container) return;
-  const creditorIds = [...new Set(paidOffDebts.map(d => d.creditorId).filter(Boolean))]
-    .sort((a, b) => String(getCreditorName(a)).localeCompare(String(getCreditorName(b)), 'pt-BR', { sensitivity: 'base' }));
-  let html = creditorFilterButton('paidOff', 'all', 'Todos', paidOffDebts.length, state.selectedPaidOffCreditorFilter === 'all');
-  creditorIds.forEach(id => {
-    const count = paidOffDebts.filter(d => d.creditorId === id).length;
-    html += creditorFilterButton('paidOff', id, creditorLogoHtml(id) + escapeHtml(getCreditorName(id)), count, state.selectedPaidOffCreditorFilter === id);
-  });
-  container.innerHTML = html;
-  bindCreditorFilterButtons(container);
-}
-
 function renderPaidOffDebtMetrics(filteredPaidOffDebts) {
   const container = $('paidOffDebtMetrics');
   if (!container) return;
@@ -361,19 +328,19 @@ function renderPaidOffDebtMetrics(filteredPaidOffDebts) {
 
 export function renderDebts() {
   const waitingAll = state.debts.filter(d => d.status === 'Em espera');
-  const waitingFiltered = state.selectedWaitingCreditorFilter === 'all' ? waitingAll : waitingAll.filter(d => d.creditorId === state.selectedWaitingCreditorFilter);
+  const waitingFiltered = filterDebtsByCreditor(waitingAll, state.selectedWaitingCreditorFilter);
   const waiting = sortDebts(waitingFiltered, state.selectedWaitingDebtSort);
   const hiddenAll = state.debts.filter(d => d.status === 'Fora do radar');
-  const hiddenFiltered = state.selectedHiddenCreditorFilter === 'all' ? hiddenAll : hiddenAll.filter(d => d.creditorId === state.selectedHiddenCreditorFilter);
+  const hiddenFiltered = filterDebtsByCreditor(hiddenAll, state.selectedHiddenCreditorFilter);
   const hidden = sortDebts(hiddenFiltered, state.selectedHiddenDebtSort);
   const paidOffAll = state.debts.filter(d => d.status === 'Quitada');
-  const paidOffFiltered = state.selectedPaidOffCreditorFilter === 'all' ? paidOffAll : paidOffAll.filter(d => d.creditorId === state.selectedPaidOffCreditorFilter);
+  const paidOffFiltered = filterDebtsByCreditor(paidOffAll, state.selectedPaidOffCreditorFilter);
   const paidOff = sortPaidOffDebts(paidOffFiltered);
-  renderWaitingCreditorFilters(waitingAll);
+  renderCreditorFilters({ containerId: 'waitingCreditorFilters', scope: 'waiting', debts: waitingAll, selectedId: state.selectedWaitingCreditorFilter });
   renderWaitingDebtMetrics(waitingAll);
-  renderHiddenCreditorFilters(hiddenAll);
+  renderCreditorFilters({ containerId: 'hiddenCreditorFilters', scope: 'hidden', debts: hiddenAll, selectedId: state.selectedHiddenCreditorFilter });
   renderHiddenDebtMetrics(hiddenAll);
-  renderPaidOffCreditorFilters(paidOffAll);
+  renderCreditorFilters({ containerId: 'paidOffCreditorFilters', scope: 'paidOff', debts: paidOffAll, selectedId: state.selectedPaidOffCreditorFilter });
   renderPaidOffDebtMetrics(paidOff);
   $('waitingDebts').innerHTML = waiting.length ? '<div class="route-panel"><div class="route-list">' + waiting.map((debt, index) => debtRouteGridRow(debt, index, 'waiting')).join('') + '</div></div>' : emptyCard('Nenhuma dívida em espera', state.selectedWaitingCreditorFilter === 'all' ? 'As dívidas fora da frente atual aparecerão aqui.' : 'Não há dívidas em espera para este credor.');
   $('hiddenDebts').innerHTML = hidden.length ? '<div class="route-panel"><div class="route-list">' + hidden.map((debt, index) => debtRouteGridRow(debt, index, 'hidden')).join('') + '</div></div>' : emptyCard('Nada fora do radar', state.selectedHiddenCreditorFilter === 'all' ? 'As dívidas que você não quer acompanhar aparecerão aqui.' : 'Não há dívidas fora do radar para este credor.');
@@ -383,31 +350,31 @@ export function renderDebts() {
 
 // --- Ações de filtro e ordenação ---
 
-window.filterWaitingByCreditor = function(id) {
+export function filterWaitingByCreditor(id) {
   applyCreditorFilter('waiting', id);
-};
+}
 
-window.filterHiddenByCreditor = function(id) {
+export function filterHiddenByCreditor(id) {
   applyCreditorFilter('hidden', id);
-};
+}
 
-window.filterPaidOffByCreditor = function(id) {
+export function filterPaidOffByCreditor(id) {
   applyCreditorFilter('paidOff', id);
-};
+}
 
-window.setWaitingDebtSort = function(mode) {
+export function setWaitingDebtSort(mode) {
   state.selectedWaitingDebtSort = mode;
   state.expandedDebtId = null;
   renderDebts();
-};
+}
 
-window.setHiddenDebtSort = function(mode) {
+export function setHiddenDebtSort(mode) {
   state.selectedHiddenDebtSort = mode;
   state.expandedDebtId = null;
   renderDebts();
-};
+}
 
-window.toggleDebt = function(id) {
+export function toggleDebt(id) {
   const nextExpanded = state.expandedDebtId === id ? null : id;
   if (state.expandedDebtId !== id) {
     state.expandedDebtTab = 'pending';
@@ -415,142 +382,104 @@ window.toggleDebt = function(id) {
   }
   state.expandedDebtId = nextExpanded;
   if (state.renderFn) state.renderFn();
-};
+}
 
-window.setDebtInstallmentTab = function(tab) {
+export function setDebtInstallmentTab(tab) {
   state.expandedDebtTab = tab === 'paid' ? 'paid' : 'pending';
   state.expandedDebtListMode = 'preview';
   if (state.renderFn) state.renderFn();
-};
+}
 
-window.showAllDebtInstallments = function() {
+export function showAllDebtInstallments() {
   state.expandedDebtListMode = 'all';
   if (state.renderFn) state.renderFn();
-};
+}
 
 // --- Drag & drop Em espera ---
 
-async function persistWaitingOrder(route) {
-  const batch = writeBatch();
-  route.forEach((debt, index) => {
-    const payoffOrder = index + 1;
-    batch.update(debtDoc(debt.id), { payoffOrder, updatedAt: serverTimestamp() });
-    const local = state.debts.find(item => item.id === debt.id);
-    if (local) local.payoffOrder = payoffOrder;
+export async function moveWaitingDebt(id, direction) {
+  const route = orderedWaitingDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
+  const reordered = moveItemByDirection(route, id, direction);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, {
+    sortStateKey: 'selectedWaitingDebtSort',
+    sortSelectId: 'waitingDebtSort',
+    message: 'Ordem de espera atualizada.'
   });
-  await batch.commit();
-  state.selectedWaitingDebtSort = 'trail';
-  if ($('waitingDebtSort')) $('waitingDebtSort').value = 'trail';
-  if (state.renderFn) state.renderFn();
-  showToast('Ordem de espera atualizada.');
 }
 
-window.moveWaitingDebt = async function(id, direction) {
-  const route = orderedWaitingDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
-  const currentIndex = route.findIndex(debt => debt.id === id);
-  const nextIndex = currentIndex + direction;
-  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= route.length) return;
-  const current = route[currentIndex];
-  route[currentIndex] = route[nextIndex];
-  route[nextIndex] = current;
-  await persistWaitingOrder(route);
-};
+export function startWaitingDebtDrag(event, id) {
+  beginDebtDrag(event, id, {
+    stateKey: 'draggedWaitingDebtId',
+    itemSelector: '.waiting-route-item'
+  });
+}
 
-window.startWaitingDebtDrag = function(event, id) {
-  state.draggedWaitingDebtId = id;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', id);
-  }
-  const item = event.currentTarget;
-  if (item) item.classList.add('dragging');
-};
+export function waitingDebtDragOver(event) {
+  allowDebtDrop(event);
+}
 
-window.waitingDebtDragOver = function(event) {
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-};
-
-window.dropWaitingDebt = async function(event, targetId) {
-  event.preventDefault();
-  const sourceId = state.draggedWaitingDebtId || event.dataTransfer?.getData('text/plain');
-  state.draggedWaitingDebtId = null;
-  document.querySelectorAll('.waiting-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-  if (!sourceId || sourceId === targetId) return;
+export async function dropWaitingDebt(event, targetId) {
+  const options = {
+    stateKey: 'draggedWaitingDebtId',
+    draggingSelector: '.waiting-route-item.dragging'
+  };
+  const sourceId = takeDebtDropSource(event, options);
   const route = orderedWaitingDebts();
-  const from = route.findIndex(debt => debt.id === sourceId);
-  const to = route.findIndex(debt => debt.id === targetId);
-  if (from < 0 || to < 0) return;
-  const [moved] = route.splice(from, 1);
-  route.splice(to, 0, moved);
-  await persistWaitingOrder(route);
-};
+  const reordered = moveItemToTargetPosition(route, sourceId, targetId);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, {
+    sortStateKey: 'selectedWaitingDebtSort',
+    sortSelectId: 'waitingDebtSort',
+    message: 'Ordem de espera atualizada.'
+  });
+}
 
-window.endWaitingDebtDrag = function() {
-  state.draggedWaitingDebtId = null;
-  document.querySelectorAll('.waiting-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-};
+export function endWaitingDebtDrag() {
+  endDebtDrag({
+    stateKey: 'draggedWaitingDebtId',
+    draggingSelector: '.waiting-route-item.dragging'
+  });
+}
 
 // --- Drag & drop Fora do radar ---
 
-async function persistHiddenOrder(route) {
-  const batch = writeBatch();
-  route.forEach((debt, index) => {
-    const payoffOrder = index + 1;
-    batch.update(debtDoc(debt.id), { payoffOrder, updatedAt: serverTimestamp() });
-    const local = state.debts.find(item => item.id === debt.id);
-    if (local) local.payoffOrder = payoffOrder;
-  });
-  await batch.commit();
-  if (state.renderFn) state.renderFn();
-  showToast('Ordem fora do radar atualizada.');
+export async function moveHiddenDebt(id, direction) {
+  const route = orderedHiddenDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
+  const reordered = moveItemByDirection(route, id, direction);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, { message: 'Ordem fora do radar atualizada.' });
 }
 
-window.moveHiddenDebt = async function(id, direction) {
-  const route = orderedHiddenDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
-  const currentIndex = route.findIndex(debt => debt.id === id);
-  const nextIndex = currentIndex + direction;
-  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= route.length) return;
-  const current = route[currentIndex];
-  route[currentIndex] = route[nextIndex];
-  route[nextIndex] = current;
-  await persistHiddenOrder(route);
-};
+export function startHiddenDebtDrag(event, id) {
+  beginDebtDrag(event, id, {
+    stateKey: 'draggedHiddenDebtId',
+    itemSelector: '.hidden-route-item'
+  });
+}
 
-window.startHiddenDebtDrag = function(event, id) {
-  state.draggedHiddenDebtId = id;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', id);
-  }
-  const item = event.currentTarget;
-  if (item) item.classList.add('dragging');
-};
+export function hiddenDebtDragOver(event) {
+  allowDebtDrop(event);
+}
 
-window.hiddenDebtDragOver = function(event) {
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
-};
-
-window.dropHiddenDebt = async function(event, targetId) {
-  event.preventDefault();
-  const sourceId = state.draggedHiddenDebtId || event.dataTransfer?.getData('text/plain');
-  state.draggedHiddenDebtId = null;
-  document.querySelectorAll('.hidden-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-  if (!sourceId || sourceId === targetId) return;
+export async function dropHiddenDebt(event, targetId) {
+  const options = {
+    stateKey: 'draggedHiddenDebtId',
+    draggingSelector: '.hidden-route-item.dragging'
+  };
+  const sourceId = takeDebtDropSource(event, options);
   const route = orderedHiddenDebts();
-  const from = route.findIndex(debt => debt.id === sourceId);
-  const to = route.findIndex(debt => debt.id === targetId);
-  if (from < 0 || to < 0) return;
-  const [moved] = route.splice(from, 1);
-  route.splice(to, 0, moved);
-  await persistHiddenOrder(route);
-};
+  const reordered = moveItemToTargetPosition(route, sourceId, targetId);
+  if (!reordered) return;
+  await persistDebtOrder(reordered, { message: 'Ordem fora do radar atualizada.' });
+}
 
-window.endHiddenDebtDrag = function() {
-  state.draggedHiddenDebtId = null;
-  document.querySelectorAll('.hidden-route-item.dragging').forEach(item => item.classList.remove('dragging'));
-};
+export function endHiddenDebtDrag() {
+  endDebtDrag({
+    stateKey: 'draggedHiddenDebtId',
+    draggingSelector: '.hidden-route-item.dragging'
+  });
+}
 
 function formatAnyDateBR(value) {
   if (!value) return '-';

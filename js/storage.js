@@ -1,6 +1,7 @@
 import { state, STORAGE_KEY } from "./state.js";
 import { normalizeData, createDefaultData } from "./data.js";
 import { dateTimeKey, showToast } from "./utils.js";
+import { createBackupEnvelope, readBackupPayload, summarizeBackup } from "./domain/backup.js";
 
 export function loadLocalState() {
   try {
@@ -16,7 +17,8 @@ export function persistLocalState(write = true) {
 }
 
 export function exportState() {
-  const blob = new Blob([JSON.stringify(state.data, null, 2)], { type: "application/json" });
+  const backup = createBackupEnvelope(state.data);
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   const filename = `orcamento-mensal-${dateTimeKey()}.json`;
@@ -35,7 +37,16 @@ export function importState(event) {
   const reader = new FileReader();
   reader.onload = async () => {
     try {
-      state.data = normalizeData(JSON.parse(String(reader.result)));
+      const payload = readBackupPayload(JSON.parse(String(reader.result)));
+      const summary = summarizeBackup(payload);
+      const confirmed = window.confirm(
+        `Importar ${filename} e substituir os dados atuais?\n\n`
+        + `${summary.creditors} credores, ${summary.incomes} entradas, `
+        + `${summary.installments} parcelamentos, ${summary.fixedCosts} custos fixos e `
+        + `${summary.plannedPurchases} lancamentos planejados.`
+      );
+      if (!confirmed) return;
+      state.data = normalizeData(payload);
       if (state.saveStateFn) {
         await state.saveStateFn(`Backup importado: ${filename}`);
       } else {
@@ -44,8 +55,9 @@ export function importState(event) {
         if (state.renderFn) state.renderFn();
         showToast(`Backup importado: ${filename}`, "success");
       }
-    } catch {
-      showToast(`Arquivo invalido: ${filename}`, "error");
+    } catch (error) {
+      console.error(error);
+      showToast(error?.message || `Arquivo invalido: ${filename}`, "error");
     } finally {
       input.value = "";
     }
