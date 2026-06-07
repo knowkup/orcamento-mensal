@@ -129,7 +129,7 @@ export async function saveState(message) {
   }
   if (state.hydrateFn) state.hydrateFn();
   if (state.renderFn) state.renderFn();
-  if (state.renderDividasFn) state.renderDividasFn();
+  if (state.renderDividasFn && isDividasViewActive()) state.renderDividasFn();
   if (message && !cloudFailed) showToast(message, "success");
 }
 
