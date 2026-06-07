@@ -2989,12 +2989,17 @@ select {
 
   .mst-header,
   .mst-row-main {
-    grid-template-columns: 1.4fr 1fr 1fr 1fr 32px;
+    grid-template-columns: 1.1fr 1fr 1fr 1fr 24px;
   }
 
+  /* Oculta coluna "Resultado" (4ª posição) — mantém Mês/Entradas/Saídas/Saldo */
   .mst-header span:nth-child(4),
   .mst-row-main span:nth-child(4) {
     display: none;
+  }
+
+  .mst-row-main {
+    font-size: 11px;
   }
 
   .control-hero-row { grid-template-columns: 1fr; }
