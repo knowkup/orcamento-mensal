@@ -2953,11 +2953,23 @@ select {
   }
 
   .nav-tab {
+    flex-direction: column;
     justify-content: center;
-    padding: 0;
+    align-items: center;
+    padding: 6px 2px;
+    gap: 2px;
   }
 
-  .nav-tab span,
+  .nav-tab span {
+    display: block;
+    font-size: 9px;
+    line-height: 1;
+    max-width: 60px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .sync-panel {
     display: none;
   }
