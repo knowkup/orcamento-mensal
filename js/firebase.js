@@ -7,6 +7,11 @@ import { nextRevision, shouldApplyCloudSnapshot } from "./domain/sync.js";
 
 const enqueueCloudSave = createAsyncQueue();
 
+function isDividasViewActive() {
+  return typeof document !== 'undefined' &&
+    document.querySelector('.view.active')?.id?.startsWith('div') === true;
+}
+
 export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
   if (!isFirebaseConfigured) {
     updateSync("Modo local", "Firebase nao configurado.", "offline");
@@ -79,7 +84,7 @@ export function listenCloudState() {
         }
         if (state.hydrateFn) state.hydrateFn();
         if (state.renderFn) state.renderFn();
-        if (state.renderDividasFn) state.renderDividasFn();
+        if (state.renderDividasFn && isDividasViewActive()) state.renderDividasFn();
       } finally {
         finishInitialLoad();
       }
