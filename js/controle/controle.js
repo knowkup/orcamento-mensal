@@ -1,10 +1,12 @@
 import { state, el, currency } from "../state.js";
 import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, isIncomeReceived, receivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "../utils.js";
-import { creditorLogoHtml, sourceLogoHtml, ownerRank, getInstallmentCard, getCreditorName } from "../creditors.js";
+import { creditorLogoHtml, sourceLogoHtml, getInstallmentCard, getCreditorName } from "../creditors.js";
 import { metric, isManualPlannedRow, emptyState } from "../components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
 import { markDebtInstallmentPaid } from "../dividas/budget-integration.js";
-import { removeManualPlanned } from "../domain/planned-transactions.js";
+import { firstDueDate, rowDueDate, compareRowsByDueDate, rowOutstanding, rowIncomeOutstanding } from "../domain/row-utils.js";
+import { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned } from "./planned-dialog.js";
+export { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned };
 
 function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
@@ -299,23 +301,6 @@ export function compareMonthlyEntries(a, b, month, kind) {
     || String(a.row.label || "").localeCompare(String(b.row.label || ""), "pt-BR");
 }
 
-export function compareRowsByDueDate(a, b, month) {
-  return rowDueDate(a, month).localeCompare(rowDueDate(b, month))
-    || ownerRank(a.owner) - ownerRank(b.owner)
-    || String(a.origin || "").localeCompare(String(b.origin || ""), "pt-BR");
-}
-
-export function rowDueDate(row, month) {
-  return row.dueDates?.[month] || firstDueDate(row.children?.[month]) || `${month}-01`;
-}
-
-export function firstDueDate(children = []) {
-  return children
-    .map((item) => item.dueDate)
-    .filter(Boolean)
-    .sort()[0] || "";
-}
-
 export function rowHasAnyPayment(row, month) {
   return isOccurrencePaid(`${row.id}:${month}`) || (row.children?.[month] || []).some((item) => isOccurrencePaid(item.key));
 }
@@ -325,30 +310,12 @@ export function rowReceivedAmount(row, month, fallback) {
   return isIncomeReceived(key) ? receivedAmount(key, fallback) : 0;
 }
 
-export function rowIncomeOutstanding(row, month, value) {
-  const key = `${row.id}:${month}`;
-  if (isIncomeReceived(key)) return 0;
-  return Math.max(0, Number(value || 0));
-}
-
 export function rowPaidAmount(row, month, fallback) {
   const key = `${row.id}:${month}`;
   if (isOccurrencePaid(key)) return paidAmount(key, fallback);
   return (row.children?.[month] || []).reduce((total, item) => (
     total + (isOccurrencePaid(item.key) ? paidAmount(item.key, item.value) : 0)
   ), 0);
-}
-
-export function rowOutstanding(row, month, value) {
-  const key = `${row.id}:${month}`;
-  if (isOccurrencePaid(key)) return 0;
-  const children = row.children?.[month] || [];
-  if (children.length) {
-    return children.reduce((total, item) => (
-      total + (isOccurrencePaid(item.key) ? 0 : Number(item.value || 0))
-    ), 0);
-  }
-  return Math.max(0, Number(value || 0));
 }
 
 export function adjustAccountBalance(delta) {
@@ -402,123 +369,6 @@ export function monthReferenceCard(month, isClosed) {
       <small class="${isClosed ? "negative" : "positive"}">${isClosed ? "Fechado" : "Em andamento"}</small>
     </article>
   `;
-}
-
-function populateFonteSelect(selectedValue = "") {
-  const sel = el.plannedForm.elements.fonte;
-  if (!sel || sel.tagName !== "SELECT") return;
-  sel.innerHTML = "";
-  const outros = (state.data.creditors || []).find((c) => c.name?.toLowerCase() === "outros");
-  const outrosLabel = outros?.name || "Outros";
-  const opt = document.createElement("option");
-  opt.value = outrosLabel;
-  opt.textContent = outrosLabel;
-  sel.appendChild(opt);
-  (state.data.recurringIncomes || []).forEach((inc) => {
-    const o = document.createElement("option");
-    o.value = inc.label;
-    o.textContent = inc.label;
-    sel.appendChild(o);
-  });
-  if (selectedValue) sel.value = selectedValue;
-}
-
-export function openPlannedDialog(id = null, kind = null) {
-  if (state.hydrateFn) state.hydrateFn();
-  state.plannedEditingId = id;
-  state.plannedEditingKind = kind;
-  el.plannedForm.reset();
-  const income = kind === "income" && id ? state.data.incomeLines.find((item) => item.id === id) : null;
-  const expense = kind === "expense" && id ? state.data.plannedPurchases.find((item) => item.id === id) : null;
-  const item = income || expense;
-  const submitLabel = el.plannedForm.querySelector("button[type='submit'] span");
-  if (submitLabel) submitLabel.textContent = item ? "Salvar lançamento" : "Adicionar ao planejamento";
-  el.plannedForm.elements.kind.value = income ? "income" : kind === "income" ? "income" : "expense";
-  el.plannedForm.elements.description.value = income?.label || expense?.description || "";
-  el.plannedForm.elements.creditorId.value = expense?.creditorId || el.plannedForm.elements.creditorId.value;
-  populateFonteSelect(income?.origin || "");
-  el.plannedForm.elements.date.value = item?.date || todayIsoDate();
-  el.plannedForm.elements.installments.value = expense?.installments || 1;
-  el.plannedForm.elements.owner.value = item?.owner || "Felipe";
-  const amount = income ? Object.values(income.values || {})[0] : expense?.amount;
-  el.plannedForm.elements.amount.value = amount ? formatCurrencyInput(amount) : "";
-  updatePlannedFields();
-  el.plannedDialog.showModal();
-}
-
-export function closePlannedDialog() {
-  state.plannedEditingId = null;
-  state.plannedEditingKind = null;
-  el.plannedForm.elements.kind.disabled = false;
-  el.plannedForm.reset();
-  el.plannedDialog.close();
-}
-
-export function updatePlannedFields() {
-  const isIncome = el.plannedForm.elements.kind.value === "income";
-  el.plannedCredorField.hidden = isIncome;
-  el.plannedFonteField.hidden = !isIncome;
-  el.plannedForm.elements.creditorId.required = !isIncome;
-  const editing = Boolean(state.plannedEditingId);
-  const expBtn = document.querySelector("#plannedKindExpense");
-  const incBtn = document.querySelector("#plannedKindIncome");
-  expBtn?.classList.toggle("active", !isIncome);
-  incBtn?.classList.toggle("active", isIncome);
-  if (expBtn) expBtn.disabled = editing;
-  if (incBtn) incBtn.disabled = editing;
-  const titleEl = document.querySelector("#plannedDialogTitle");
-  if (titleEl) titleEl.textContent = isIncome ? "Nova entrada" : "Nova saída";
-}
-
-export async function addPlannedPurchase(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  const kind = state.plannedEditingKind || String(form.get("kind") || "expense");
-  const date = String(form.get("date"));
-  const month = date.slice(0, 7);
-  const amount = parseCurrencyInput(form.get("amount"));
-  const installments = Math.max(1, Number(form.get("installments") || 1));
-  if (kind === "income") {
-    const fonte = String(form.get("fonte") || "").trim();
-    const existing = state.plannedEditingKind === "income" && state.plannedEditingId
-      ? state.data.incomeLines.find((item) => item.id === state.plannedEditingId)
-      : null;
-    const item = {
-      id: existing?.id || crypto.randomUUID(),
-      label: String(form.get("description")).trim(),
-      origin: fonte,
-      creditorId: "",
-      owner: String(form.get("owner") || "Felipe"),
-      date,
-      values: { [month]: amount }
-    };
-    if (existing) Object.assign(existing, item);
-    else state.data.incomeLines.push(item);
-  } else {
-    const existing = state.plannedEditingKind === "expense" && state.plannedEditingId
-      ? state.data.plannedPurchases.find((item) => item.id === state.plannedEditingId)
-      : null;
-    const item = {
-      id: existing?.id || crypto.randomUUID(),
-      description: String(form.get("description")).trim(),
-      creditorId: String(form.get("creditorId")),
-      month,
-      date,
-      installments,
-      amount,
-      owner: String(form.get("owner") || "Felipe")
-    };
-    if (existing) Object.assign(existing, item);
-    else state.data.plannedPurchases.push(item);
-  }
-  const editing = Boolean(state.plannedEditingId);
-  closePlannedDialog();
-  if (state.saveStateFn) await state.saveStateFn(editing ? "Lançamento atualizado." : "Lançamento adicionado.");
-}
-
-export async function deleteManualPlanned(id) {
-  state.data = removeManualPlanned(state.data, id);
-  if (state.saveStateFn) await state.saveStateFn("Lançamento excluído.");
 }
 
 export async function togglePaidOccurrence(key) {
