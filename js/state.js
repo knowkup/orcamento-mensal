@@ -44,6 +44,7 @@ export const el = {
   syncTitle: document.querySelector("#syncTitle"),
   syncText: document.querySelector("#syncText"),
   syncDot: document.querySelector(".sync-dot"),
+  syncDotMobile: document.querySelector("#syncDotMobile"),
   exportButton: document.querySelector("#exportButton"),
   importInput: document.querySelector("#importInput"),
   monthSummary: document.querySelector("#monthSummary"),
