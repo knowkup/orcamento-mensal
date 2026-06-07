@@ -1,4 +1,5 @@
 import { state, rebuildIndexes } from './state.js';
+import { navigateTo } from '../navigation.js';
 import { state as mainState } from '../state.js';
 import { getDocs, debtsColl, debtDoc, installmentsColl, paymentsColl, debtCreditorsColl, writeBatch, serverTimestamp } from './firebase.js';
 import { mergeCreditorCatalog } from '../domain/creditor-catalog.js';
@@ -90,19 +91,4 @@ async function normalizeConsignadoBudgetFlags() {
   await batch.commit();
 }
 
-// Navigation helper maps debt view names to Orcamento's unified showView.
-window.showDividasView = function(viewName) {
-  if (window.showView) {
-    window.showView(viewName);
-  } else {
-    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === viewName));
-    document.querySelectorAll('.view').forEach(view => {
-      const active = view.id === viewName + 'View';
-      view.classList.toggle('active', active);
-      if (active && view.dataset.title) {
-        const title = document.querySelector('#viewTitle');
-        if (title) title.textContent = view.dataset.title;
-      }
-    });
-  }
-};
+export { navigateTo };

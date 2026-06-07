@@ -12,6 +12,7 @@ import { renderFgts, openFgtsDialog, closeFgtsDialog, addFgtsContract, renderFgt
 import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException, toggleIncomeCltFields } from "./preferencias.js";
 import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
 import { loadDividas } from "./dividas/boot.js";
+import { registerNavigation } from "./navigation.js";
 
 boot();
 
@@ -28,6 +29,7 @@ async function boot() {
 }
 
 function bindEvents() {
+  registerNavigation(showView);
   el.navTabs.forEach((button) => on(button, "click", () => showView(button.dataset.view)));
   on(el.exportButton, "click", exportState);
   on(el.importInput, "change", importState);
@@ -187,7 +189,6 @@ function showView(name) {
   renderView(name);
   refreshIcons();
 }
-window.showView = showView;
 
 function renderAll() {
   renderProjection();

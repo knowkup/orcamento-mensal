@@ -5,6 +5,7 @@ import { nextPayoffOrder, nextActiveRouteOrder } from './debts.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, doc, addDoc, getDocs, updateDoc, writeBatch, query, where, serverTimestamp } from './firebase.js';
 import { closePaymentForm, closePayoffModal } from './payment.js';
 import { normalizeDebtBudgetFlags } from '../domain/debt-budget.js';
+import { navigateTo } from '../navigation.js';
 
 // --- Modal de dívida ---
 
@@ -149,7 +150,7 @@ export function goToDebtsAndNew(defaultStatus = 'Ativa') {
 }
 
 export function openDebtFromDashboard(id) {
-  window.showDividasView('divrota');
+  navigateTo('divrota');
   state.expandedDebtId = id;
   if (state.renderFn) state.renderFn();
   const road = document.getElementById('trailRoad');
@@ -162,7 +163,7 @@ export function openDebtFromTrail(id) {
     : debt && debt.status === 'Fora do radar' ? 'divradar'
     : debt && debt.status === 'Em espera' ? 'divespera'
     : 'divrota';
-  window.showDividasView(view);
+  navigateTo(view);
   state.expandedDebtId = id;
   if (state.renderFn) state.renderFn();
   const targetId = debt && debt.status === 'Quitada' ? 'paidOffDebts'
