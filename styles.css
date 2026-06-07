@@ -3891,3 +3891,61 @@ select {
 
   .mais-item i { width: 20px; height: 20px; color: var(--blue); }
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   MOBILE — Densidade: monthly-item layout 2 linhas (≤760px)
+   Sobrescreve o "grid-template-columns: 1fr" do bloco geral acima.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 760px) {
+  /* Grid 2×2: linha 1 = nome | ação, linha 2 = data | chevron */
+  .monthly-item {
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    grid-template-areas:
+      "name   action"
+      "meta   chevron";
+    gap: 4px 8px;
+    padding: 10px 12px;
+  }
+
+  .monthly-item .entity-cell        { grid-area: name; }
+  .monthly-item .monthly-item-action { grid-area: action; flex-direction: column; align-items: flex-end; gap: 4px; justify-content: center; }
+  .monthly-item .monthly-chevron     { grid-area: chevron; width: 32px; height: 32px; min-height: 32px; align-self: center; justify-self: end; }
+
+  /* Data field: horizontal compacto */
+  .monthly-item .monthly-field:not(.compact) {
+    grid-area: meta;
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+    font-size: 11px;
+  }
+
+  .monthly-item .monthly-field:not(.compact) span { margin: 0; font-size: 10px; }
+  .monthly-item .monthly-field:not(.compact) strong { font-size: 11px; }
+
+  /* Status e Contas: ocultos — cor/fundo já comunicam o status */
+  .monthly-item .monthly-field.compact { display: none; }
+
+  /* Valor: alinhado à direita */
+  .monthly-item .monthly-item-action > strong {
+    min-width: 0;
+    text-align: right;
+    font-size: 14px;
+  }
+
+  /* Botão de ação: touch target reduzido no layout compacto */
+  .monthly-item .monthly-item-action .mini-icon {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+  }
+
+  .monthly-item .monthly-item-action .small-button {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
