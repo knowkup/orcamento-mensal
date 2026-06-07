@@ -3017,8 +3017,9 @@ select {
   .control-hero-row { grid-template-columns: 1fr; }
   .control-flow-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hero-now { border-right: none; border-bottom: 1px solid var(--border); }
-  .hero-value { font-size: 30px; }
-  .hero-card { padding: 20px; }
+  .hero-value { font-size: 24px; }
+  .hero-card { padding: 12px 14px; }
+  .control-flow-card { min-height: 76px; }
 
   .month-summary,
   .monthly-summary-row,
