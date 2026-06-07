@@ -3748,6 +3748,33 @@ select {
     padding-bottom: env(safe-area-inset-bottom);
   }
 
+  .sync-dot-mobile {
+    position: absolute;
+    top: 8px;
+    right: 10px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    pointer-events: none;
+    transition: background 0.25s ease;
+    z-index: 1;
+  }
+
+  .sync-dot-mobile.offline { background: var(--gold); }
+
+  .sync-dot-mobile.syncing {
+    background: transparent;
+    border: 2px solid rgba(77, 141, 247, 0.28);
+    border-top-color: var(--blue);
+    animation: sync-spin 0.7s linear infinite;
+  }
+
+  .sync-dot-mobile.error {
+    background: var(--red);
+    animation: sync-pulse 1.6s ease-in-out infinite;
+  }
+
   .bottom-tab {
     flex: 1;
     display: flex;

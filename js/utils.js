@@ -138,6 +138,11 @@ export function updateSync(title, text, status = "online") {
     el.syncDot.classList.toggle("syncing", tone === "syncing");
     el.syncDot.classList.toggle("error", tone === "error");
   }
+  if (el.syncDotMobile) {
+    el.syncDotMobile.classList.toggle("offline", tone === "offline");
+    el.syncDotMobile.classList.toggle("syncing", tone === "syncing");
+    el.syncDotMobile.classList.toggle("error", tone === "error");
+  }
 }
 
 export function showToast(message, tone = "info") {
