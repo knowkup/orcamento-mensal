@@ -34,21 +34,6 @@ function preferenceSummaryCard(label, value, helper) {
 
 export function renderOrigins() {
   renderOriginsV2();
-  return;
-  el.creditorList.innerHTML = sortedCreditors().map((creditor) => `
-    <div class="creditor-card">
-      ${creditorLogoHtml(creditor.id)}
-      <div>
-        <strong>${escapeHtml(creditor.name)}</strong>
-        <span>${escapeHtml(creditor.type)}</span>
-      </div>
-      <button class="small-button danger-mini" type="button" data-delete-creditor="${creditor.id}">Excluir</button>
-    </div>
-  `).join("");
-
-  el.creditorList.querySelectorAll("[data-delete-creditor]").forEach((button) => {
-    button.addEventListener("click", () => deleteCreditor(button.dataset.deleteCreditor));
-  });
 }
 
 export function renderOriginsV2() {
