@@ -8,7 +8,7 @@ export function normalizeDebtBudgetFlags(debt = {}) {
 
 export function debtInstallmentForMonth({ debt, installments, month, paidOccurrences = [] }) {
   const flags = normalizeDebtBudgetFlags(debt);
-  if (!flags.includeInBudget || debt.status === 'Quitada') return null;
+  if (!flags.includeInBudget || debt.status !== 'Ativa') return null;
 
   const paidViaControl = paidOccurrences.includes(`auto-debt-${debt.id}:${month}`);
   return installments

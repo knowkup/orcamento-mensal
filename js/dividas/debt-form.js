@@ -1,4 +1,5 @@
 import { state } from './state.js';
+import { state as mainState } from '../state.js';
 import { $, brl, parseMoney, escapeHtml, showToast, sortedAllCreditors, addMonths } from './utils.js';
 import { nextInstallment } from './calc.js';
 import { nextPayoffOrder, nextActiveRouteOrder } from './debts.js';
@@ -126,6 +127,7 @@ export async function changeDebtStatus(id, status) {
     if (payload.payoffOrder) debt.payoffOrder = payload.payoffOrder;
   }
   if (state.renderFn) state.renderFn();
+  if (mainState.renderFn) mainState.renderFn();
   const messages = {
     Ativa: 'Dívida movida para Rota Financeira.',
     'Em espera': 'Dívida movida para espera.',

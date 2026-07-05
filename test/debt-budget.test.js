@@ -20,7 +20,7 @@ test('selects the first pending installment for the month', () => {
   assert.equal(debtInstallmentForMonth({ debt, installments, month: '2026-06' })?.id, 'i1');
 });
 
-test('ignores debts outside the budget or already paid off', () => {
+test('ignores debts outside the budget or outside the active route', () => {
   assert.equal(debtInstallmentForMonth({
     debt: { ...debt, includeInBudget: false },
     installments,
@@ -28,6 +28,16 @@ test('ignores debts outside the budget or already paid off', () => {
   }), null);
   assert.equal(debtInstallmentForMonth({
     debt: { ...debt, status: 'Quitada' },
+    installments,
+    month: '2026-06'
+  }), null);
+  assert.equal(debtInstallmentForMonth({
+    debt: { ...debt, status: 'Em espera' },
+    installments,
+    month: '2026-06'
+  }), null);
+  assert.equal(debtInstallmentForMonth({
+    debt: { ...debt, status: 'Fora do radar' },
     installments,
     month: '2026-06'
   }), null);
