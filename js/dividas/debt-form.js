@@ -9,6 +9,17 @@ import { navigateTo } from '../navigation.js';
 
 // --- Modal de dívida ---
 
+function hydrateDebtCreditorSelect(selectedId = '') {
+  const creditors = sortedAllCreditors();
+  const select = $('debtCreditorSelect');
+  select.innerHTML = creditors
+    .map(creditor => '<option value="' + escapeHtml(creditor.id) + '">' + escapeHtml(creditor.name) + '</option>')
+    .join('');
+  select.value = selectedId && creditors.some(creditor => creditor.id === selectedId)
+    ? selectedId
+    : (creditors[0]?.id || '');
+}
+
 export function openDebtForm(mode = 'new', id = null, defaultStatus = 'Ativa') {
   closePaymentForm();
   closePayoffModal();
@@ -17,7 +28,7 @@ export function openDebtForm(mode = 'new', id = null, defaultStatus = 'Ativa') {
   if (state.editingDebtId) {
     const debt = state.debts.find(d => d.id === state.editingDebtId);
     if (!debt) return;
-    $('debtCreditorSelect').value = debt.creditorId || '';
+    hydrateDebtCreditorSelect(debt.creditorId || '');
     $('debtName').value = debt.name || '';
     $('debtType').value = debt.type || 'Cartão';
     $('debtPaymentMethod').value = debt.paymentMethod || 'Boleto';
@@ -33,7 +44,7 @@ export function openDebtForm(mode = 'new', id = null, defaultStatus = 'Ativa') {
     $('debtIncludeInBudget').checked = !!debt.includeInBudget;
     $('debtIsConsignado').checked = !!debt.isConsignado;
   } else {
-    $('debtCreditorSelect').value = sortedAllCreditors()[0]?.id || '';
+    hydrateDebtCreditorSelect();
     $('debtName').value = '';
     $('debtType').value = 'Cartão';
     $('debtPaymentMethod').value = 'Boleto';

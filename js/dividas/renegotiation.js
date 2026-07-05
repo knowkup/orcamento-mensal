@@ -1,5 +1,5 @@
 import { state } from './state.js';
-import { $, brl, parseMoney, escapeHtml, emptyCard, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, sortedCreditors, showToast, addMonths } from './utils.js';
+import { $, brl, parseMoney, escapeHtml, emptyCard, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, sortedAllCreditors, showToast, addMonths } from './utils.js';
 import { debtBalance, openInstallmentsForDebt, nextInstallment } from './calc.js';
 import { eligibleRenegotiationDebts, selectedRenegotiationDebts, nextPayoffOrder, debtMetric } from './debts.js';
 import { debtsColl, debtDoc, installmentsColl, installmentDoc, renegotiationsColl, doc, addDoc, writeBatch, serverTimestamp } from './firebase.js';
@@ -66,8 +66,9 @@ export function openRenegotiationModal() {
 
   const total = selected.reduce((sum, debt) => sum + debtBalance(debt), 0);
   const creditorIds = [...new Set(selected.map(debt => debt.creditorId).filter(Boolean))];
-  $('renCreditorSelect').innerHTML = sortedCreditors().map(c => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
-  $('renCreditorSelect').value = creditorIds.length === 1 ? creditorIds[0] : (sortedCreditors()[0]?.id || '');
+  const creditors = sortedAllCreditors();
+  $('renCreditorSelect').innerHTML = creditors.map(c => '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.name) + '</option>').join('');
+  $('renCreditorSelect').value = creditorIds.length === 1 ? creditorIds[0] : (creditors[0]?.id || '');
   $('renDebtName').value = selected.length === 1 ? 'Acordo - ' + selected[0].name : 'Acordo consolidado';
   $('renDebtType').value = 'Empréstimo';
   $('renPaymentMethod').value = 'Boleto';
