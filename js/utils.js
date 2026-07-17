@@ -87,6 +87,14 @@ export function formatCurrencyInput(value) {
   return number ? currency.format(number).replace("R$", "").trim() : "";
 }
 
+function formatCurrencyMask(value) {
+  const text = String(value || "");
+  const signal = text.includes("-") ? "-" : "";
+  const digits = text.replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+  if (!digits) return signal;
+  return `${signal}${formatCurrencyInput(Number(digits) / 100)}`;
+}
+
 export function bindMoneyInputs(root = document) {
   root.querySelectorAll("[data-money-input]").forEach((input) => {
     if (input.dataset.moneyBound) return;
@@ -95,7 +103,8 @@ export function bindMoneyInputs(root = document) {
       input.value = formatCurrencyInput(input.value);
     });
     input.addEventListener("input", () => {
-      input.value = input.value.replace(/[^\d,.-]/g, "");
+      input.value = formatCurrencyMask(input.value);
+      input.setSelectionRange(input.value.length, input.value.length);
     });
   });
 }
