@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { $, brl, parseMoney, escapeHtml, emptyCard, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, sortedAllCreditors, showToast, addMonths } from './utils.js';
 import { debtBalance, openInstallmentsForDebt, nextInstallment } from './calc.js';
 import { eligibleRenegotiationDebts, selectedRenegotiationDebts, nextPayoffOrder, debtMetric } from './debts.js';
-import { debtsColl, debtDoc, installmentsColl, installmentDoc, renegotiationsColl, doc, addDoc, writeBatch, serverTimestamp } from './firebase.js';
+import { debtsColl, debtDoc, installmentsColl, installmentDoc, paymentsColl, renegotiationsColl, doc, addDoc, writeBatch, serverTimestamp } from './firebase.js';
 import { closeInstallmentModal, closePaymentForm, closePayoffModal } from './payment.js';
 import { closeDebtForm } from './debt-form.js';
 
@@ -28,7 +28,7 @@ export function renderRenegotiation() {
     : 'Nenhuma dívida selecionada.';
 
   if (!eligible.length) {
-    list.innerHTML = emptyCard('Nenhuma dívida disponível', 'Apenas dívidas ativas ou em espera podem entrar em uma renegociação.');
+    list.innerHTML = emptyCard('Nenhuma dívida disponível', 'Dívidas da rota, em espera e fora do radar podem entrar em uma renegociação.');
     return;
   }
 
@@ -75,6 +75,8 @@ export function openRenegotiationModal() {
   $('renFirstDue').value = '';
   $('renInstallmentsQty').value = '';
   $('renInstallmentValue').value = '';
+  $('renDownPayment').value = '';
+  $('renDownPaymentDate').value = '';
   $('renCriticality').value = selected.some(debt => debt.criticality === 'Máxima') ? 'Máxima' : selected.some(debt => debt.criticality === 'Alta') ? 'Alta' : 'Normal';
   $('renPayoffToday').value = brl(total);
   $('renNotes').value = 'Renegociação de: ' + selected.map(debt => getCreditorName(debt.creditorId) + ' · ' + debt.name).join('; ');
@@ -99,12 +101,16 @@ export async function saveRenegotiation() {
   const firstDue = $('renFirstDue').value;
   const installmentsQty = Number($('renInstallmentsQty').value || 0);
   const installmentValue = parseMoney($('renInstallmentValue').value);
+  const downPayment = parseMoney($('renDownPayment').value);
+  const downPaymentDate = $('renDownPaymentDate').value;
   if (!creditorId || !name || !firstDue || !installmentsQty || !installmentValue) return showToast('Preencha credor, nome, primeira parcela, quantidade e valor.');
+  if (downPayment && !downPaymentDate) return showToast('Informe a data da entrada.');
+  if (downPaymentDate && !downPayment) return showToast('Informe o valor da entrada.');
 
   const sourceDebtIds = selected.map(debt => debt.id);
   const previousBalance = selected.reduce((sum, debt) => sum + debtBalance(debt), 0);
   const payload = {
-    creditorId, name, firstDue, installmentsQty, installmentValue,
+    creditorId, name, firstDue, installmentsQty, installmentValue, downPayment, downPaymentDate,
     type: $('renDebtType').value,
     paymentMethod: $('renPaymentMethod').value,
     status: 'Ativa',
@@ -119,7 +125,24 @@ export async function saveRenegotiation() {
   };
 
   const created = await addDoc(debtsColl(), { ...payload, createdAt: serverTimestamp() });
-  await generateInstallments(created.id, installmentsQty, installmentValue, firstDue);
+  const entryInstallmentId = await generateInstallments(created.id, installmentsQty, installmentValue, firstDue, downPayment, downPaymentDate);
+  if (entryInstallmentId) {
+    await addDoc(paymentsColl(), {
+      debtId: created.id,
+      installmentId: entryInstallmentId,
+      installmentNumber: 'Entrada',
+      expectedDate: downPaymentDate,
+      paymentDate: downPaymentDate,
+      expectedValue: downPayment,
+      paidValue: downPayment,
+      discount: 0,
+      interest: 0,
+      method: $('renPaymentMethod').value,
+      notes: 'Entrada do acordo.',
+      type: 'down-payment',
+      createdAt: serverTimestamp()
+    });
+  }
 
   const batch = writeBatch();
   sourceDebtIds.forEach(id => {
@@ -140,7 +163,9 @@ export async function saveRenegotiation() {
     sourceDebtIds,
     newDebtId: created.id,
     previousBalance,
-    newTotal: installmentsQty * installmentValue,
+    downPayment,
+    downPaymentDate,
+    newTotal: downPayment + installmentsQty * installmentValue,
     notes: $('renNotes').value.trim(),
     createdAt: serverTimestamp()
   });
@@ -151,11 +176,28 @@ export async function saveRenegotiation() {
   showToast('Acordo salvo com sucesso.');
 }
 
-async function generateInstallments(debtId, qty, value, firstDue) {
+async function generateInstallments(debtId, qty, value, firstDue, downPayment = 0, downPaymentDate = '') {
   const batch = writeBatch();
+  let entryInstallmentId = null;
+  if (downPayment) {
+    const entryRef = doc(installmentsColl());
+    entryInstallmentId = entryRef.id;
+    batch.set(entryRef, {
+      debtId,
+      number: 0,
+      total: qty,
+      dueDate: downPaymentDate,
+      expectedValue: downPayment,
+      status: 'Paga',
+      paidAt: downPaymentDate,
+      isDownPayment: true,
+      createdAt: serverTimestamp()
+    });
+  }
   for (let i = 0; i < qty; i++) {
     const ref = doc(installmentsColl());
     batch.set(ref, { debtId, number: i + 1, total: qty, dueDate: addMonths(firstDue, i), expectedValue: value, status: 'Pendente', createdAt: serverTimestamp() });
   }
   await batch.commit();
+  return entryInstallmentId;
 }

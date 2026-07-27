@@ -98,7 +98,7 @@ export function exportDebtPaymentsCsv() {
       data: payment.paymentDate || '',
       credor: debt ? getCreditorName(debt.creditorId) : '',
       divida: debt?.name || '',
-      parcela: installment ? installment.number + '/' + installment.total : '',
+      parcela: installment ? (installment.isDownPayment ? 'Entrada' : installment.number + '/' + installment.total) : '',
       valorPrevisto: Number(payment.expectedValue || 0).toFixed(2).replace('.', ','),
       valorPago: Number(payment.paidValue || 0).toFixed(2).replace('.', ','),
       desconto: Number(payment.discount || 0).toFixed(2).replace('.', ','),

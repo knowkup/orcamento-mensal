@@ -1227,7 +1227,11 @@
           </label>
         </div>
         <div class="form-row">
-          <label>1ª parcela<input id="renFirstDue" type="date" required></label>
+          <label class="money-label">Entrada<input id="renDownPayment" type="text" inputmode="decimal" data-money-input placeholder="Opcional"></label>
+          <label>Data da entrada<input id="renDownPaymentDate" type="date"></label>
+        </div>
+        <div class="form-row">
+          <label>Data da 1ª parcela<input id="renFirstDue" type="date" required></label>
           <label>Qtd. parcelas<input id="renInstallmentsQty" type="number" min="1" step="1" required></label>
         </div>
         <div class="form-row">

@@ -69,7 +69,7 @@ export function sortedTrailDebts() {
 }
 
 export function eligibleRenegotiationDebts() {
-  return state.debts.filter(d => d.status === 'Ativa' || d.status === 'Em espera');
+  return state.debts.filter(d => ['Ativa', 'Em espera', 'Fora do radar'].includes(d.status));
 }
 
 export function selectedRenegotiationDebts() {
@@ -131,7 +131,7 @@ export function installmentRowsForDebt(debt) {
         ? (payment ? '<button class="ghost-btn mini-action" type="button" data-delete-type="payment" data-delete-id="' + escapeHtml(payment.id) + '">Excluir pagamento</button>' : '')
         : '<button class="ghost-btn mini-action" type="button" data-payment-installment-id="' + escapeHtml(item.id) + '">Registrar pagamento</button>';
       html += '<div class="installment-row">' +
-        '<div data-label="Parcela"><strong>' + item.number + '/' + item.total + '</strong></div>' +
+        '<div data-label="Parcela"><strong>' + (item.isDownPayment ? 'Entrada' : item.number + '/' + item.total) + '</strong></div>' +
         '<div data-label="Vencimento">' + formatDateBR(item.dueDate) + '</div>' +
         '<div data-label="Valor">' + brl(item.expectedValue) + '</div>' +
         '<div data-label="Status"><span class="tag ' + statusClass + '">' + escapeHtml(item.status || 'Pendente') + '</span></div>' +
