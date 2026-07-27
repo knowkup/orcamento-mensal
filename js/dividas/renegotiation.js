@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { $, brl, parseMoney, escapeHtml, emptyCard, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, sortedAllCreditors, showToast, addMonths } from './utils.js';
 import { debtBalance, openInstallmentsForDebt, nextInstallment } from './calc.js';
 import { eligibleRenegotiationDebts, selectedRenegotiationDebts, nextPayoffOrder, debtMetric } from './debts.js';
-import { debtsColl, debtDoc, installmentsColl, installmentDoc, paymentsColl, renegotiationsColl, doc, addDoc, writeBatch, serverTimestamp } from './firebase.js';
+import { debtsColl, debtDoc, installmentsColl, installmentDoc, renegotiationsColl, doc, addDoc, writeBatch, serverTimestamp } from './firebase.js';
 import { closeInstallmentModal, closePaymentForm, closePayoffModal } from './payment.js';
 import { closeDebtForm } from './debt-form.js';
 
@@ -125,24 +125,7 @@ export async function saveRenegotiation() {
   };
 
   const created = await addDoc(debtsColl(), { ...payload, createdAt: serverTimestamp() });
-  const entryInstallmentId = await generateInstallments(created.id, installmentsQty, installmentValue, firstDue, downPayment, downPaymentDate);
-  if (entryInstallmentId) {
-    await addDoc(paymentsColl(), {
-      debtId: created.id,
-      installmentId: entryInstallmentId,
-      installmentNumber: 'Entrada',
-      expectedDate: downPaymentDate,
-      paymentDate: downPaymentDate,
-      expectedValue: downPayment,
-      paidValue: downPayment,
-      discount: 0,
-      interest: 0,
-      method: $('renPaymentMethod').value,
-      notes: 'Entrada do acordo.',
-      type: 'down-payment',
-      createdAt: serverTimestamp()
-    });
-  }
+  await generateInstallments(created.id, installmentsQty, installmentValue, firstDue, downPayment, downPaymentDate);
 
   const batch = writeBatch();
   sourceDebtIds.forEach(id => {
@@ -178,18 +161,15 @@ export async function saveRenegotiation() {
 
 async function generateInstallments(debtId, qty, value, firstDue, downPayment = 0, downPaymentDate = '') {
   const batch = writeBatch();
-  let entryInstallmentId = null;
   if (downPayment) {
     const entryRef = doc(installmentsColl());
-    entryInstallmentId = entryRef.id;
     batch.set(entryRef, {
       debtId,
       number: 0,
       total: qty,
       dueDate: downPaymentDate,
       expectedValue: downPayment,
-      status: 'Paga',
-      paidAt: downPaymentDate,
+      status: 'Pendente',
       isDownPayment: true,
       createdAt: serverTimestamp()
     });
@@ -199,5 +179,4 @@ async function generateInstallments(debtId, qty, value, firstDue, downPayment = 
     batch.set(ref, { debtId, number: i + 1, total: qty, dueDate: addMonths(firstDue, i), expectedValue: value, status: 'Pendente', createdAt: serverTimestamp() });
   }
   await batch.commit();
-  return entryInstallmentId;
 }

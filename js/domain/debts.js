@@ -14,10 +14,11 @@ export function debtBalanceFromInstallments(installments = []) {
 }
 
 export function debtInstallmentProgress(installments = [], expectedQuantity = 0) {
-  const paid = installments.filter(installment => installment.status === 'Paga' || installment.status === 'Quitada').length;
+  const scheduledInstallments = installments.filter(installment => !installment.isDownPayment);
+  const paid = scheduledInstallments.filter(installment => installment.status === 'Paga' || installment.status === 'Quitada').length;
   return {
     paid,
-    total: installments.length || Number(expectedQuantity || 0) || 0
+    total: scheduledInstallments.length || Number(expectedQuantity || 0) || 0
   };
 }
 

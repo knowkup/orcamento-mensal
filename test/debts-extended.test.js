@@ -44,6 +44,14 @@ test("debtInstallmentProgress counts Quitada as paid", () => {
   assert.deepEqual(debtInstallmentProgress(items, 2), { paid: 1, total: 2 });
 });
 
+test("debtInstallmentProgress does not count an entry as an installment", () => {
+  const items = [
+    { isDownPayment: true, status: "Paga", expectedValue: 100 },
+    { status: "Pendente", expectedValue: 200 }
+  ];
+  assert.deepEqual(debtInstallmentProgress(items, 1), { paid: 0, total: 1 });
+});
+
 test("isDebtPaidOff is false when there are still open installments", () => {
   assert.equal(
     isDebtPaidOff([{ status: "Paga" }, { status: "Pendente" }], 2),
