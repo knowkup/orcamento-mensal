@@ -2,8 +2,11 @@ import { state, el, currency } from "../state.js";
 import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, refreshIcons } from "../utils.js";
 import { getInstallmentCard, getCreditorName, creditorLogoHtml, getCreditCard } from "../creditors.js";
 import { emptyState, genericDebtCard } from "../components.js";
+import { isInstallmentComplete, removeCompletedInstallments } from "../domain/installments.js";
 
 export function renderInstallments() {
+  const removedCompleted = removeCompletedInstallmentsFromState();
+  if (removedCompleted && state.saveStateFn) void state.saveStateFn("Parcelamentos concluídos removidos.");
   renderInstallmentSummary();
   renderInstallmentChips();
   const filtered = state.installmentCreditorFilter === "all"
@@ -169,6 +172,11 @@ export async function payInstallment(key) {
   const item = state.data.installments.find((entry) => entry.id === id);
   if (!item) return;
   item.paidInstallments = Math.min(item.totalInstallments, Math.max(Number(item.paidInstallments), Number(number)));
+  if (isInstallmentComplete(item)) {
+    removeInstallmentFromState(id);
+    if (state.saveStateFn) await state.saveStateFn("Parcelamento concluído e removido.");
+    return;
+  }
   state.expandedInstallments[id] = true;
   if (state.saveStateFn) await state.saveStateFn("Parcela paga.");
 }
@@ -183,6 +191,26 @@ export async function unpayInstallment(key) {
 }
 
 export async function deleteInstallment(id) {
-  state.data.installments = state.data.installments.filter((item) => item.id !== id);
+  removeInstallmentFromState(id);
   if (state.saveStateFn) await state.saveStateFn("Parcela excluída.");
+}
+
+function removeCompletedInstallmentsFromState() {
+  const completedIds = state.data.installments
+    .filter(isInstallmentComplete)
+    .map((item) => item.id);
+  if (!completedIds.length) return false;
+  state.data.installments = removeCompletedInstallments(state.data.installments);
+  completedIds.forEach(clearInstallmentUiState);
+  return true;
+}
+
+function removeInstallmentFromState(id) {
+  state.data.installments = state.data.installments.filter((item) => item.id !== id);
+  clearInstallmentUiState(id);
+}
+
+function clearInstallmentUiState(id) {
+  delete state.expandedInstallments[id];
+  delete state.installmentFilters[id];
 }
