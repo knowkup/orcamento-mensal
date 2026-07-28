@@ -5,6 +5,7 @@ import { metric, isManualPlannedRow, emptyState } from "../components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
 import { markDebtInstallmentPaid } from "../dividas/budget-integration.js";
 import { firstDueDate, rowDueDate, compareRowsByDueDate, rowOutstanding, rowIncomeOutstanding } from "../domain/row-utils.js";
+import { cardGeneralPurchaseAmount, cardGeneralPurchaseStorageKey } from "../domain/card-general-purchases.js";
 import { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned } from "./planned-dialog.js";
 export { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned };
 
@@ -136,8 +137,8 @@ export function renderMonthlyControl() {
       button.classList.toggle("is-open", details.open);
     });
   });
-  el.monthlyBoard.querySelectorAll("[data-edit-fixed-amount]").forEach((button) => {
-    button.addEventListener("click", () => openFixedCostAmountDialog(button.dataset.editFixedAmount));
+  el.monthlyBoard.querySelectorAll("[data-edit-monthly-amount]").forEach((button) => {
+    button.addEventListener("click", () => openMonthlyAmountDialog(button.dataset.editMonthlyAmount));
   });
   el.monthlyBoard.querySelectorAll("[data-edit-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => openPlannedDialog(button.dataset.editManualPlan, button.dataset.editManualKind));
@@ -254,14 +255,14 @@ export function monthlyAccountCount(row, month) {
 }
 
 function monthlyBreakdown(row, month) {
-  const children = (row.children?.[month] || []).filter((item) => Number(item.value || 0) > 0 || isOccurrencePaid(item.key));
+  const children = (row.children?.[month] || []).filter((item) => Number(item.value || 0) > 0 || isOccurrencePaid(item.key) || item.isCardGeneralPurchases);
   if (!children.length) return "";
   return `
     <details class="monthly-breakdown">
       <summary>Detalhes do valor</summary>
       <div class="monthly-breakdown-list">
         ${children
-          .sort((a, b) => String(a.dueDate || "").localeCompare(String(b.dueDate || "")) || a.label.localeCompare(b.label, "pt-BR"))
+          .sort((a, b) => Number(Boolean(b.isCardGeneralPurchases)) - Number(Boolean(a.isCardGeneralPurchases)) || String(a.dueDate || "").localeCompare(String(b.dueDate || "")) || a.label.localeCompare(b.label, "pt-BR"))
           .map((item) => {
             const done = isOccurrencePaid(item.key);
             const displayValue = done ? paidAmount(item.key, item.value) : item.value;
@@ -269,8 +270,9 @@ function monthlyBreakdown(row, month) {
               ? `data-cancel-payment="${item.key}"`
               : `data-pay-expense="${item.key}" data-expected="${item.value}" data-label="${escapeHtml(item.label)}"`;
             const isFixed = item.key.startsWith("child-fixed|");
-            const editAmountButton = isFixed && !done
-              ? `<button class="icon-button mini-icon" type="button" title="Editar valor deste mês" data-edit-fixed-amount="${item.key}">${icon("pencil")}</button>`
+            const isCardGeneral = item.isCardGeneralPurchases;
+            const editAmountButton = (isFixed || isCardGeneral) && !done
+              ? `<button class="icon-button mini-icon" type="button" title="Editar valor deste mês" data-edit-monthly-amount="${item.key}">${icon("pencil")}</button>`
               : "";
             return `
               <div class="monthly-breakdown-row ${done ? "done" : ""}">
@@ -552,8 +554,19 @@ export async function confirmReceivedOccurrence(event) {
   if (state.saveStateFn) await state.saveStateFn("Entrada recebida.");
 }
 
-export function openFixedCostAmountDialog(key) {
+export function openMonthlyAmountDialog(key) {
   const { rowId, month } = splitOccurrenceKey(key);
+  if (rowId.startsWith("child-card-general|")) {
+    const groupId = rowId.replace("child-card-general|", "");
+    const group = uniqueGroups(state.data.installments, (item) => groupKey(item)).find((item) => item.id === groupId);
+    const current = cardGeneralPurchaseAmount(state.data.cardGeneralPurchases, groupId, month);
+    el.fixedCostAmountForm.elements.key.value = `card-general|${cardGeneralPurchaseStorageKey(groupId, month)}`;
+    el.fixedCostAmountForm.elements.amount.value = formatCurrencyInput(current);
+    el.fixedCostAmountTitle.textContent = `Compras gerais · ${group?.name || "Cartão"}`;
+    el.fixedCostAmountEyebrow.textContent = "Cartão de crédito";
+    el.fixedCostAmountDialog.showModal();
+    return;
+  }
   const id = rowId.replace("child-fixed|", "");
   const cost = state.data.fixedCosts.find((item) => item.id === id);
   const overrideKey = `${id}:${month}`;
@@ -562,6 +575,7 @@ export function openFixedCostAmountDialog(key) {
   el.fixedCostAmountForm.elements.key.value = overrideKey;
   el.fixedCostAmountForm.elements.amount.value = formatCurrencyInput(current);
   el.fixedCostAmountTitle.textContent = cost?.name || "Custo fixo";
+  el.fixedCostAmountEyebrow.textContent = "Custo fixo";
   el.fixedCostAmountDialog.showModal();
 }
 
@@ -570,6 +584,15 @@ export async function saveFixedCostAmount(event) {
   const form = new FormData(event.currentTarget);
   const key = String(form.get("key"));
   const amount = parseCurrencyInput(form.get("amount"));
+  if (key.startsWith("card-general|")) {
+    const storageKey = key.replace("card-general|", "");
+    state.data.cardGeneralPurchases = { ...(state.data.cardGeneralPurchases || {}) };
+    if (amount) state.data.cardGeneralPurchases[storageKey] = amount;
+    else delete state.data.cardGeneralPurchases[storageKey];
+    el.fixedCostAmountDialog.close();
+    if (state.saveStateFn) await state.saveStateFn("Compras gerais atualizadas para o mês.");
+    return;
+  }
   state.data.fixedCostAmountOverrides = { ...(state.data.fixedCostAmountOverrides || {}), [key]: amount };
   el.fixedCostAmountDialog.close();
   if (state.saveStateFn) await state.saveStateFn("Valor do custo fixo ajustado para o mês.");

@@ -137,6 +137,7 @@ export const el = {
   fixedCostAmountDialog: document.querySelector("#fixedCostAmountDialog"),
   fixedCostAmountForm: document.querySelector("#fixedCostAmountForm"),
   fixedCostAmountTitle: document.querySelector("#fixedCostAmountTitle"),
+  fixedCostAmountEyebrow: document.querySelector("#fixedCostAmountEyebrow"),
   closeFixedCostAmountButton: document.querySelector("#closeFixedCostAmountButton"),
   incomeExceptionDialog: document.querySelector("#incomeExceptionDialog"),
   incomeExceptionForm: document.querySelector("#incomeExceptionForm"),

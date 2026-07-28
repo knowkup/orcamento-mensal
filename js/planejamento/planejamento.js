@@ -13,6 +13,7 @@ import { rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDat
 import { normalizedIncomeChanges } from "../data.js";
 import { getDebtInstallmentsForMonth } from "../dividas/budget-integration.js";
 import { buildProjectionTotals, plannedInstallmentMonths, valuesFromMonthlyMap } from "../domain/projection.js";
+import { cardGeneralPurchaseAmount, cardGeneralPurchaseOccurrenceKey } from "../domain/card-general-purchases.js";
 
 export function renderProjection() {
   const months = currentMonths(12);
@@ -710,7 +711,7 @@ function installmentNumForMonth(item, month, strict) {
 }
 
 export function installmentTotalForGroup(group, monthIndex, month = null, strict = true) {
-  return state.data.installments
+  const installmentsTotal = state.data.installments
     .filter((item) => groupKey(item) === group.key && item.active !== false)
     .reduce((total, item) => {
       if (month && item.purchaseDate) {
@@ -720,10 +721,11 @@ export function installmentTotalForGroup(group, monthIndex, month = null, strict
       const left = Math.max(0, Number(item.totalInstallments) - Number(item.paidInstallments));
       return monthIndex < left ? total + Number(item.amount) : total;
     }, 0);
+  return installmentsTotal + (month ? cardGeneralPurchaseAmount(state.data.cardGeneralPurchases, group.id, month) : 0);
 }
 
 export function installmentChildrenForGroup(group, monthIndex, month, strict = true) {
-  return state.data.installments
+  const installments = state.data.installments
     .filter((item) => groupKey(item) === group.key && item.active !== false)
     .flatMap((item) => {
       let number;
@@ -741,6 +743,16 @@ export function installmentChildrenForGroup(group, monthIndex, month, strict = t
         dueDate: installmentDueDate(item.purchaseDate || `${month}-01`, number - 1)
       }];
     });
+  return [
+    {
+      key: cardGeneralPurchaseOccurrenceKey(group.id, month),
+      label: "Compras gerais",
+      value: cardGeneralPurchaseAmount(state.data.cardGeneralPurchases, group.id, month),
+      dueDate: group.cardId ? cardDueDateForMonth(group.cardId, month) : `${month}-01`,
+      isCardGeneralPurchases: true
+    },
+    ...installments
+  ];
 }
 
 export function appendKahDifferenceRow(rows, months) {

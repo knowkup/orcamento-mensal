@@ -22,6 +22,7 @@ export function createDefaultData() {
     recurringIncomes: [],
     projectionLines: [],
     installments: [],
+    cardGeneralPurchases: {},
     fixedCosts: [],
     plannedPurchases: [],
     paidOccurrences: [],
@@ -168,6 +169,7 @@ export function normalizeData(data) {
       const paymentMethod = item.paymentMethod || "Cartão de crédito";
       return { ...item, item: item.item || item.name || item.description || "Parcelamento", creditorId, owner, paymentMethod, cardId: item.cardId || cardByLegacyKey.get(`${creditorId}|${owner}|${paymentMethod}`) || "" };
     }),
+    cardGeneralPurchases: data.cardGeneralPurchases || {},
     fixedCosts: (data.fixedCosts || []).map((item) => {
       const card = creditCards.find((entry) => entry.id === item.cardId);
       return { ...item, cardId: item.cardId || "", creditorId: card?.creditorId || item.creditorId || creditorByName.get(item.payment) || item.payment, owner: card?.owner || item.owner || "Felipe", paymentMethod: item.paymentMethod || item.payment || "Cartão de crédito" };
