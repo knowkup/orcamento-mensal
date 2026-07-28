@@ -2,7 +2,7 @@ import { state, el, currency } from "../state.js";
 import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast, refreshIcons } from "../utils.js";
 import { getInstallmentCard, getCreditorName, creditorLogoHtml, getCreditCard } from "../creditors.js";
 import { emptyState, genericDebtCard } from "../components.js";
-import { isInstallmentComplete, removeCompletedInstallments } from "../domain/installments.js";
+import { isInstallmentComplete, removeCompletedInstallments, sortInstallmentsByCreditorAndPurchaseDate } from "../domain/installments.js";
 
 export function renderInstallments() {
   const removedCompleted = removeCompletedInstallmentsFromState();
@@ -12,8 +12,12 @@ export function renderInstallments() {
   const filtered = state.installmentCreditorFilter === "all"
     ? state.data.installments
     : state.data.installments.filter((item) => getInstallmentCard(item).creditorId === state.installmentCreditorFilter);
-  el.installmentsTable.innerHTML = filtered.length
-    ? filtered.map((item) => {
+  const ordered = sortInstallmentsByCreditorAndPurchaseDate(
+    filtered,
+    (item) => getCreditorName(getInstallmentCard(item).creditorId)
+  );
+  el.installmentsTable.innerHTML = ordered.length
+    ? ordered.map((item) => {
       const card = getInstallmentCard(item);
       return genericDebtCard({
         id: item.id,
@@ -152,7 +156,8 @@ export function openInstallmentDialog(id = null) {
   if (item) item.item = item.item || item.name || item.description || "Parcelamento";
   const card = item ? getInstallmentCard(item) : null;
   el.installmentDialogTitle.textContent = item ? "Editar parcelamento" : "Novo parcelamento";
-  el.installmentForm.elements.item.value = item?.item || "";
+  const itemNameInput = el.installmentForm.elements.namedItem("item");
+  if (itemNameInput) itemNameInput.value = item?.item || item?.name || item?.description || "";
   if (card?.real) el.installmentForm.elements.cardId.value = card.id;
   el.installmentForm.elements.amount.value = item?.amount ? formatCurrencyInput(item.amount) : "";
   el.installmentForm.elements.total.value = item?.totalInstallments || "";
