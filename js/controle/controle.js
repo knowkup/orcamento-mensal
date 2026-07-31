@@ -170,9 +170,10 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const incomeOutstanding = kind === "income" ? receivedOutstandingAmount(key, value) : 0;
     const hasIncomeReceipt = kind === "income" && hasReceivedAmount(key);
     const expenseOutstanding = kind === "expense" ? paidOutstandingAmount(key, value) : 0;
+    const hasExpensePayment = kind === "expense" && hasPaidAmount(key);
     const done = kind === "income" ? incomeOutstanding <= 0 : expenseOutstanding <= 0;
     const partialIncome = kind === "income" && hasIncomeReceipt && !done;
-    const partialExpense = kind === "expense" && hasPaidAmount(key) && !done;
+    const partialExpense = kind === "expense" && hasExpensePayment && !done;
     const displayValue = kind === "income"
       ? (scope === "realized" ? incomeReceived : incomeOutstanding)
       : kind === "expense"
@@ -180,13 +181,15 @@ export function monthlyItems(items, month, kind, scope = "pending") {
         : value;
     const attr = kind === "income"
       ? (scope === "realized" && hasIncomeReceipt ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
-      : (done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
+      : (scope === "realized" && hasExpensePayment ? `data-cancel-payment="${key}"` : done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
     const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
     const buttonLabel = kind === "income"
       ? (scope === "realized" && hasIncomeReceipt ? "Estornar recebimentos" : partialIncome ? "Receber restante" : "Receber")
-      : (done ? "Excluir pagamento" : partialExpense ? "Pagar restante" : "Pagar");
+      : (scope === "realized" && hasExpensePayment ? "Estornar pagamento" : done ? "Excluir pagamento" : partialExpense ? "Pagar restante" : "Pagar");
     const actionButton = scope === "realized"
-      ? (kind === "expense" && !done ? "" : `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`)
+      ? (kind === "expense" && !done
+        ? (hasExpensePayment ? `<button class="small-button danger-mini" type="button" ${attr}>Estornar</button>` : "")
+        : `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`)
       : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
     const marker = (() => {
       if (row.creditorId) return creditorLogoHtml(row.creditorId);
