@@ -1,5 +1,5 @@
 import { state, el, currency } from "../state.js";
-import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, isIncomeReceived, receivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "../utils.js";
+import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, receivedAmount, receivedOutstandingAmount, hasReceivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "../utils.js";
 import { creditorLogoHtml, sourceLogoHtml, getInstallmentCard, getCreditorName } from "../creditors.js";
 import { metric, isManualPlannedRow, emptyState } from "../components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
@@ -18,7 +18,7 @@ function resolveAutoMonth() {
   const rows = buildProjectionRows([current], true);
   const entries = rows.filter((r) => r.kind === "income").map((r) => ({ row: r, value: r.values[current] || 0 })).filter((i) => i.value > 0);
   const exits = rows.filter((r) => r.kind === "expense").map((r) => ({ row: r, value: r.values[current] || 0 })).filter((i) => i.value > 0 || rowHasAnyPayment(i.row, current));
-  const hasPending = entries.some((i) => !isIncomeReceived(`${i.row.id}:${current}`)) || exits.some((i) => rowOutstanding(i.row, current, i.value) > 0);
+  const hasPending = entries.some((i) => rowIncomeOutstanding(i.row, current, i.value) > 0) || exits.some((i) => rowOutstanding(i.row, current, i.value) > 0);
   return hasPending ? current : nextMonths(1)[0];
 }
 
@@ -42,11 +42,11 @@ export function renderMonthlyControl() {
     .filter((row) => row.kind === "expense")
     .map((row) => ({ row, value: row.values[month] || 0 }))
     .filter((item) => item.value > 0 || rowHasAnyPayment(item.row, month));
-  const pendingEntries = entries.filter((item) => !isIncomeReceived(`${item.row.id}:${month}`));
+  const pendingEntries = entries.filter((item) => rowIncomeOutstanding(item.row, month, item.value) > 0);
   const pendingExits = exits.filter((item) => rowOutstanding(item.row, month, item.value) > 0);
-  const realizedEntries = entries.filter((item) => isIncomeReceived(`${item.row.id}:${month}`));
+  const realizedEntries = entries.filter((item) => rowReceivedAmount(item.row, month, item.value) > 0);
   const realizedExits = exits.filter((item) => rowHasAnyPayment(item.row, month));
-  const received = entries.reduce((total, item) => total + (isIncomeReceived(`${item.row.id}:${month}`) ? receivedAmount(`${item.row.id}:${month}`, item.value) : 0), 0);
+  const received = entries.reduce((total, item) => total + rowReceivedAmount(item.row, month, item.value), 0);
   const paid = exits.reduce((total, item) => total + rowPaidAmount(item.row, month, item.value), 0);
   const expectedIncome = pendingEntries.reduce((total, item) => total + item.value, 0);
   const expectedExpense = pendingExits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
@@ -166,17 +166,23 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     .sort((a, b) => compareMonthlyEntries(a, b, month, kind))
     .map(({ row, value }) => {
     const key = `${row.id}:${month}`;
-    const done = kind === "income" ? isIncomeReceived(key) : isOccurrencePaid(key);
-    const displayValue = kind === "income" && done
-      ? receivedAmount(key, value)
+    const incomeReceived = kind === "income" ? receivedAmount(key, value) : 0;
+    const incomeOutstanding = kind === "income" ? receivedOutstandingAmount(key, value) : 0;
+    const hasIncomeReceipt = kind === "income" && hasReceivedAmount(key);
+    const done = kind === "income" ? incomeOutstanding <= 0 : isOccurrencePaid(key);
+    const partialIncome = kind === "income" && hasIncomeReceipt && !done;
+    const displayValue = kind === "income"
+      ? (scope === "realized" ? incomeReceived : incomeOutstanding)
       : kind === "expense"
         ? (scope === "realized" ? rowPaidAmount(row, month, value) : (done ? paidAmount(key, value) : rowOutstanding(row, month, value)))
         : value;
     const attr = kind === "income"
-      ? (done ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
+      ? (scope === "realized" && hasIncomeReceipt ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
       : (done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
     const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
-    const buttonLabel = kind === "income" ? (done ? "Cancelar Recebimento" : "Receber") : (done ? "Excluir pagamento" : "Pagar");
+    const buttonLabel = kind === "income"
+      ? (scope === "realized" && hasIncomeReceipt ? "Estornar recebimentos" : partialIncome ? "Receber restante" : "Receber")
+      : (done ? "Excluir pagamento" : "Pagar");
     const actionButton = scope === "realized"
       ? (kind === "expense" && !done ? "" : `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`)
       : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
@@ -208,7 +214,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
         </div>
       </details>` : "";
     const statusLabel = kind === "income"
-      ? (done ? "Recebido" : "Pendente")
+      ? (done ? "Recebido" : partialIncome ? "Parcial" : "Pendente")
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
     const statusTone = statusLabel === "Pendente" ? "pending" : statusLabel === "Parcial" ? "partial" : "done";
     const chevron = scope !== "realized" && (hasBreakdown || isManual)
@@ -309,7 +315,7 @@ export function rowHasAnyPayment(row, month) {
 
 export function rowReceivedAmount(row, month, fallback) {
   const key = `${row.id}:${month}`;
-  return isIncomeReceived(key) ? receivedAmount(key, fallback) : 0;
+  return receivedAmount(key, fallback);
 }
 
 export function rowPaidAmount(row, month, fallback) {
@@ -443,8 +449,9 @@ export async function toggleReceivedOccurrence(key) {
 export async function cancelReceivedOccurrence(key) {
   state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((item) => item !== key);
   if (state.data.receivedAmounts) delete state.data.receivedAmounts[key];
+  if (state.data.receivedPayments) delete state.data.receivedPayments[key];
   applyCashMovement(key, 0);
-  if (state.saveStateFn) await state.saveStateFn("Recebimento cancelado.");
+  if (state.saveStateFn) await state.saveStateFn("Recebimentos estornados.");
 }
 
 export function splitOccurrenceKey(key) {
@@ -506,7 +513,7 @@ export async function closeMonth() {
   const rows = buildProjectionRows([month], true);
   const entries = rows.filter((row) => row.kind === "income" && (row.values[month] || 0) > 0);
   const exits = rows.filter((row) => row.kind === "expense" && ((row.values[month] || 0) > 0 || rowHasAnyPayment(row, month)));
-  const hasPending = entries.some((row) => !isIncomeReceived(`${row.id}:${month}`))
+  const hasPending = entries.some((row) => rowIncomeOutstanding(row, month, row.values[month] || 0) > 0)
     || exits.some((row) => rowOutstanding(row, month, row.values[month] || 0) > 0);
   if (hasPending) {
     showToast("Baixe todas as entradas e saídas antes de fechar.");
@@ -538,7 +545,10 @@ export function openReceiveDialog(key, expected) {
   const row = buildProjectionRows(nextMonths(1), true).find((item) => item.id === rowId);
   el.receiveTitle.textContent = row?.label || "Confirmar entrada";
   el.receiveForm.elements.key.value = key;
-  el.receiveForm.elements.amount.value = formatCurrencyInput(receivedAmount(key, Number(expected || 0)));
+  el.receiveForm.elements.expected.value = Number(expected || 0);
+  el.receiveForm.elements.amount.value = formatCurrencyInput(receivedOutstandingAmount(key, Number(expected || 0)));
+  el.receiveForm.elements.receivedDate.value = todayIsoDate();
+  el.receiveForm.elements.settlementStatus.value = "pending";
   el.receiveDialog.showModal();
 }
 
@@ -547,11 +557,28 @@ export async function confirmReceivedOccurrence(event) {
   const form = new FormData(event.currentTarget);
   const key = String(form.get("key"));
   const amount = parseCurrencyInput(form.get("amount"));
-  state.data.receivedOccurrences = [...new Set([...(state.data.receivedOccurrences || []), key])];
-  state.data.receivedAmounts = { ...(state.data.receivedAmounts || {}), [key]: amount };
-  applyCashMovement(key, amount);
+  const expected = Number(form.get("expected") || 0);
+  const settlementStatus = String(form.get("settlementStatus") || "pending");
+  if (amount <= 0) {
+    showToast("Informe um valor recebido maior que zero.", "error");
+    return;
+  }
+  const receivedDate = String(form.get("receivedDate") || todayIsoDate());
+  const payments = [...(state.data.receivedPayments?.[key] || [])];
+  if (!payments.length && hasReceivedAmount(key)) {
+    payments.push({ amount: receivedAmount(key, expected), date: "" });
+  }
+  payments.push({ amount, date: receivedDate });
+  const totalReceived = payments.reduce((total, payment) => total + Number(payment.amount || 0), 0);
+  state.data.receivedPayments = { ...(state.data.receivedPayments || {}), [key]: payments };
+  state.data.receivedAmounts = { ...(state.data.receivedAmounts || {}), [key]: totalReceived };
+  const completed = settlementStatus === "complete" || totalReceived >= expected - 0.005;
+  state.data.receivedOccurrences = completed
+    ? [...new Set([...(state.data.receivedOccurrences || []), key])]
+    : (state.data.receivedOccurrences || []).filter((item) => item !== key);
+  applyCashMovement(key, totalReceived);
   el.receiveDialog.close();
-  if (state.saveStateFn) await state.saveStateFn("Entrada recebida.");
+  if (state.saveStateFn) await state.saveStateFn(completed ? "Entrada marcada como concluída." : "Recebimento parcial registrado.");
 }
 
 export function openMonthlyAmountDialog(key) {

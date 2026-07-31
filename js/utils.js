@@ -1,5 +1,6 @@
 import { state, el, currency, monthLabel, monthLabelLong } from "./state.js";
 import { escapeHtmlValue, parseBrazilianMoney, formatIsoDateBR } from "./domain/value-utils.js";
+import { hasIncomeReceipt, incomeOutstandingAmount, incomeReceivedAmount } from "./domain/income-receipts.js";
 
 export function nextMonths(count) {
   const now = new Date();
@@ -197,5 +198,13 @@ export function isIncomeReceived(key) {
 }
 
 export function receivedAmount(key, fallback) {
-  return Number(state.data.receivedAmounts?.[key] ?? fallback ?? 0);
+  return incomeReceivedAmount(state.data, key, fallback);
+}
+
+export function receivedOutstandingAmount(key, expected) {
+  return incomeOutstandingAmount(state.data, key, expected);
+}
+
+export function hasReceivedAmount(key) {
+  return hasIncomeReceipt(state.data, key);
 }

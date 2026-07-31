@@ -30,6 +30,7 @@ export function createDefaultData() {
     paidAmounts: {},
     paidDates: {},
     receivedAmounts: {},
+    receivedPayments: {},
     appliedCashMovements: {},
     fixedCostAmountOverrides: {},
     car: {
@@ -106,8 +107,16 @@ export function normalizedIncomeChanges(income) {
 
 export function migrateCashMovements(data) {
   const movements = {};
-  (data.receivedOccurrences || []).forEach((key) => {
-    const amount = Number(data.receivedAmounts?.[key] || 0);
+  const receivedKeys = new Set([
+    ...(data.receivedOccurrences || []),
+    ...Object.keys(data.receivedAmounts || {}),
+    ...Object.keys(data.receivedPayments || {})
+  ]);
+  receivedKeys.forEach((key) => {
+    const payments = data.receivedPayments?.[key];
+    const amount = Array.isArray(payments)
+      ? payments.reduce((total, payment) => total + Number(payment?.amount || 0), 0)
+      : Number(data.receivedAmounts?.[key] || 0);
     if (amount) movements[key] = amount;
   });
   (data.paidOccurrences || []).forEach((key) => {
@@ -180,6 +189,7 @@ export function normalizeData(data) {
     paidAmounts: data.paidAmounts || {},
     paidDates: data.paidDates || {},
     receivedAmounts: data.receivedAmounts || {},
+    receivedPayments: data.receivedPayments || {},
     appliedCashMovements: data.appliedCashMovements || {},
     fixedCostAmountOverrides: data.fixedCostAmountOverrides || {},
     car: { ...defaults.car, ...(data.car || {}) },
