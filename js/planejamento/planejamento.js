@@ -131,6 +131,7 @@ function _renderMonthlySummary(totals, months, rows) {
   const summaryEl = document.querySelector("#projMonthlySummary");
   if (!summaryEl) return;
   const fmt = (v) => currency.format(v);
+  const openingBalance = projectionOpeningBalance();
 
   const rowsHtml = totals.map((t) => {
     const isExpanded = _expandedSummaryMonth === t.month;
@@ -196,6 +197,11 @@ function _renderMonthlySummary(totals, months, rows) {
   }).join("");
 
   summaryEl.innerHTML = `
+    <div class="mst-opening-balance">
+      <span>Saldo inicial do período</span>
+      <strong class="${openingBalance >= 0 ? "positive" : "negative"}">${fmt(openingBalance)}</strong>
+      <small>Não é uma entrada de julho.</small>
+    </div>
     <div class="mst-table">
       <div class="mst-header">
         <span>Mês</span>
@@ -909,10 +915,12 @@ export function differenceValue(line, months, month, index) {
 }
 
 export function buildTotals(rows, months) {
-  // A projeção foi reiniciada em julho/2026: o acumulado parte de zero e
-  // considera somente os resultados do período exibido em diante.
-  return buildProjectionTotals(rows, months, 0, {
+  return buildProjectionTotals(rows, months, projectionOpeningBalance(), {
     incomeValue: (row, month) => rowIncomeOutstanding(row, month, row.values[month] || 0),
     expenseValue: (row, month) => rowOutstanding(row, month, row.values[month] || 0)
   });
+}
+
+function projectionOpeningBalance() {
+  return Number(state.data.accountBalance || state.data.initialBalance || 0);
 }

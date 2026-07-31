@@ -1551,6 +1551,24 @@ button.hero-card:hover { background: #f5f7fa; }
   margin-bottom: 14px;
 }
 
+.mst-opening-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.mst-opening-balance strong {
+  font-size: 14px;
+}
+
+.mst-opening-balance small {
+  font-weight: 600;
+}
+
 .mst-table {
   border: 1px solid var(--line);
   border-radius: 8px;
