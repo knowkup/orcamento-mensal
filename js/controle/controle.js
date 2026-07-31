@@ -6,11 +6,23 @@ import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/pla
 import { markDebtInstallmentPaid } from "../dividas/budget-integration.js";
 import { firstDueDate, rowDueDate, compareRowsByDueDate, rowOutstanding, rowIncomeOutstanding } from "../domain/row-utils.js";
 import { cardGeneralPurchaseAmount, cardGeneralPurchaseStorageKey } from "../domain/card-general-purchases.js";
+import { accountBalanceAtMonthEnd } from "../domain/closed-months.js";
 import { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned } from "./planned-dialog.js";
 export { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned };
 
 function carPaymentMonthLocal(item) {
   return item.dueDate ? String(item.dueDate).slice(0, 7) : item.month;
+}
+
+function isClosedMonth(month) {
+  return (state.data.closedMonths || []).includes(month);
+}
+
+function canChangeOccurrence(key) {
+  const { month } = splitOccurrenceKey(key);
+  if (!isClosedMonth(month)) return true;
+  showToast("Este mês está fechado e não pode mais ser alterado.", "error");
+  return false;
 }
 
 function resolveAutoMonth() {
@@ -33,6 +45,7 @@ export function navigateControlMonth(direction) {
 
 export function renderMonthlyControl() {
   const month = state.controlMonth ?? resolveAutoMonth();
+  const isClosed = (state.data.closedMonths || []).includes(month);
   const rows = buildProjectionRows([month], true);
   const entries = rows
     .filter((row) => row.kind === "income")
@@ -50,21 +63,49 @@ export function renderMonthlyControl() {
   const paid = exits.reduce((total, item) => total + rowPaidAmount(item.row, month, item.value), 0);
   const expectedIncome = pendingEntries.reduce((total, item) => total + item.value, 0);
   const expectedExpense = pendingExits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
-  const accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
-  const projectedBalance = accountBalance + expectedIncome - expectedExpense;
+  const liveAccountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
+  const liveProjectedBalance = liveAccountBalance + expectedIncome - expectedExpense;
   const hasPending = pendingEntries.length > 0 || pendingExits.length > 0;
   const pendingCount = pendingEntries.length + pendingExits.length;
   const realizedCount = realizedEntries.length + realizedExits.length;
-  const isClosed = (state.data.closedMonths || []).includes(month);
-  const closeMonthLabel = hasPending
-    ? "Baixe todas as entradas e saidas antes de fechar o mes."
-    : `Fechar ${formatMonthLong(month)}`;
-  const pendingSummary = hasPending
-    ? `${pendingEntries.length} entrada${pendingEntries.length === 1 ? "" : "s"} e ${pendingExits.length} saida${pendingExits.length === 1 ? "" : "s"} pendente${pendingEntries.length + pendingExits.length === 1 ? "" : "s"}`
+  const snapshot = state.data.closedMonthSnapshots?.[month];
+  const frozenSummary = snapshot || (isClosed ? {
+    accountBalance: accountBalanceAtMonthEnd(state.data, month),
+    projectedBalance: accountBalanceAtMonthEnd(state.data, month) + expectedIncome - expectedExpense,
+    expectedIncome,
+    expectedExpense,
+    received,
+    paid,
+    pendingCount,
+    realizedCount,
+    pendingEntries: pendingEntries.length,
+    pendingExits: pendingExits.length
+  } : null);
+  const display = frozenSummary || {
+    accountBalance: liveAccountBalance,
+    projectedBalance: liveProjectedBalance,
+    expectedIncome,
+    expectedExpense,
+    received,
+    paid,
+    pendingCount,
+    realizedCount,
+    pendingEntries: pendingEntries.length,
+    pendingExits: pendingExits.length
+  };
+  const closeMonthLabel = isClosed
+    ? `${formatMonthLong(month)} já está fechado e congelado.`
+    : hasPending
+      ? "Baixe todas as entradas e saidas antes de fechar o mes."
+      : `Fechar ${formatMonthLong(month)}`;
+  const pendingSummary = isClosed
+    ? "Mês fechado — valores congelados"
+    : hasPending
+      ? `${pendingEntries.length} entrada${pendingEntries.length === 1 ? "" : "s"} e ${pendingExits.length} saida${pendingExits.length === 1 ? "" : "s"} pendente${pendingEntries.length + pendingExits.length === 1 ? "" : "s"}`
     : "Sem pendencias para fechar";
 
   el.monthlyReference.textContent = "";
-  el.closeMonthButton.disabled = hasPending;
+  el.closeMonthButton.disabled = isClosed || hasPending;
   el.closeMonthButton.title = closeMonthLabel;
   el.closeMonthButton.setAttribute("aria-label", closeMonthLabel);
   el.monthlySummary.classList.add("monthly-control-summary");
@@ -74,14 +115,14 @@ export function renderMonthlyControl() {
       <span class="month-pending-pill ${hasPending ? "has-pending" : "clear"}">${pendingSummary}</span>
     </div>
     <div class="control-hero-row">
-      ${accountBalanceCard(accountBalance)}
-      ${projectedBalanceCard(projectedBalance)}
+      ${accountBalanceCard(display.accountBalance, isClosed)}
+      ${projectedBalanceCard(display.projectedBalance)}
     </div>
     <div class="control-flow-strip">
-      ${controlFlowCard("A receber", currency.format(expectedIncome), `${pendingEntries.length} pendente${pendingEntries.length === 1 ? "" : "s"}`, "income")}
-      ${controlFlowCard("A pagar", `-${currency.format(expectedExpense)}`, `${pendingExits.length} pendente${pendingExits.length === 1 ? "" : "s"}`, "expense")}
-      ${controlFlowCard("Realizado", currency.format(received - paid), `${realizedCount} baixa${realizedCount === 1 ? "" : "s"}`, "realized")}
-      ${controlFlowCard("Fechamento", hasPending ? `${pendingCount} pendencia${pendingCount === 1 ? "" : "s"}` : "Liberado", closeMonthLabel, hasPending ? "pending" : "clear")}
+      ${controlFlowCard("A receber", currency.format(display.expectedIncome), `${display.pendingEntries} pendente${display.pendingEntries === 1 ? "" : "s"}`, "income")}
+      ${controlFlowCard("A pagar", `-${currency.format(display.expectedExpense)}`, `${display.pendingExits} pendente${display.pendingExits === 1 ? "" : "s"}`, "expense")}
+      ${controlFlowCard("Realizado", currency.format(display.received - display.paid), `${display.realizedCount} baixa${display.realizedCount === 1 ? "" : "s"}`, "realized")}
+      ${controlFlowCard("Fechamento", isClosed ? "Congelado" : hasPending ? `${display.pendingCount} pendencia${display.pendingCount === 1 ? "" : "s"}` : "Liberado", closeMonthLabel, isClosed ? "clear" : hasPending ? "pending" : "clear")}
     </div>
   `;
 
@@ -92,25 +133,25 @@ export function renderMonthlyControl() {
           <span>Entradas previstas</span>
           <small>${pendingEntries.length} item${pendingEntries.length === 1 ? "" : "s"} para receber</small>
         </div>
-        <strong>${currency.format(expectedIncome)}</strong>
+        <strong>${currency.format(display.expectedIncome)}</strong>
       </div>
-      ${monthlyItems(pendingEntries, month, "income")}
+      ${monthlyItems(pendingEntries, month, "income", "pending", isClosed)}
     </section>
     <section class="monthly-column expense-column">
       <div class="monthly-column-head">
         <span>Saídas previstas</span>
         <small>${pendingExits.length} item${pendingExits.length === 1 ? "" : "s"} para pagar</small>
-        <strong>-${currency.format(expectedExpense)}</strong>
+        <strong>-${currency.format(display.expectedExpense)}</strong>
       </div>
-      ${monthlyItems(pendingExits, month, "expense")}
+      ${monthlyItems(pendingExits, month, "expense", "pending", isClosed)}
     </section>
     <section class="monthly-column realized-column">
       <div class="monthly-column-head">
         <span>Realizado no mês</span>
-        <small>${realizedCount} baixa${realizedCount === 1 ? "" : "s"} confirmada${realizedCount === 1 ? "" : "s"}</small>
-        <strong>${currency.format(received - paid)}</strong>
+        <small>${display.realizedCount} baixa${display.realizedCount === 1 ? "" : "s"} confirmada${display.realizedCount === 1 ? "" : "s"}</small>
+        <strong>${currency.format(display.received - display.paid)}</strong>
       </div>
-      ${monthlyRealizedItems(realizedEntries, realizedExits, month)}
+      ${monthlyRealizedItems(realizedEntries, realizedExits, month, isClosed)}
     </section>
   `;
 
@@ -143,7 +184,9 @@ export function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-edit-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => openPlannedDialog(button.dataset.editManualPlan, button.dataset.editManualKind));
   });
-  el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
+  el.addMonthlyPlanButton.disabled = isClosed;
+  el.addMonthlyPlanButton.title = isClosed ? "Mês fechado" : "Novo lançamento";
+  if (!isClosed) el.monthlySummary.querySelector("[data-edit-account-balance]")?.addEventListener("click", openAccountBalanceDialog);
 }
 
 export function controlFlowCard(label, value, helper, tone = "neutral") {
@@ -156,7 +199,7 @@ export function controlFlowCard(label, value, helper, tone = "neutral") {
   `;
 }
 
-export function monthlyItems(items, month, kind, scope = "pending") {
+export function monthlyItems(items, month, kind, scope = "pending", locked = false) {
   if (!items.length) {
     const title = kind === "income" ? "Nenhuma entrada pendente" : "Nenhuma saida pendente";
     const text = kind === "income" ? "Tudo recebido ou sem entradas previstas para este mes." : "Tudo pago ou sem contas previstas para este mes.";
@@ -186,7 +229,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const buttonLabel = kind === "income"
       ? (scope === "realized" && hasIncomeReceipt ? "Estornar recebimentos" : partialIncome ? "Receber restante" : "Receber")
       : (scope === "realized" && hasExpensePayment ? "Estornar pagamento" : done ? "Excluir pagamento" : partialExpense ? "Pagar restante" : "Pagar");
-    const actionButton = scope === "realized"
+    const actionButton = locked ? "" : scope === "realized"
       ? (kind === "expense" && !done
         ? (hasExpensePayment ? `<button class="small-button danger-mini" type="button" ${attr}>Estornar</button>` : "")
         : `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`)
@@ -201,14 +244,14 @@ export function monthlyItems(items, month, kind, scope = "pending") {
       }
       return sourceLogoHtml(row.logoUrl, row.origin || row.label);
     })();
-    const breakdown = kind === "expense" && scope !== "realized" ? monthlyBreakdown(row, month) : "";
+    const breakdown = kind === "expense" && scope !== "realized" ? monthlyBreakdown(row, month, locked) : "";
     const dueDate = rowDueDate(row, month);
     const dateLabel = kind === "income" ? "Recebimento" : "Vencimento";
     const accountCount = monthlyAccountCount(row, month);
     const hasBreakdown = kind === "expense" && Boolean(breakdown);
     const isManual = isManualPlannedRow(row);
     const manualKind = row.manualType === "planned-income" ? "income" : "expense";
-    const manualMenu = isManual && scope !== "realized" ? `
+    const manualMenu = isManual && scope !== "realized" && !locked ? `
       <details class="monthly-breakdown">
         <summary class="visually-hidden">Opções</summary>
         <div class="monthly-breakdown-list">
@@ -249,13 +292,13 @@ export function monthlyItems(items, month, kind, scope = "pending") {
   }).join("");
 }
 
-export function monthlyRealizedItems(entries, exits, month) {
+export function monthlyRealizedItems(entries, exits, month, locked = false) {
   if (!entries.length && !exits.length) return emptyState("Nada realizado neste mes", "Recebimentos e pagamentos confirmados aparecem aqui.");
   const entryRows = entries.length
-    ? `<div class="realized-group"><span>Recebimentos</span>${monthlyItems(entries, month, "income", "realized")}</div>`
+    ? `<div class="realized-group"><span>Recebimentos</span>${monthlyItems(entries, month, "income", "realized", locked)}</div>`
     : "";
   const exitRows = exits.length
-    ? `<div class="realized-group"><span>Pagamentos</span>${monthlyItems(exits, month, "expense", "realized")}</div>`
+    ? `<div class="realized-group"><span>Pagamentos</span>${monthlyItems(exits, month, "expense", "realized", locked)}</div>`
     : "";
   return `${entryRows}${exitRows}`;
 }
@@ -265,7 +308,7 @@ export function monthlyAccountCount(row, month) {
   return children.length || 1;
 }
 
-function monthlyBreakdown(row, month) {
+function monthlyBreakdown(row, month, locked = false) {
   const children = (row.children?.[month] || []).filter((item) => Number(item.value || 0) > 0 || isOccurrencePaid(item.key) || item.isCardGeneralPurchases);
   if (!children.length) return "";
   return `
@@ -282,7 +325,7 @@ function monthlyBreakdown(row, month) {
               : `data-pay-expense="${item.key}" data-expected="${item.value}" data-label="${escapeHtml(item.label)}"`;
             const isFixed = item.key.startsWith("child-fixed|");
             const isCardGeneral = item.isCardGeneralPurchases;
-            const editAmountButton = (isFixed || isCardGeneral) && !done
+            const editAmountButton = !locked && (isFixed || isCardGeneral) && !done
               ? `<button class="icon-button mini-icon" type="button" title="Editar valor deste mês" data-edit-monthly-amount="${item.key}">${icon("pencil")}</button>`
               : "";
             return `
@@ -294,7 +337,7 @@ function monthlyBreakdown(row, month) {
                 <div class="monthly-item-action">
                   <strong class="negative">-${currency.format(displayValue)}</strong>
                   ${editAmountButton}
-                  <button class="small-button pay ${done ? "danger-mini" : ""}" type="button" ${attr}>${done ? "Excluir pagamento" : "Pagar"}</button>
+                  ${locked ? "" : `<button class="small-button pay ${done ? "danger-mini" : ""}" type="button" ${attr}>${done ? "Excluir pagamento" : "Pagar"}</button>`}
                 </div>
               </div>
             `;
@@ -344,10 +387,10 @@ export function applyCashMovement(key, amount) {
   else delete state.data.appliedCashMovements[key];
 }
 
-export function accountBalanceCard(value) {
+export function accountBalanceCard(value, locked = false) {
   const tone = value >= 0 ? "positive" : "negative";
   return `
-    <button class="hero-card hero-now" type="button" data-edit-account-balance>
+    <button class="hero-card hero-now" type="button" data-edit-account-balance ${locked ? "disabled title=\"Mês fechado\"" : ""}>
       <div class="hero-card-head">
         <span class="hero-label">Agora</span>
         <span class="hero-sublabel">Saldo em conta <i data-lucide="pencil" class="hero-edit-icon"></i></span>
@@ -394,6 +437,7 @@ export async function togglePaidOccurrence(key) {
 }
 
 export function openExpensePaymentDialog(key, expected, label) {
+  if (!canChangeOccurrence(key)) return;
   el.expensePaymentTitle.textContent = label || "Registrar pagamento";
   el.expensePaymentForm.elements.key.value = key;
   el.expensePaymentForm.elements.expected.value = Number(expected || 0);
@@ -407,6 +451,7 @@ export async function confirmPaidOccurrence(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const key = String(form.get("key"));
+  if (!canChangeOccurrence(key)) return;
   const amount = parseCurrencyInput(form.get("paidAmount"));
   const paymentDate = String(form.get("paymentDate") || todayIsoDate());
   el.expensePaymentDialog.close();
@@ -417,6 +462,7 @@ export async function confirmPaidOccurrence(event) {
 }
 
 export async function registerPaidOccurrence(key, amount, paymentDate, options = {}) {
+  if (!canChangeOccurrence(key)) return;
   const value = amount == null ? undefined : Number(amount || 0);
   if (value != null && value <= 0) {
     showToast("Informe um valor pago maior que zero.", "error");
@@ -452,6 +498,7 @@ export async function registerPaidOccurrence(key, amount, paymentDate, options =
 }
 
 export async function cancelPaidOccurrence(key) {
+  if (!canChangeOccurrence(key)) return;
   state.data.paidOccurrences = (state.data.paidOccurrences || []).filter((item) => item !== key);
   if (state.data.paidAmounts) delete state.data.paidAmounts[key];
   if (state.data.paidDates) delete state.data.paidDates[key];
@@ -477,6 +524,7 @@ export async function toggleReceivedOccurrence(key) {
 }
 
 export async function cancelReceivedOccurrence(key) {
+  if (!canChangeOccurrence(key)) return;
   state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((item) => item !== key);
   if (state.data.receivedAmounts) delete state.data.receivedAmounts[key];
   if (state.data.receivedPayments) delete state.data.receivedPayments[key];
@@ -540,6 +588,10 @@ export function syncExpenseSource(key, paid, amount, paymentDate) {
 
 export async function closeMonth() {
   const month = state.controlMonth ?? resolveAutoMonth();
+  if (isClosedMonth(month)) {
+    showToast("Este mês já está fechado e congelado.", "error");
+    return;
+  }
   const rows = buildProjectionRows([month], true);
   const entries = rows.filter((row) => row.kind === "income" && (row.values[month] || 0) > 0);
   const exits = rows.filter((row) => row.kind === "expense" && ((row.values[month] || 0) > 0 || rowHasAnyPayment(row, month)));
@@ -550,6 +602,26 @@ export async function closeMonth() {
     return;
   }
   if (!window.confirm(`Fechar ${formatMonthLong(month)} e levar o saldo atual para o próximo mês?`)) return;
+  const received = entries.reduce((total, row) => total + rowReceivedAmount(row, month, row.values[month] || 0), 0);
+  const paid = exits.reduce((total, row) => total + rowPaidAmount(row, month, row.values[month] || 0), 0);
+  const closingBalance = accountBalanceAtMonthEnd(state.data, month);
+  state.data.closedMonthSnapshots = {
+    ...(state.data.closedMonthSnapshots || {}),
+    [month]: {
+      accountBalance: closingBalance,
+      projectedBalance: closingBalance,
+      expectedIncome: 0,
+      expectedExpense: 0,
+      received,
+      paid,
+      pendingCount: 0,
+      realizedCount: entries.filter((row) => rowReceivedAmount(row, month, row.values[month] || 0) > 0).length
+        + exits.filter((row) => rowHasAnyPayment(row, month)).length,
+      pendingEntries: 0,
+      pendingExits: 0,
+      closedAt: todayIsoDate()
+    }
+  };
   state.data.accountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
   state.data.initialBalance = state.data.accountBalance;
   state.data.closedMonths = [...new Set([...(state.data.closedMonths || []), month])];
@@ -563,6 +635,10 @@ export function openAccountBalanceDialog() {
 
 export async function saveAccountBalance(event) {
   event.preventDefault();
+  if (isClosedMonth(state.controlMonth ?? resolveAutoMonth())) {
+    showToast("Este mês está fechado e não pode mais ser alterado.", "error");
+    return;
+  }
   const form = new FormData(event.currentTarget);
   state.data.accountBalance = parseCurrencyInput(form.get("accountBalance"));
   state.data.initialBalance = state.data.accountBalance;
@@ -571,6 +647,7 @@ export async function saveAccountBalance(event) {
 }
 
 export function openReceiveDialog(key, expected) {
+  if (!canChangeOccurrence(key)) return;
   const [rowId] = key.split(":");
   const row = buildProjectionRows(nextMonths(1), true).find((item) => item.id === rowId);
   el.receiveTitle.textContent = row?.label || "Confirmar entrada";
@@ -586,6 +663,7 @@ export async function confirmReceivedOccurrence(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const key = String(form.get("key"));
+  if (!canChangeOccurrence(key)) return;
   const amount = parseCurrencyInput(form.get("amount"));
   const expected = Number(form.get("expected") || 0);
   const settlementStatus = String(form.get("settlementStatus") || "pending");
@@ -612,6 +690,7 @@ export async function confirmReceivedOccurrence(event) {
 }
 
 export function openMonthlyAmountDialog(key) {
+  if (!canChangeOccurrence(key)) return;
   const { rowId, month } = splitOccurrenceKey(key);
   if (rowId.startsWith("child-card-general|")) {
     const groupId = rowId.replace("child-card-general|", "");
