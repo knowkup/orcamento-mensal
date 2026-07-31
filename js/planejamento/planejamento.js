@@ -909,7 +909,9 @@ export function differenceValue(line, months, month, index) {
 }
 
 export function buildTotals(rows, months) {
-  return buildProjectionTotals(rows, months, state.data.accountBalance || state.data.initialBalance || 0, {
+  // A projeção foi reiniciada em julho/2026: o acumulado parte de zero e
+  // considera somente os resultados do período exibido em diante.
+  return buildProjectionTotals(rows, months, 0, {
     incomeValue: (row, month) => rowIncomeOutstanding(row, month, row.values[month] || 0),
     expenseValue: (row, month) => rowOutstanding(row, month, row.values[month] || 0)
   });
