@@ -1,6 +1,7 @@
 import { state, el, currency, monthLabel, monthLabelLong } from "./state.js";
 import { escapeHtmlValue, parseBrazilianMoney, formatIsoDateBR } from "./domain/value-utils.js";
 import { hasIncomeReceipt, incomeOutstandingAmount, incomeReceivedAmount } from "./domain/income-receipts.js";
+import { expenseOutstandingAmount, expensePaidAmount, hasExpensePayment } from "./domain/expense-payments.js";
 
 export function nextMonths(count) {
   const now = new Date();
@@ -190,7 +191,15 @@ export function isOccurrencePaid(key) {
 }
 
 export function paidAmount(key, fallback) {
-  return Number(state.data.paidAmounts?.[key] ?? fallback ?? 0);
+  return expensePaidAmount(state.data, key, fallback);
+}
+
+export function paidOutstandingAmount(key, expected) {
+  return expenseOutstandingAmount(state.data, key, expected);
+}
+
+export function hasPaidAmount(key) {
+  return hasExpensePayment(state.data, key);
 }
 
 export function isIncomeReceived(key) {

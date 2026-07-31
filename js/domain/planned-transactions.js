@@ -27,6 +27,7 @@ export function removeManualPlanned(data, id) {
     receivedPayments: withoutMapPrefix(data.receivedPayments, id),
     paidAmounts: withoutMapPrefix(data.paidAmounts, id),
     paidDates: withoutMapPrefix(data.paidDates, id),
+    expensePayments: withoutMapPrefix(data.expensePayments, id),
     appliedCashMovements: withoutMapPrefix(appliedCashMovements, id)
   };
 }

@@ -29,6 +29,7 @@ export function createDefaultData() {
     receivedOccurrences: [],
     paidAmounts: {},
     paidDates: {},
+    expensePayments: {},
     receivedAmounts: {},
     receivedPayments: {},
     appliedCashMovements: {},
@@ -119,9 +120,17 @@ export function migrateCashMovements(data) {
       : Number(data.receivedAmounts?.[key] || 0);
     if (amount) movements[key] = amount;
   });
-  (data.paidOccurrences || []).forEach((key) => {
+  const paidKeys = new Set([
+    ...(data.paidOccurrences || []),
+    ...Object.keys(data.paidAmounts || {}),
+    ...Object.keys(data.expensePayments || {})
+  ]);
+  paidKeys.forEach((key) => {
     if (key.startsWith("child-car|")) return;
-    const amount = Number(data.paidAmounts?.[key] || 0);
+    const payments = data.expensePayments?.[key];
+    const amount = Array.isArray(payments)
+      ? payments.reduce((total, payment) => total + Number(payment?.amount || 0), 0)
+      : Number(data.paidAmounts?.[key] || 0);
     if (amount) movements[key] = -amount;
   });
   const delta = Object.values(movements).reduce((total, value) => total + Number(value || 0), 0);
@@ -188,6 +197,7 @@ export function normalizeData(data) {
     receivedOccurrences: data.receivedOccurrences || [],
     paidAmounts: data.paidAmounts || {},
     paidDates: data.paidDates || {},
+    expensePayments: data.expensePayments || {},
     receivedAmounts: data.receivedAmounts || {},
     receivedPayments: data.receivedPayments || {},
     appliedCashMovements: data.appliedCashMovements || {},

@@ -2,7 +2,7 @@
  * Utilitários de linha compartilhados entre planejamento e controle.
  * Extraído para quebrar a dependência circular planejamento ↔ controle.
  */
-import { isOccurrencePaid, receivedOutstandingAmount } from "../utils.js";
+import { paidOutstandingAmount, receivedOutstandingAmount } from "../utils.js";
 import { ownerRank } from "../creditors.js";
 
 export function firstDueDate(children = []) {
@@ -24,14 +24,13 @@ export function compareRowsByDueDate(a, b, month) {
 
 export function rowOutstanding(row, month, value) {
   const key = `${row.id}:${month}`;
-  if (isOccurrencePaid(key)) return 0;
   const children = row.children?.[month] || [];
   if (children.length) {
     return children.reduce((total, item) => (
-      total + (isOccurrencePaid(item.key) ? 0 : Number(item.value || 0))
+      total + paidOutstandingAmount(item.key, item.value)
     ), 0);
   }
-  return Math.max(0, Number(value || 0));
+  return paidOutstandingAmount(key, value);
 }
 
 export function rowIncomeOutstanding(row, month, value) {

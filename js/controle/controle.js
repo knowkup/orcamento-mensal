@@ -1,5 +1,5 @@
 import { state, el, currency } from "../state.js";
-import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, receivedAmount, receivedOutstandingAmount, hasReceivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "../utils.js";
+import { escapeHtml, icon, formatDate, formatMonthLong, isOccurrencePaid, paidAmount, paidOutstandingAmount, hasPaidAmount, receivedAmount, receivedOutstandingAmount, hasReceivedAmount, showToast, todayIsoDate, nextMonths, parseCurrencyInput, formatCurrencyInput } from "../utils.js";
 import { creditorLogoHtml, sourceLogoHtml, getInstallmentCard, getCreditorName } from "../creditors.js";
 import { metric, isManualPlannedRow, emptyState } from "../components.js";
 import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/planejamento.js";
@@ -169,8 +169,10 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const incomeReceived = kind === "income" ? receivedAmount(key, value) : 0;
     const incomeOutstanding = kind === "income" ? receivedOutstandingAmount(key, value) : 0;
     const hasIncomeReceipt = kind === "income" && hasReceivedAmount(key);
-    const done = kind === "income" ? incomeOutstanding <= 0 : isOccurrencePaid(key);
+    const expenseOutstanding = kind === "expense" ? paidOutstandingAmount(key, value) : 0;
+    const done = kind === "income" ? incomeOutstanding <= 0 : expenseOutstanding <= 0;
     const partialIncome = kind === "income" && hasIncomeReceipt && !done;
+    const partialExpense = kind === "expense" && hasPaidAmount(key) && !done;
     const displayValue = kind === "income"
       ? (scope === "realized" ? incomeReceived : incomeOutstanding)
       : kind === "expense"
@@ -182,7 +184,7 @@ export function monthlyItems(items, month, kind, scope = "pending") {
     const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
     const buttonLabel = kind === "income"
       ? (scope === "realized" && hasIncomeReceipt ? "Estornar recebimentos" : partialIncome ? "Receber restante" : "Receber")
-      : (done ? "Excluir pagamento" : "Pagar");
+      : (done ? "Excluir pagamento" : partialExpense ? "Pagar restante" : "Pagar");
     const actionButton = scope === "realized"
       ? (kind === "expense" && !done ? "" : `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`)
       : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
@@ -270,8 +272,8 @@ function monthlyBreakdown(row, month) {
         ${children
           .sort((a, b) => Number(Boolean(b.isCardGeneralPurchases)) - Number(Boolean(a.isCardGeneralPurchases)) || String(a.dueDate || "").localeCompare(String(b.dueDate || "")) || a.label.localeCompare(b.label, "pt-BR"))
           .map((item) => {
-            const done = isOccurrencePaid(item.key);
-            const displayValue = done ? paidAmount(item.key, item.value) : item.value;
+            const done = paidOutstandingAmount(item.key, item.value) <= 0;
+            const displayValue = done ? paidAmount(item.key, item.value) : paidOutstandingAmount(item.key, item.value);
             const attr = done
               ? `data-cancel-payment="${item.key}"`
               : `data-pay-expense="${item.key}" data-expected="${item.value}" data-label="${escapeHtml(item.label)}"`;
@@ -310,7 +312,7 @@ export function compareMonthlyEntries(a, b, month, kind) {
 }
 
 export function rowHasAnyPayment(row, month) {
-  return isOccurrencePaid(`${row.id}:${month}`) || (row.children?.[month] || []).some((item) => isOccurrencePaid(item.key));
+  return hasPaidAmount(`${row.id}:${month}`) || (row.children?.[month] || []).some((item) => hasPaidAmount(item.key));
 }
 
 export function rowReceivedAmount(row, month, fallback) {
@@ -320,9 +322,9 @@ export function rowReceivedAmount(row, month, fallback) {
 
 export function rowPaidAmount(row, month, fallback) {
   const key = `${row.id}:${month}`;
-  if (isOccurrencePaid(key)) return paidAmount(key, fallback);
+  if (hasPaidAmount(key)) return paidAmount(key, fallback);
   return (row.children?.[month] || []).reduce((total, item) => (
-    total + (isOccurrencePaid(item.key) ? paidAmount(item.key, item.value) : 0)
+    total + (hasPaidAmount(item.key) ? paidAmount(item.key, item.value) : 0)
   ), 0);
 }
 
@@ -391,8 +393,10 @@ export async function togglePaidOccurrence(key) {
 export function openExpensePaymentDialog(key, expected, label) {
   el.expensePaymentTitle.textContent = label || "Registrar pagamento";
   el.expensePaymentForm.elements.key.value = key;
-  el.expensePaymentForm.elements.paidAmount.value = formatCurrencyInput(paidAmount(key, Number(expected || 0)));
+  el.expensePaymentForm.elements.expected.value = Number(expected || 0);
+  el.expensePaymentForm.elements.paidAmount.value = formatCurrencyInput(paidOutstandingAmount(key, Number(expected || 0)));
   el.expensePaymentForm.elements.paymentDate.value = state.data.paidDates?.[key] || todayIsoDate();
+  el.expensePaymentForm.elements.settlementStatus.value = "complete";
   el.expensePaymentDialog.showModal();
 }
 
@@ -403,29 +407,52 @@ export async function confirmPaidOccurrence(event) {
   const amount = parseCurrencyInput(form.get("paidAmount"));
   const paymentDate = String(form.get("paymentDate") || todayIsoDate());
   el.expensePaymentDialog.close();
-  await registerPaidOccurrence(key, amount, paymentDate);
+  await registerPaidOccurrence(key, amount, paymentDate, {
+    expected: Number(form.get("expected") || 0),
+    settlementStatus: String(form.get("settlementStatus") || "pending")
+  });
 }
 
-export async function registerPaidOccurrence(key, amount, paymentDate) {
+export async function registerPaidOccurrence(key, amount, paymentDate, options = {}) {
   const value = amount == null ? undefined : Number(amount || 0);
-  state.data.paidOccurrences = [...new Set([...(state.data.paidOccurrences || []), key])];
+  if (value != null && value <= 0) {
+    showToast("Informe um valor pago maior que zero.", "error");
+    return;
+  }
   state.data.paidAmounts = { ...(state.data.paidAmounts || {}) };
   state.data.paidDates = { ...(state.data.paidDates || {}) };
-  if (value != null) state.data.paidAmounts[key] = value;
-  state.data.paidDates[key] = paymentDate || todayIsoDate();
-  applyCashMovement(key, -paidAmount(key, value || 0));
-  syncExpenseSource(key, true, value, state.data.paidDates[key]);
-  const { rowId: _rId, month: _rMonth } = splitOccurrenceKey(key);
-  if (_rId.startsWith('auto-debt-')) {
-    try { await markDebtInstallmentPaid(_rId.replace('auto-debt-', ''), _rMonth, true, value, paymentDate); } catch (e) { console.error(e); }
+  const expected = Number(options.expected || 0);
+  const hasExpected = expected > 0;
+  let totalPaid = paidAmount(key, hasExpected ? expected : 0);
+  if (value != null) {
+    const payments = [...(state.data.expensePayments?.[key] || [])];
+    if (!payments.length && hasPaidAmount(key)) {
+      payments.push({ amount: paidAmount(key, expected), date: "" });
+    }
+    payments.push({ amount: value, date: paymentDate || todayIsoDate() });
+    totalPaid = payments.reduce((total, payment) => total + Number(payment.amount || 0), 0);
+    state.data.expensePayments = { ...(state.data.expensePayments || {}), [key]: payments };
+    state.data.paidAmounts[key] = totalPaid;
   }
-  if (state.saveStateFn) await state.saveStateFn("Pagamento registrado.");
+  const completed = options.settlementStatus === "complete" || !hasExpected || totalPaid >= expected - 0.005;
+  state.data.paidOccurrences = completed
+    ? [...new Set([...(state.data.paidOccurrences || []), key])]
+    : (state.data.paidOccurrences || []).filter((item) => item !== key);
+  state.data.paidDates[key] = paymentDate || todayIsoDate();
+  applyCashMovement(key, -totalPaid);
+  if (completed) syncExpenseSource(key, true, totalPaid, state.data.paidDates[key]);
+  const { rowId: _rId, month: _rMonth } = splitOccurrenceKey(key);
+  if (completed && _rId.startsWith('auto-debt-')) {
+    try { await markDebtInstallmentPaid(_rId.replace('auto-debt-', ''), _rMonth, true, totalPaid, paymentDate); } catch (e) { console.error(e); }
+  }
+  if (state.saveStateFn) await state.saveStateFn(completed ? "Pagamento marcado como concluído." : "Pagamento parcial registrado.");
 }
 
 export async function cancelPaidOccurrence(key) {
   state.data.paidOccurrences = (state.data.paidOccurrences || []).filter((item) => item !== key);
   if (state.data.paidAmounts) delete state.data.paidAmounts[key];
   if (state.data.paidDates) delete state.data.paidDates[key];
+  if (state.data.expensePayments) delete state.data.expensePayments[key];
   applyCashMovement(key, 0);
   syncExpenseSource(key, false);
   const { rowId: _cId, month: _cMonth } = splitOccurrenceKey(key);
@@ -548,7 +575,7 @@ export function openReceiveDialog(key, expected) {
   el.receiveForm.elements.expected.value = Number(expected || 0);
   el.receiveForm.elements.amount.value = formatCurrencyInput(receivedOutstandingAmount(key, Number(expected || 0)));
   el.receiveForm.elements.receivedDate.value = todayIsoDate();
-  el.receiveForm.elements.settlementStatus.value = "pending";
+  el.receiveForm.elements.settlementStatus.value = "complete";
   el.receiveDialog.showModal();
 }
 
