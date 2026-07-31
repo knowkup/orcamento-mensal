@@ -61,7 +61,9 @@ export function renderMonthlyControl() {
   const realizedExits = exits.filter((item) => rowHasAnyPayment(item.row, month));
   const received = entries.reduce((total, item) => total + rowReceivedAmount(item.row, month, item.value), 0);
   const paid = exits.reduce((total, item) => total + rowPaidAmount(item.row, month, item.value), 0);
-  const expectedIncome = pendingEntries.reduce((total, item) => total + item.value, 0);
+  const expectedIncome = pendingEntries.reduce((total, item) => (
+    total + rowIncomeOutstanding(item.row, month, item.value)
+  ), 0);
   const expectedExpense = pendingExits.reduce((total, item) => total + rowOutstanding(item.row, month, item.value), 0);
   const liveAccountBalance = Number(state.data.accountBalance || state.data.initialBalance || 0);
   const liveProjectedBalance = liveAccountBalance + expectedIncome - expectedExpense;
