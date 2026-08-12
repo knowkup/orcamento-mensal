@@ -38,6 +38,10 @@ export function createDefaultData() {
     fixedCostAmountOverrides: {},
     debtOverviewSelectedIds: null,
     debtOverviewOverrides: {},
+    debtOverviewExcludedIds: [],
+    debtOverviewConsolidations: [],
+    debtOverviewExcludedIds: [],
+    debtOverviewConsolidations: [],
     car: {
       name: "Carro",
       creditorId: "",
@@ -214,6 +218,18 @@ export function normalizeData(data) {
     debtOverviewOverrides: data.debtOverviewOverrides && typeof data.debtOverviewOverrides === "object" && !Array.isArray(data.debtOverviewOverrides)
       ? data.debtOverviewOverrides
       : defaults.debtOverviewOverrides,
+    debtOverviewExcludedIds: Array.isArray(data.debtOverviewExcludedIds)
+      ? data.debtOverviewExcludedIds.filter((id) => typeof id === "string" && id)
+      : defaults.debtOverviewExcludedIds,
+    debtOverviewConsolidations: Array.isArray(data.debtOverviewConsolidations)
+      ? data.debtOverviewConsolidations.filter((item) => item && typeof item === "object" && Array.isArray(item.debtIds))
+      : defaults.debtOverviewConsolidations,
+    debtOverviewExcludedIds: Array.isArray(data.debtOverviewExcludedIds)
+      ? data.debtOverviewExcludedIds.filter((id) => typeof id === "string" && id)
+      : defaults.debtOverviewExcludedIds,
+    debtOverviewConsolidations: Array.isArray(data.debtOverviewConsolidations)
+      ? data.debtOverviewConsolidations.filter((item) => item && typeof item === "object" && Array.isArray(item.debtIds))
+      : defaults.debtOverviewConsolidations,
     car: { ...defaults.car, ...(data.car || {}) },
     fgts: { ...defaults.fgts, ...(data.fgts || {}), contracts: ((data.fgts?.contracts) || defaults.fgts.contracts).map((item) => ({ ...item, creditorId: item.creditorId || creditorByName.get(item.contract) || creditors[0]?.id })) },
     taxes: {

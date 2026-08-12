@@ -16,12 +16,17 @@ import {
   toggleRenegotiationDebt
 } from './renegotiation.js';
 import {
+  createOverviewConsolidation,
+  removeOverviewConsolidation,
   resetOverviewSimulation,
   saveOverviewSimulation,
   selectAllDebtOverview,
+  toggleOverviewConsolidationDebt,
   toggleDebtOverviewDebt,
+  toggleOverviewDebtExclusion,
   toggleOverviewCreditor,
   toggleOverviewSimulation,
+  updateOverviewConsolidationInput,
   updateOverviewSimulationInput
 } from './overview.js';
 import {
@@ -99,6 +104,21 @@ export function bindDebtDataEvents() {
       );
       return;
     }
+    const unifyInput = event.target.closest('[data-overview-unify-debt-id]');
+    if (unifyInput && overviewRoot.contains(unifyInput)) {
+      toggleOverviewConsolidationDebt(unifyInput.dataset.overviewUnifyDebtId, unifyInput.checked);
+      return;
+    }
+    const consolidationInput = event.target.closest('[data-overview-consolidation-field]');
+    if (consolidationInput && overviewRoot.contains(consolidationInput)) {
+      updateOverviewConsolidationInput(
+        consolidationInput.dataset.overviewConsolidationId,
+        consolidationInput.dataset.overviewConsolidationField,
+        consolidationInput.value
+      );
+      runDebtOperation(saveOverviewSimulation, 'Não foi possível salvar o acordo simulado.');
+      return;
+    }
     const simulationInput = event.target.closest('[data-overview-simulation-field]');
     if (!simulationInput || !overviewRoot.contains(simulationInput)) return;
     updateOverviewSimulationInput(
@@ -109,6 +129,15 @@ export function bindDebtDataEvents() {
     runDebtOperation(saveOverviewSimulation, 'Não foi possível salvar a simulação do Painel.');
   });
   overviewRoot?.addEventListener('input', (event) => {
+    const consolidationInput = event.target.closest('[data-overview-consolidation-field]');
+    if (consolidationInput && overviewRoot.contains(consolidationInput)) {
+      updateOverviewConsolidationInput(
+        consolidationInput.dataset.overviewConsolidationId,
+        consolidationInput.dataset.overviewConsolidationField,
+        consolidationInput.value
+      );
+      return;
+    }
     const simulationInput = event.target.closest('[data-overview-simulation-field]');
     if (!simulationInput || !overviewRoot.contains(simulationInput)) return;
     updateOverviewSimulationInput(
@@ -120,6 +149,10 @@ export function bindDebtDataEvents() {
   document.getElementById('selectAllDebtOverviewButton')?.addEventListener('click', () => runDebtOperation(
     selectAllDebtOverview,
     'Não foi possível selecionar todas as dívidas.'
+  ));
+  document.getElementById('createOverviewConsolidationButton')?.addEventListener('click', () => runDebtOperation(
+    createOverviewConsolidation,
+    'Não foi possível criar o acordo simulado.'
   ));
 
   document.addEventListener('click', (event) => {
@@ -145,6 +178,18 @@ export function bindDebtDataEvents() {
       runDebtOperation(
         () => resetOverviewSimulation(button.dataset.resetOverviewSimulation),
         'Não foi possível restaurar a condição original.'
+      );
+      return;
+    }
+    if (button.dataset.toggleOverviewExclusion) {
+      toggleOverviewDebtExclusion(button.dataset.toggleOverviewExclusion);
+      runDebtOperation(saveOverviewSimulation, 'Não foi possível atualizar esta dívida no Painel.');
+      return;
+    }
+    if (button.dataset.removeOverviewConsolidation) {
+      runDebtOperation(
+        () => removeOverviewConsolidation(button.dataset.removeOverviewConsolidation),
+        'Não foi possível desfazer a unificação.'
       );
       return;
     }

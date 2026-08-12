@@ -173,3 +173,13 @@ test("normalizeData preserves isolated debt overview simulations", () => {
   });
   assert.deepEqual(result.debtOverviewOverrides, { debt_1: { downPayment: 100, installmentValue: 250 } });
 });
+
+test("normalizeData preserves isolated debt consolidations", () => {
+  const result = normalizeData({
+    schemaVersion: 3,
+    debtOverviewExcludedIds: ["debt_consignado"],
+    debtOverviewConsolidations: [{ id: "agreement_1", debtIds: ["debt_1", "debt_2"] }]
+  });
+  assert.deepEqual(result.debtOverviewExcludedIds, ["debt_consignado"]);
+  assert.deepEqual(result.debtOverviewConsolidations, [{ id: "agreement_1", debtIds: ["debt_1", "debt_2"] }]);
+});

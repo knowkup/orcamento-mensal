@@ -88,6 +88,7 @@ test('migrated static controls have event bindings', async () => {
     'waitingDebtSort',
     'hiddenDebtSort',
     'selectAllDebtOverviewButton',
+    'createOverviewConsolidationButton',
     'closeDebtFormButton',
     'saveDebtButton',
     'debtIsConsignado'
@@ -102,4 +103,6 @@ test('migrated static controls have event bindings', async () => {
   assert.match(overview, /data-overview-creditor-id/);
   assert.match(overview, /data-overview-simulation-field/);
   assert.match(events, /updateOverviewSimulationInput/);
+  assert.match(overview, /data-overview-unify-debt-id/);
+  assert.match(events, /createOverviewConsolidation/);
 });
