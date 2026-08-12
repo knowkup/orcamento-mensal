@@ -143,10 +143,18 @@ function renderConsolidations(debts, groups) {
     const totalDifference = current.balance - terms.installmentBalance;
     const monthlyDifference = current.monthly - terms.installmentValue;
     const differenceLabel = (value) => value >= 0 ? 'Economia de ' + brl(value) : 'Acréscimo de ' + brl(Math.abs(value));
+    const expanded = state.expandedOverviewConsolidationId === group.id;
     const field = (key, label, value, options = '') => '<label>' + escapeHtml(label) + '<input ' + options + ' data-overview-consolidation-field="' + escapeHtml(key) + '" data-overview-consolidation-id="' + escapeHtml(group.id) + '" value="' + escapeHtml(value ?? '') + '"></label>';
-    return '<section class="debt-overview-consolidation">' +
-      '<div class="debt-overview-consolidation-head"><div><span class="tag blue">Acordo simulado</span><strong>' + escapeHtml(group.name || 'Acordo simulado') + '</strong><small>Substitui no Painel: ' + escapeHtml(names) + '</small></div><button class="ghost-btn danger-btn mini-action" type="button" data-remove-overview-consolidation="' + escapeHtml(group.id) + '">Desfazer</button></div>' +
-      '<p class="debt-overview-consolidation-note">Salvo somente no Painel. As ' + sourceDebts.length + ' dívidas de origem foram substituídas por este acordo neste cenário.</p>' +
+    const summary = '<div class="debt-overview-consolidation-summary">' +
+      '<div class="debt-overview-consolidation-title"><span class="tag blue">Acordo simulado</span><div><strong>' + escapeHtml(group.name || 'Acordo simulado') + '</strong><small>Substitui ' + sourceDebts.length + (sourceDebts.length === 1 ? ' dívida' : ' dívidas') + ' no Painel</small></div></div>' +
+      '<div class="debt-overview-row-value"><span>Parcelas no Painel</span><strong>' + terms.installments + ' × ' + brl(terms.installmentValue) + '</strong><small>' + (terms.downPayment ? 'Entrada ' + brl(terms.downPayment) + ' · ' : '') + brl(terms.installmentBalance) + '</small></div>' +
+      '<div class="debt-overview-row-value"><span>Quitação no Painel</span><strong>' + brl(terms.payoff) + '</strong></div>' +
+      '<button class="ghost-btn mini-action" type="button" data-toggle-overview-consolidation="' + escapeHtml(group.id) + '">' + (expanded ? 'Minimizar' : 'Ver cenário') + '</button>' +
+      '<button class="ghost-btn danger-btn mini-action" type="button" data-remove-overview-consolidation="' + escapeHtml(group.id) + '">Desfazer</button>' +
+    '</div>';
+    const detail = '<div class="debt-overview-consolidation-detail">' +
+      '<small class="debt-overview-consolidation-sources">Substitui no Painel: ' + escapeHtml(names) + '</small>' +
+      '<p class="debt-overview-consolidation-note">Salvo somente no Painel. As dívidas de origem foram substituídas por este acordo neste cenário.</p>' +
       '<div class="debt-overview-comparison">' +
         '<div class="debt-overview-comparison-column"><span>Hoje</span><strong>' + sourceDebts.length + (sourceDebts.length === 1 ? ' dívida' : ' dívidas') + ' · ' + brl(current.monthly) + '/mês</strong><small>Saldo: ' + brl(current.balance) + ' · Quitação: ' + brl(current.payoff) + '</small></div>' +
         '<div class="debt-overview-comparison-column is-proposed"><span>No acordo do Painel</span><strong>' + terms.installments + ' × ' + brl(terms.installmentValue) + (terms.downPayment ? ' + entrada ' + brl(terms.downPayment) : '') + '</strong><small>Saldo: ' + brl(terms.installmentBalance) + ' · Quitação: ' + brl(terms.payoff) + '</small></div>' +
@@ -160,6 +168,8 @@ function renderConsolidations(debts, groups) {
         field('payoffToday', 'Quitação no Painel', group.payoffToday, 'type="number" min="0" step="0.01" inputmode="decimal"') +
       '</div>' +
       '<div class="debt-overview-consolidation-totals"><span>' + terms.installments + ' × ' + brl(terms.installmentValue) + (terms.downPayment ? ' + entrada ' + brl(terms.downPayment) : '') + '</span><strong>' + brl(terms.installmentBalance) + '</strong></div>' +
+    '</div>';
+    return '<section class="debt-overview-consolidation ' + (expanded ? 'is-expanded' : '') + '">' + summary + (expanded ? detail : '') +
     '</section>';
   }).join('');
 }
@@ -322,6 +332,11 @@ export function toggleOverviewConsolidationDebt(debtId, selected) {
   renderDebtOverview();
 }
 
+export function toggleOverviewConsolidation(consolidationId) {
+  state.expandedOverviewConsolidationId = state.expandedOverviewConsolidationId === consolidationId ? null : consolidationId;
+  renderDebtOverview();
+}
+
 export async function createOverviewConsolidation() {
   const debts = overviewDebts();
   const selectedIds = selectedDebtIds();
@@ -358,6 +373,7 @@ export function updateOverviewConsolidationInput(consolidationId, field, value) 
 }
 
 export async function removeOverviewConsolidation(consolidationId) {
+  if (state.expandedOverviewConsolidationId === consolidationId) state.expandedOverviewConsolidationId = null;
   mainState.data.debtOverviewConsolidations = consolidations().filter((item) => item.id !== consolidationId);
   if (mainState.saveStateFn) await mainState.saveStateFn();
   else renderDebtOverview();

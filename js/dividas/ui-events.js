@@ -22,6 +22,7 @@ import {
   saveOverviewSimulation,
   selectAllDebtOverview,
   toggleOverviewConsolidationDebt,
+  toggleOverviewConsolidation,
   toggleDebtOverviewDebt,
   toggleOverviewDebtExclusion,
   toggleOverviewCreditor,
@@ -172,6 +173,10 @@ export function bindDebtDataEvents() {
     }
     if (button.dataset.toggleOverviewSimulation) {
       toggleOverviewSimulation(button.dataset.toggleOverviewSimulation);
+      return;
+    }
+    if (button.dataset.toggleOverviewConsolidation) {
+      toggleOverviewConsolidation(button.dataset.toggleOverviewConsolidation);
       return;
     }
     if (button.dataset.resetOverviewSimulation) {
