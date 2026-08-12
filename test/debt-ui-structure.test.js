@@ -12,6 +12,7 @@ const debtModules = [
   'js/dividas/debts.js',
   'js/dividas/payment.js',
   'js/dividas/renegotiation.js',
+  'js/dividas/overview.js',
   'js/dividas/trail.js',
   'js/dividas/ui-events.js'
 ];
@@ -82,9 +83,11 @@ test('debt modules expose navigation only through the intentional bridge', async
 test('migrated static controls have event bindings', async () => {
   const html = await readFile('index.html', 'utf8');
   const events = await readFile('js/dividas/ui-events.js', 'utf8');
+  const overview = await readFile('js/dividas/overview.js', 'utf8');
   const ids = [
     'waitingDebtSort',
     'hiddenDebtSort',
+    'selectAllDebtOverviewButton',
     'closeDebtFormButton',
     'saveDebtButton',
     'debtIsConsignado'
@@ -94,4 +97,7 @@ test('migrated static controls have event bindings', async () => {
     assert.match(html, new RegExp(`id=["']${id}["']`), `${id} is missing from index.html`);
     assert.match(events, new RegExp(`getElementById\\(['"]${id}['"]\\)`), `${id} is not bound`);
   });
+
+  assert.match(events, /data-overview-debt-id/);
+  assert.match(overview, /data-overview-creditor-filter/);
 });

@@ -9,6 +9,7 @@ import { renderDashboard, renderRenegotiatedHistory } from './dashboard.js';
 import { renderTrail } from './trail.js';
 import { renderDebts } from './debts.js';
 import { renderRenegotiation } from './renegotiation.js';
+import { renderDebtOverview } from './overview.js';
 import { bindDebtDataEvents } from './ui-events.js';
 import './payment.js';
 import './debt-form.js';
@@ -40,6 +41,7 @@ export function renderDividas() {
   rebuildIndexes();
   renderDebts();
   renderRenegotiation();
+  renderDebtOverview();
   renderTrail();
   renderRenegotiatedHistory();
 }

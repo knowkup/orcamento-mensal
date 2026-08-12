@@ -12,6 +12,7 @@ export const state = {
   selectedWaitingCreditorFilter: 'all',
   selectedHiddenCreditorFilter: 'all',
   selectedPaidOffCreditorFilter: 'all',
+  selectedOverviewCreditorFilter: 'all',
   selectedTrailDebtSort: 'trail',
   selectedWaitingDebtSort: 'priority',
   selectedHiddenDebtSort: 'priority',

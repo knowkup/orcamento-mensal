@@ -15,6 +15,7 @@ import {
   saveRenegotiation,
   toggleRenegotiationDebt
 } from './renegotiation.js';
+import { selectAllDebtOverview, setOverviewCreditorFilter, toggleDebtOverviewDebt } from './overview.js';
 import {
   dropHiddenDebt,
   dropWaitingDebt,
@@ -80,12 +81,30 @@ export function bindDebtDataEvents() {
     toggleRenegotiationDebt(input.dataset.renegotiationDebtId);
   });
 
+  const overviewRoot = document.getElementById('divposrenegociacaoView');
+  overviewRoot?.addEventListener('change', (event) => {
+    const input = event.target.closest('[data-overview-debt-id]');
+    if (!input || !overviewRoot.contains(input)) return;
+    runDebtOperation(
+      () => toggleDebtOverviewDebt(input.dataset.overviewDebtId, input.checked),
+      'Não foi possível atualizar o panorama.'
+    );
+  });
+  document.getElementById('selectAllDebtOverviewButton')?.addEventListener('click', () => runDebtOperation(
+    selectAllDebtOverview,
+    'Não foi possível selecionar todas as dívidas.'
+  ));
+
   document.addEventListener('click', (event) => {
     const button = event.target.closest('button');
     if (!button) return;
 
     if (button.dataset.toggleDebt) {
       toggleDebt(button.dataset.toggleDebt);
+      return;
+    }
+    if (button.dataset.overviewCreditorFilter) {
+      setOverviewCreditorFilter(button.dataset.overviewCreditorFilter);
       return;
     }
     if (button.dataset.newDebtStatus) {
