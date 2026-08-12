@@ -15,6 +15,7 @@ export const state = {
   selectedTrailDebtSort: 'trail',
   selectedWaitingDebtSort: 'priority',
   selectedHiddenDebtSort: 'priority',
+  expandedOverviewSimulationDebtId: null,
   selectedRenegotiationDebtIds: new Set(),
   expandedDebtId: null,
   expandedDebtTab: 'pending',

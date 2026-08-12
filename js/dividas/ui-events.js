@@ -15,7 +15,15 @@ import {
   saveRenegotiation,
   toggleRenegotiationDebt
 } from './renegotiation.js';
-import { selectAllDebtOverview, toggleDebtOverviewDebt, toggleOverviewCreditor } from './overview.js';
+import {
+  resetOverviewSimulation,
+  saveOverviewSimulation,
+  selectAllDebtOverview,
+  toggleDebtOverviewDebt,
+  toggleOverviewCreditor,
+  toggleOverviewSimulation,
+  updateOverviewSimulationInput
+} from './overview.js';
 import {
   dropHiddenDebt,
   dropWaitingDebt,
@@ -84,10 +92,29 @@ export function bindDebtDataEvents() {
   const overviewRoot = document.getElementById('divposrenegociacaoView');
   overviewRoot?.addEventListener('change', (event) => {
     const input = event.target.closest('[data-overview-debt-id]');
-    if (!input || !overviewRoot.contains(input)) return;
-    runDebtOperation(
-      () => toggleDebtOverviewDebt(input.dataset.overviewDebtId, input.checked),
-      'Não foi possível atualizar o panorama.'
+    if (input && overviewRoot.contains(input)) {
+      runDebtOperation(
+        () => toggleDebtOverviewDebt(input.dataset.overviewDebtId, input.checked),
+        'Não foi possível atualizar o panorama.'
+      );
+      return;
+    }
+    const simulationInput = event.target.closest('[data-overview-simulation-field]');
+    if (!simulationInput || !overviewRoot.contains(simulationInput)) return;
+    updateOverviewSimulationInput(
+      simulationInput.dataset.overviewSimulationDebtId,
+      simulationInput.dataset.overviewSimulationField,
+      simulationInput.value
+    );
+    runDebtOperation(saveOverviewSimulation, 'Não foi possível salvar a simulação do Painel.');
+  });
+  overviewRoot?.addEventListener('input', (event) => {
+    const simulationInput = event.target.closest('[data-overview-simulation-field]');
+    if (!simulationInput || !overviewRoot.contains(simulationInput)) return;
+    updateOverviewSimulationInput(
+      simulationInput.dataset.overviewSimulationDebtId,
+      simulationInput.dataset.overviewSimulationField,
+      simulationInput.value
     );
   });
   document.getElementById('selectAllDebtOverviewButton')?.addEventListener('click', () => runDebtOperation(
@@ -107,6 +134,17 @@ export function bindDebtDataEvents() {
       runDebtOperation(
         () => toggleOverviewCreditor(button.dataset.overviewCreditorId),
         'Não foi possível atualizar os credores do panorama.'
+      );
+      return;
+    }
+    if (button.dataset.toggleOverviewSimulation) {
+      toggleOverviewSimulation(button.dataset.toggleOverviewSimulation);
+      return;
+    }
+    if (button.dataset.resetOverviewSimulation) {
+      runDebtOperation(
+        () => resetOverviewSimulation(button.dataset.resetOverviewSimulation),
+        'Não foi possível restaurar a condição original.'
       );
       return;
     }

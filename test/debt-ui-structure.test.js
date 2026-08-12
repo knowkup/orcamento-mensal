@@ -100,4 +100,6 @@ test('migrated static controls have event bindings', async () => {
 
   assert.match(events, /data-overview-debt-id/);
   assert.match(overview, /data-overview-creditor-id/);
+  assert.match(overview, /data-overview-simulation-field/);
+  assert.match(events, /updateOverviewSimulationInput/);
 });

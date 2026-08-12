@@ -165,3 +165,11 @@ test("normalizeData preserves existing creditors", () => {
   assert.equal(result.creditors.length, 1);
   assert.equal(result.creditors[0].name, "Nubank");
 });
+
+test("normalizeData preserves isolated debt overview simulations", () => {
+  const result = normalizeData({
+    schemaVersion: 3,
+    debtOverviewOverrides: { debt_1: { downPayment: 100, installmentValue: 250 } }
+  });
+  assert.deepEqual(result.debtOverviewOverrides, { debt_1: { downPayment: 100, installmentValue: 250 } });
+});
