@@ -153,12 +153,17 @@ function renderSelectionList(debts, selectedIds, excludedIds, groups) {
   if (!container || !selectionText) return;
   const selectedCount = debts.filter((debt) => isSelected(debt, selectedIds)).length;
   selectionText.textContent = selectedCount + (selectedCount === 1 ? ' dívida selecionada no Painel.' : ' dívidas selecionadas no Painel.') + ' Clique nos credores para incluir ou remover todas as dívidas deles; use “Simular” para editar apenas neste Painel.';
-  if (!debts.length) {
-    container.innerHTML = emptyCard('Nenhuma dívida para selecionar', 'Cadastre uma dívida em rota, em espera ou fora do radar.');
+  const selectedCreditorIds = new Set(debts
+    .filter((debt) => isSelected(debt, selectedIds))
+    .map((debt) => debt.creditorId)
+    .filter(Boolean));
+  const visibleDebts = debts.filter((debt) => selectedCreditorIds.has(debt.creditorId));
+  if (!visibleDebts.length) {
+    container.innerHTML = emptyCard('Nenhum credor selecionado', 'Escolha um credor acima para ver e simular as dívidas dele no Painel.');
     return;
   }
   const groupByDebtId = new Map(groups.flatMap((group) => group.debtIds.map((id) => [id, group])));
-  container.innerHTML = debts.map((debt) => {
+  container.innerHTML = visibleDebts.map((debt) => {
     const terms = overviewTerms(debt);
     const group = groupByDebtId.get(debt.id);
     const excluded = excludedIds.has(debt.id);
