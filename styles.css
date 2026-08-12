@@ -3247,6 +3247,14 @@ select {
 .debt-overview-consolidation-head > div { display: grid; gap: 5px; }
 .debt-overview-consolidation-head strong { color: var(--ink); }
 .debt-overview-consolidation-head small { color: var(--muted); font-size: 12px; }
+.debt-overview-consolidation-note { margin: -3px 0 0; color: #2459a4; font-size: 12px; font-weight: 650; }
+.debt-overview-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; overflow: hidden; border: 1px solid rgba(45,101,190,0.24); border-radius: 12px; background: rgba(45,101,190,0.16); }
+.debt-overview-comparison-column { display: grid; gap: 5px; padding: 11px 12px; background: rgba(255,255,255,0.74); }
+.debt-overview-comparison-column.is-proposed { background: rgba(226,237,255,0.82); }
+.debt-overview-comparison-column > span { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
+.debt-overview-comparison-column strong { color: var(--ink); font-size: 14px; }
+.debt-overview-comparison-column small { color: var(--muted); font-size: 12px; }
+.debt-overview-comparison-delta { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 12px; padding: 8px 12px; background: rgba(244,248,255,0.92); color: #2459a4; font-size: 12px; font-weight: 700; }
 .debt-overview-consolidation-totals { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 13px; }
 .debt-overview-consolidation-totals strong { color: var(--ink); }
 .sort-bar { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin: -4px 0 14px; }

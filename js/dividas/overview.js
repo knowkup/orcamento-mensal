@@ -131,10 +131,27 @@ function renderConsolidations(debts, groups) {
   const debtById = new Map(debts.map((debt) => [debt.id, debt]));
   container.innerHTML = groups.map((group) => {
     const terms = consolidationTerms(group);
-    const names = group.debtIds.map((id) => debtById.get(id)?.name).filter(Boolean).join(' · ');
+    const sourceDebts = group.debtIds.map((id) => debtById.get(id)).filter(Boolean);
+    const names = sourceDebts.map((debt) => debt.name).join(' · ');
+    const current = sourceDebts.reduce((totals, debt) => {
+      const sourceTerms = overviewTerms(debt);
+      totals.monthly += sourceTerms.installmentValue;
+      totals.balance += sourceTerms.installmentBalance;
+      totals.payoff += sourceTerms.payoff;
+      return totals;
+    }, { monthly: 0, balance: 0, payoff: 0 });
+    const totalDifference = current.balance - terms.installmentBalance;
+    const monthlyDifference = current.monthly - terms.installmentValue;
+    const differenceLabel = (value) => value >= 0 ? 'Economia de ' + brl(value) : 'Acréscimo de ' + brl(Math.abs(value));
     const field = (key, label, value, options = '') => '<label>' + escapeHtml(label) + '<input ' + options + ' data-overview-consolidation-field="' + escapeHtml(key) + '" data-overview-consolidation-id="' + escapeHtml(group.id) + '" value="' + escapeHtml(value ?? '') + '"></label>';
     return '<section class="debt-overview-consolidation">' +
-      '<div class="debt-overview-consolidation-head"><div><span class="tag blue">Acordo simulado</span><strong>' + escapeHtml(group.name || 'Acordo simulado') + '</strong><small>Unifica: ' + escapeHtml(names) + '</small></div><button class="ghost-btn danger-btn mini-action" type="button" data-remove-overview-consolidation="' + escapeHtml(group.id) + '">Desfazer</button></div>' +
+      '<div class="debt-overview-consolidation-head"><div><span class="tag blue">Acordo simulado</span><strong>' + escapeHtml(group.name || 'Acordo simulado') + '</strong><small>Substitui no Painel: ' + escapeHtml(names) + '</small></div><button class="ghost-btn danger-btn mini-action" type="button" data-remove-overview-consolidation="' + escapeHtml(group.id) + '">Desfazer</button></div>' +
+      '<p class="debt-overview-consolidation-note">Salvo somente no Painel. As ' + sourceDebts.length + ' dívidas de origem foram substituídas por este acordo neste cenário.</p>' +
+      '<div class="debt-overview-comparison">' +
+        '<div class="debt-overview-comparison-column"><span>Hoje</span><strong>' + sourceDebts.length + (sourceDebts.length === 1 ? ' dívida' : ' dívidas') + ' · ' + brl(current.monthly) + '/mês</strong><small>Saldo: ' + brl(current.balance) + ' · Quitação: ' + brl(current.payoff) + '</small></div>' +
+        '<div class="debt-overview-comparison-column is-proposed"><span>No acordo do Painel</span><strong>' + terms.installments + ' × ' + brl(terms.installmentValue) + (terms.downPayment ? ' + entrada ' + brl(terms.downPayment) : '') + '</strong><small>Saldo: ' + brl(terms.installmentBalance) + ' · Quitação: ' + brl(terms.payoff) + '</small></div>' +
+        '<div class="debt-overview-comparison-delta"><span>Parcelas/mês: ' + differenceLabel(monthlyDifference) + '</span><span>Total: ' + differenceLabel(totalDifference) + '</span></div>' +
+      '</div>' +
       '<div class="debt-overview-simulation-grid">' +
         field('name', 'Nome do acordo', group.name, 'type="text"') +
         field('downPayment', 'Entrada', group.downPayment, 'type="number" min="0" step="0.01" inputmode="decimal"') +
@@ -163,22 +180,25 @@ function renderSelectionList(debts, selectedIds, excludedIds, groups) {
     return;
   }
   const groupByDebtId = new Map(groups.flatMap((group) => group.debtIds.map((id) => [id, group])));
-  container.innerHTML = visibleDebts.map((debt) => {
+  const standaloneDebts = visibleDebts.filter((debt) => !groupByDebtId.has(debt.id));
+  if (!standaloneDebts.length) {
+    container.innerHTML = emptyCard('Dívidas substituídas por acordo', 'As dívidas deste recorte já estão representadas pelos acordos simulados acima. Desfaça um acordo para trazê-las de volta ao Painel.');
+    return;
+  }
+  container.innerHTML = standaloneDebts.map((debt) => {
     const terms = overviewTerms(debt);
-    const group = groupByDebtId.get(debt.id);
     const excluded = excludedIds.has(debt.id);
     const selected = isSelected(debt, selectedIds);
-    const canUnify = selected && !excluded && !group;
+    const canUnify = selected && !excluded;
     return '<div class="debt-overview-selection-row ' + (excluded ? 'is-excluded' : '') + '">' +
-      '<label class="debt-overview-check"><input type="checkbox" data-overview-debt-id="' + escapeHtml(debt.id) + '" ' + (selected ? 'checked' : '') + (group ? ' disabled' : '') + '><span class="sr-only">Incluir ' + escapeHtml(debt.name) + ' no Painel</span></label>' +
+      '<label class="debt-overview-check"><input type="checkbox" data-overview-debt-id="' + escapeHtml(debt.id) + '" ' + (selected ? 'checked' : '') + '><span class="sr-only">Incluir ' + escapeHtml(debt.name) + ' no Painel</span></label>' +
       '<label class="debt-overview-unify"><input type="checkbox" data-overview-unify-debt-id="' + escapeHtml(debt.id) + '" ' + (state.selectedOverviewConsolidationDebtIds.has(debt.id) ? 'checked' : '') + (canUnify ? '' : ' disabled') + '><span>Unir</span></label>' +
       '<div class="debt-head">' + creditorLogoHtml(debt.creditorId) + '<div><div class="debt-name">' + escapeHtml(debt.name) + '</div><div class="debt-meta"><span>' + escapeHtml(getCreditorName(debt.creditorId)) + '</span><span>' + escapeHtml(statusLabel(debt.status)) + '</span>' + (terms.simulated ? '<span class="tag blue">Simulada</span>' : '') + '</div></div></div>' +
       '<div class="debt-overview-row-value"><span>Parcelas no Painel</span><strong>' + terms.installments + ' × ' + brl(terms.installmentValue) + '</strong><small>' + (terms.downPayment ? 'Entrada ' + brl(terms.downPayment) + ' · ' : '') + brl(terms.installmentBalance) + '</small></div>' +
       '<div class="debt-overview-row-value"><span>Quitação no Painel</span><strong>' + brl(terms.payoff) + '</strong></div>' +
-      (group ? '<span class="muted-hint">No acordo</span>' : '<button class="ghost-btn mini-action" type="button" data-toggle-overview-simulation="' + escapeHtml(debt.id) + '">' + (state.expandedOverviewSimulationDebtId === debt.id ? 'Fechar simulação' : 'Simular') + '</button>') +
-      (selected && !group ? '<button class="ghost-btn mini-action" type="button" data-toggle-overview-exclusion="' + escapeHtml(debt.id) + '">' + (excluded ? 'Devolver ao Painel' : 'Não contar') + '</button>' : '') +
-      (group ? '<div class="debt-overview-group-note">Incluída em: ' + escapeHtml(group.name || 'Acordo simulado') + '</div>' : '') +
-      (!group ? simulationFieldsHtml(debt, terms) : '') +
+      '<button class="ghost-btn mini-action" type="button" data-toggle-overview-simulation="' + escapeHtml(debt.id) + '">' + (state.expandedOverviewSimulationDebtId === debt.id ? 'Fechar simulação' : 'Simular') + '</button>' +
+      (selected ? '<button class="ghost-btn mini-action" type="button" data-toggle-overview-exclusion="' + escapeHtml(debt.id) + '">' + (excluded ? 'Devolver ao Painel' : 'Não contar') + '</button>' : '') +
+      simulationFieldsHtml(debt, terms) +
     '</div>';
   }).join('');
 }
@@ -205,11 +225,15 @@ export function renderDebtOverview() {
   const selectedIds = selectedDebtIds();
   const excludedIds = excludedDebtIds();
   const groups = validConsolidations(allDebts);
-  const consolidatedIds = new Set(groups.flatMap((group) => group.debtIds));
+  const visibleGroups = groups.filter((group) => group.debtIds.every((id) => {
+    const debt = allDebts.find((item) => item.id === id);
+    return debt && isSelected(debt, selectedIds);
+  }));
+  const consolidatedIds = new Set(visibleGroups.flatMap((group) => group.debtIds));
   const selected = allDebts.filter((debt) => isSelected(debt, selectedIds) && !excludedIds.has(debt.id) && !consolidatedIds.has(debt.id));
-  renderOverviewSummary(selected, groups);
+  renderOverviewSummary(selected, visibleGroups);
   renderCreditorFilters(allDebts);
-  renderConsolidations(allDebts, groups);
+  renderConsolidations(allDebts, visibleGroups);
   renderSelectionList(allDebts, selectedIds, excludedIds, groups);
 }
 
@@ -218,8 +242,12 @@ export function renderDebtOverviewSummary() {
   const selectedIds = selectedDebtIds();
   const excludedIds = excludedDebtIds();
   const groups = validConsolidations(allDebts);
-  const consolidatedIds = new Set(groups.flatMap((group) => group.debtIds));
-  renderOverviewSummary(allDebts.filter((debt) => isSelected(debt, selectedIds) && !excludedIds.has(debt.id) && !consolidatedIds.has(debt.id)), groups);
+  const visibleGroups = groups.filter((group) => group.debtIds.every((id) => {
+    const debt = allDebts.find((item) => item.id === id);
+    return debt && isSelected(debt, selectedIds);
+  }));
+  const consolidatedIds = new Set(visibleGroups.flatMap((group) => group.debtIds));
+  renderOverviewSummary(allDebts.filter((debt) => isSelected(debt, selectedIds) && !excludedIds.has(debt.id) && !consolidatedIds.has(debt.id)), visibleGroups);
 }
 
 export async function toggleOverviewCreditor(creditorId) {
