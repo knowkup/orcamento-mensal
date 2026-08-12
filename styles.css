@@ -3244,7 +3244,7 @@ select {
 .debt-overview-consolidations { display: grid; gap: 10px; margin: 0 0 12px; }
 .debt-overview-consolidation { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid rgba(45,101,190,0.35); border-radius: 14px; background: linear-gradient(90deg, rgba(226,237,255,0.56), rgba(13,32,56,0.02)); }
 .debt-overview-consolidation-summary { display: grid; grid-template-columns: auto auto minmax(220px, 1fr) minmax(150px, 0.65fr) minmax(150px, 0.65fr) auto auto; gap: 12px; align-items: center; }
-.debt-overview-agreement-check input, .debt-overview-agreement-unify input { opacity: 1; }
+.debt-overview-agreement-check, .debt-overview-agreement-unify { pointer-events: none; }
 .debt-overview-consolidation-title { display: flex; gap: 10px; align-items: center; min-width: 0; }
 .debt-overview-consolidation-title > div { display: grid; gap: 5px; min-width: 0; }
 .debt-overview-consolidation-title .debt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -146,8 +146,8 @@ function renderConsolidations(debts, groups) {
     const expanded = state.expandedOverviewConsolidationId === group.id;
     const field = (key, label, value, options = '') => '<label>' + escapeHtml(label) + '<input ' + options + ' data-overview-consolidation-field="' + escapeHtml(key) + '" data-overview-consolidation-id="' + escapeHtml(group.id) + '" value="' + escapeHtml(value ?? '') + '"></label>';
     const summary = '<div class="debt-overview-consolidation-summary">' +
-      '<label class="debt-overview-check debt-overview-agreement-check"><input type="checkbox" checked disabled><span class="sr-only">Acordo incluído no Painel</span></label>' +
-      '<label class="debt-overview-unify debt-overview-agreement-unify"><input type="checkbox" checked disabled><span>Unir</span></label>' +
+      '<label class="debt-overview-check debt-overview-agreement-check" aria-disabled="true"><input type="checkbox" checked tabindex="-1"><span class="sr-only">Acordo incluído no Painel</span></label>' +
+      '<label class="debt-overview-unify debt-overview-agreement-unify" aria-disabled="true"><input type="checkbox" checked tabindex="-1"><span>Unir</span></label>' +
       '<div class="debt-head debt-overview-consolidation-title">' + creditorLogoHtml(sourceDebts[0]?.creditorId) + '<div><div class="debt-name">' + escapeHtml(group.name || 'Acordo simulado') + '</div><div class="debt-meta"><span class="tag blue">Acordo simulado</span><span>Substitui ' + sourceDebts.length + (sourceDebts.length === 1 ? ' dívida' : ' dívidas') + ' no Painel</span></div></div></div>' +
       '<div class="debt-overview-row-value"><span>Parcelas no Painel</span><strong>' + terms.installments + ' × ' + brl(terms.installmentValue) + '</strong><small>' + (terms.downPayment ? 'Entrada ' + brl(terms.downPayment) + ' · ' : '') + brl(terms.installmentBalance) + '</small></div>' +
       '<div class="debt-overview-row-value"><span>Quitação no Painel</span><strong>' + brl(terms.payoff) + '</strong></div>' +
