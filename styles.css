@@ -3208,6 +3208,7 @@ select {
 .filter-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 9px; font: inherit; font-size: 12px; font-weight: 650; border: 1px solid var(--border); border-radius: 10px; background: rgba(13,32,56,0.03); color: var(--muted); cursor: pointer; transition: 160ms ease; }
 .filter-chip:hover { background: rgba(13,32,56,0.07); }
 .filter-chip.is-active { background: linear-gradient(135deg, rgba(216,164,65,0.22), rgba(216,164,65,0.10)); color: #6b4200; border-color: rgba(216,164,65,0.52); box-shadow: none; }
+.filter-chip.is-partial { border-color: rgba(45,101,190,0.42); background: rgba(226,237,255,0.72); color: #2459a4; }
 .filter-chip.is-active * { color: #6b4200; }
 .filter-chip .creditor-logo { width: 18px; height: 18px; border-radius: 5px; font-size: 8px; flex: 0 0 auto; }
 .filter-row .ghost-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 28px; padding: 3px 8px; font-size: 12px; border-radius: 8px; }

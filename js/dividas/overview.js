@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { state as mainState } from '../state.js';
 import { $, brl, emptyCard, escapeHtml, creditorLogoHtml, getCreditorName } from './utils.js';
 import { debtBalance, payoffTodayValue, remainingInstallmentsCount } from './calc.js';
-import { creditorFilterEntries, filterDebtsByCreditor } from '../domain/debt-filters.js';
+import { creditorFilterEntries } from '../domain/debt-filters.js';
 
 const PANORAMA_STATUSES = ['Ativa', 'Em espera', 'Fora do radar'];
 
@@ -30,10 +30,14 @@ function statusLabel(status) {
 function renderCreditorFilters(debts) {
   const container = $('debtOverviewCreditorFilters');
   if (!container) return;
-  const selected = state.selectedOverviewCreditorFilter;
-  let html = '<button class="filter-chip ' + (selected === 'all' ? 'is-active' : '') + '" type="button" data-overview-creditor-filter="all">Todos<span class="filter-count">' + debts.length + '</span></button>';
+  const selectedIds = selectedDebtIds();
+  const allSelected = debts.every((debt) => isSelected(debt, selectedIds));
+  let html = '<button class="filter-chip ' + (allSelected ? 'is-active' : '') + '" type="button" data-overview-creditor-id="all" aria-pressed="' + allSelected + '">Todos<span class="filter-count">' + debts.length + '</span></button>';
   creditorFilterEntries(debts, getCreditorName).forEach(({ id, name, count }) => {
-    html += '<button class="filter-chip ' + (selected === id ? 'is-active' : '') + '" type="button" data-overview-creditor-filter="' + escapeHtml(id) + '">' + creditorLogoHtml(id) + escapeHtml(name) + '<span class="filter-count">' + count + '</span></button>';
+    const creditorDebts = debts.filter((debt) => debt.creditorId === id);
+    const selectedCount = creditorDebts.filter((debt) => isSelected(debt, selectedIds)).length;
+    const active = selectedCount === creditorDebts.length;
+    html += '<button class="filter-chip ' + (active ? 'is-active' : '') + (selectedCount && !active ? ' is-partial' : '') + '" type="button" data-overview-creditor-id="' + escapeHtml(id) + '" aria-pressed="' + active + '">' + creditorLogoHtml(id) + escapeHtml(name) + '<span class="filter-count">' + selectedCount + '/' + count + '</span></button>';
   });
   container.innerHTML = html;
 }
@@ -58,14 +62,13 @@ function renderSelectionList(debts, selectedIds) {
   const container = $('debtOverviewSelectionList');
   const selectionText = $('debtOverviewSelectionText');
   if (!container || !selectionText) return;
-  const visible = filterDebtsByCreditor(debts, state.selectedOverviewCreditorFilter);
   const selectedCount = debts.filter((debt) => isSelected(debt, selectedIds)).length;
-  selectionText.textContent = selectedCount + (selectedCount === 1 ? ' dívida selecionada no panorama.' : ' dívidas selecionadas no panorama.') + ' Marque ou desmarque as dívidas de cada credor.';
-  if (!visible.length) {
-    container.innerHTML = emptyCard('Nenhuma dívida neste credor', 'Escolha outro credor ou cadastre uma dívida em rota, em espera ou fora do radar.');
+  selectionText.textContent = selectedCount + (selectedCount === 1 ? ' dívida selecionada no panorama.' : ' dívidas selecionadas no panorama.') + ' Clique nos credores para incluir ou remover todas as dívidas deles; use os checks para exceções.';
+  if (!debts.length) {
+    container.innerHTML = emptyCard('Nenhuma dívida para selecionar', 'Cadastre uma dívida em rota, em espera ou fora do radar.');
     return;
   }
-  container.innerHTML = visible.map((debt) => {
+  container.innerHTML = debts.map((debt) => {
     const balance = debtBalance(debt);
     const payoff = payoffBalance(debt);
     return '<label class="debt-overview-selection-row">' +
@@ -96,9 +99,28 @@ export function renderDebtOverview() {
   renderSelectionList(allDebts, selectedIds);
 }
 
-export function setOverviewCreditorFilter(creditorId) {
-  state.selectedOverviewCreditorFilter = creditorId || 'all';
-  renderDebtOverview();
+export async function toggleOverviewCreditor(creditorId) {
+  const debts = overviewDebts();
+  const allIds = debts.map((debt) => debt.id);
+  if (creditorId === 'all') {
+    mainState.data.debtOverviewSelectedIds = allIds;
+  } else {
+    const ids = selectedDebtIds() || new Set(allIds);
+    const creditorIds = debts.filter((debt) => debt.creditorId === creditorId).map((debt) => debt.id);
+    const allCreditorsWereSelected = allIds.every((id) => ids.has(id));
+    const creditorAlreadySelected = creditorIds.every((id) => ids.has(id));
+    if (allCreditorsWereSelected) {
+      mainState.data.debtOverviewSelectedIds = creditorIds;
+    } else if (creditorAlreadySelected) {
+      creditorIds.forEach((id) => ids.delete(id));
+      mainState.data.debtOverviewSelectedIds = allIds.filter((id) => ids.has(id));
+    } else {
+      creditorIds.forEach((id) => ids.add(id));
+      mainState.data.debtOverviewSelectedIds = allIds.filter((id) => ids.has(id));
+    }
+  }
+  if (mainState.saveStateFn) await mainState.saveStateFn();
+  else renderDebtOverview();
 }
 
 export async function toggleDebtOverviewDebt(debtId, selected) {

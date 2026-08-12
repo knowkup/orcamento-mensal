@@ -15,7 +15,7 @@ import {
   saveRenegotiation,
   toggleRenegotiationDebt
 } from './renegotiation.js';
-import { selectAllDebtOverview, setOverviewCreditorFilter, toggleDebtOverviewDebt } from './overview.js';
+import { selectAllDebtOverview, toggleDebtOverviewDebt, toggleOverviewCreditor } from './overview.js';
 import {
   dropHiddenDebt,
   dropWaitingDebt,
@@ -103,8 +103,11 @@ export function bindDebtDataEvents() {
       toggleDebt(button.dataset.toggleDebt);
       return;
     }
-    if (button.dataset.overviewCreditorFilter) {
-      setOverviewCreditorFilter(button.dataset.overviewCreditorFilter);
+    if (button.dataset.overviewCreditorId) {
+      runDebtOperation(
+        () => toggleOverviewCreditor(button.dataset.overviewCreditorId),
+        'Não foi possível atualizar os credores do panorama.'
+      );
       return;
     }
     if (button.dataset.newDebtStatus) {

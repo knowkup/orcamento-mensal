@@ -99,5 +99,5 @@ test('migrated static controls have event bindings', async () => {
   });
 
   assert.match(events, /data-overview-debt-id/);
-  assert.match(overview, /data-overview-creditor-filter/);
+  assert.match(overview, /data-overview-creditor-id/);
 });
