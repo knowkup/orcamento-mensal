@@ -327,7 +327,9 @@ function monthlyBreakdown(row, month, locked = false) {
               : `data-pay-expense="${item.key}" data-expected="${item.value}" data-label="${escapeHtml(item.label)}"`;
             const isFixed = item.key.startsWith("child-fixed|");
             const isCardGeneral = item.isCardGeneralPurchases;
-            const editAmountButton = !locked && (isFixed || isCardGeneral) && !done
+            // Compras gerais começa em R$ 0,00 e por isso é considerada quitada.
+            // Ainda assim, ela precisa continuar editável para que o valor possa ser informado.
+            const editAmountButton = !locked && (isCardGeneral || (isFixed && !done))
               ? `<button class="icon-button mini-icon" type="button" title="Editar valor deste mês" data-edit-monthly-amount="${item.key}">${icon("pencil")}</button>`
               : "";
             return `
