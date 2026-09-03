@@ -85,8 +85,10 @@ export function parseCurrencyInput(value) {
 }
 
 export function formatCurrencyInput(value) {
+  const isEmpty = value == null || (typeof value === "string" && !value.trim());
+  if (isEmpty) return "";
   const number = typeof value === "number" ? value : parseCurrencyInput(value);
-  return number ? currency.format(number).replace("R$", "").trim() : "";
+  return Number.isFinite(number) ? currency.format(number).replace("R$", "").trim() : "";
 }
 
 function formatCurrencyMask(value) {
