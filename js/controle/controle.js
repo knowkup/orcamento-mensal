@@ -164,7 +164,12 @@ export function renderMonthlyControl() {
     button.addEventListener("click", () => cancelReceivedOccurrence(button.dataset.cancelIncome));
   });
   el.monthlyBoard.querySelectorAll("[data-pay-expense]").forEach((button) => {
-    button.addEventListener("click", () => openExpensePaymentDialog(button.dataset.payExpense, button.dataset.expected, button.dataset.label));
+    button.addEventListener("click", () => openExpensePaymentDialog(
+      button.dataset.payExpense,
+      button.dataset.expected,
+      button.dataset.label,
+      button.dataset.outstanding
+    ));
   });
   el.monthlyBoard.querySelectorAll("[data-cancel-payment]").forEach((button) => {
     button.addEventListener("click", () => cancelPaidOccurrence(button.dataset.cancelPayment));
@@ -215,6 +220,7 @@ export function monthlyItems(items, month, kind, scope = "pending", locked = fal
     const incomeOutstanding = kind === "income" ? receivedOutstandingAmount(key, value) : 0;
     const hasIncomeReceipt = kind === "income" && hasReceivedAmount(key);
     const expenseOutstanding = kind === "expense" ? paidOutstandingAmount(key, value) : 0;
+    const expenseRemaining = kind === "expense" ? rowOutstanding(row, month, value) : 0;
     const hasExpensePayment = kind === "expense" && hasPaidAmount(key);
     const done = kind === "income" ? incomeOutstanding <= 0 : expenseOutstanding <= 0;
     const partialIncome = kind === "income" && hasIncomeReceipt && !done;
@@ -222,11 +228,11 @@ export function monthlyItems(items, month, kind, scope = "pending", locked = fal
     const displayValue = kind === "income"
       ? (scope === "realized" ? incomeReceived : incomeOutstanding)
       : kind === "expense"
-        ? (scope === "realized" ? rowPaidAmount(row, month, value) : (done ? paidAmount(key, value) : rowOutstanding(row, month, value)))
+        ? (scope === "realized" ? rowPaidAmount(row, month, value) : (done ? paidAmount(key, value) : expenseRemaining))
         : value;
     const attr = kind === "income"
       ? (scope === "realized" && hasIncomeReceipt ? `data-cancel-income="${key}"` : `data-receive-income="${key}" data-expected="${value}"`)
-      : (scope === "realized" && hasExpensePayment ? `data-cancel-payment="${key}"` : done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-label="${escapeHtml(row.label)}"`);
+      : (scope === "realized" && hasExpensePayment ? `data-cancel-payment="${key}"` : done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-outstanding="${expenseRemaining}" data-label="${escapeHtml(row.label)}"`);
     const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
     const buttonLabel = kind === "income"
       ? (scope === "realized" && hasIncomeReceipt ? "Estornar recebimentos" : partialIncome ? "Receber restante" : "Receber")
@@ -440,12 +446,16 @@ export async function togglePaidOccurrence(key) {
   }
 }
 
-export function openExpensePaymentDialog(key, expected, label) {
+export function openExpensePaymentDialog(key, expected, label, outstanding) {
   if (!canChangeOccurrence(key)) return;
+  const expectedAmount = Number(expected || 0);
+  const remainingAmount = outstanding == null
+    ? paidOutstandingAmount(key, expectedAmount)
+    : Math.max(0, Number(outstanding) || 0);
   el.expensePaymentTitle.textContent = label || "Registrar pagamento";
   el.expensePaymentForm.elements.key.value = key;
-  el.expensePaymentForm.elements.expected.value = Number(expected || 0);
-  el.expensePaymentForm.elements.paidAmount.value = formatCurrencyInput(paidOutstandingAmount(key, Number(expected || 0)));
+  el.expensePaymentForm.elements.expected.value = expectedAmount;
+  el.expensePaymentForm.elements.paidAmount.value = formatCurrencyInput(remainingAmount);
   el.expensePaymentForm.elements.paymentDate.value = state.data.paidDates?.[key] || todayIsoDate();
   el.expensePaymentForm.elements.settlementStatus.value = "complete";
   el.expensePaymentDialog.showModal();
