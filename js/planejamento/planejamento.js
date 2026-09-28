@@ -14,6 +14,7 @@ import { normalizedIncomeChanges } from "../data.js";
 import { getDebtInstallmentsForMonth } from "../dividas/budget-integration.js";
 import { buildProjectionTotals, plannedInstallmentMonths, valuesFromMonthlyMap } from "../domain/projection.js";
 import { cardGeneralPurchaseAmount, cardGeneralPurchaseOccurrenceKey } from "../domain/card-general-purchases.js";
+import { fixedCostAdditionAmount, fixedCostMonthlyValue } from "../domain/fixed-cost-additions.js";
 
 export function renderProjection() {
   const months = currentMonths(12);
@@ -870,24 +871,29 @@ export function fixedCostGroupInfo(key, item) {
 
 export function fixedTotalForGroup(key, month = null) {
   const overrides = state.data.fixedCostAmountOverrides || {};
+  const additions = state.data.fixedCostAdditions || {};
   return state.data.fixedCosts
     .filter((item) => item.includeInProjection !== false && fixedCostGroupKey(item) === key)
     .reduce((total, item) => {
-      const ov = month !== null ? overrides[`${item.id}:${month}`] : undefined;
-      return total + (ov !== undefined ? ov : Number(item.amount || 0));
+      if (month === null) return total + Number(item.amount || 0);
+      return total + fixedCostMonthlyValue(item, overrides, additions, month);
     }, 0);
 }
 
 export function fixedChildrenForGroup(key, month) {
   const overrides = state.data.fixedCostAmountOverrides || {};
+  const additions = state.data.fixedCostAdditions || {};
   return state.data.fixedCosts
     .filter((item) => item.includeInProjection !== false && fixedCostGroupKey(item) === key)
     .map((item) => {
-      const ov = overrides[`${item.id}:${month}`];
+      const additionAmount = fixedCostAdditionAmount(additions, item.id, month);
       return {
         key: `child-fixed|${item.id}:${month}`,
         label: item.name || "Custo fixo",
-        value: ov !== undefined ? ov : Number(item.amount || 0),
+        value: fixedCostMonthlyValue(item, overrides, additions, month),
+        baseValue: Number(item.amount || 0),
+        additionAmount,
+        isCardFixed: item.paymentMethod === "Cartão de crédito" && Boolean(item.cardId),
         dueDate: monthDayDate(month, item.dueDay || 1)
       };
     });

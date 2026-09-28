@@ -23,6 +23,7 @@ Campos principais:
 - `paidAmounts`, `paidDates` e `receivedAmounts`: detalhes das baixas.
 - `appliedCashMovements`: movimentos ja aplicados ao saldo em conta.
 - `fixedCostAmountOverrides`: valores excepcionais por custo e mes.
+- `fixedCostAdditions`: soma dos gastos adicionais por custo e mês; não altera o valor recorrente dos demais meses.
 - `car`, `fgts`, `vacations` e `taxes`: dominios especializados.
 
 ## Dividas

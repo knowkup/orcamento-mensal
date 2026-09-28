@@ -4,7 +4,7 @@ import { loadLocalState, exportState, importState } from "./storage.js";
 import { setupFirebase, saveState } from "./firebase.js";
 import { bindMoneyInputs, refreshIcons, updateSync } from "./utils.js";
 import { renderProjection } from "./planejamento/planejamento.js";
-import { renderMonthlyControl, confirmReceivedOccurrence, confirmPaidOccurrence, openPlannedDialog, closeMonth, saveAccountBalance, updatePlannedFields, addPlannedPurchase, closePlannedDialog, saveFixedCostAmount, navigateControlMonth } from "./controle/controle.js";
+import { renderMonthlyControl, confirmReceivedOccurrence, confirmPaidOccurrence, openPlannedDialog, closeMonth, saveAccountBalance, updatePlannedFields, addPlannedPurchase, closePlannedDialog, saveFixedCostAmount, saveFixedCostAddition, navigateControlMonth } from "./controle/controle.js";
 import { renderInstallments, addInstallment, openInstallmentDialog, closeInstallmentDialog } from "./parcelamentos/parcelamentos.js";
 import { renderFixedCosts, openFixedCostDialog, closeFixedCostDialog, updateFixedCostFields, addFixedCost } from "./custos-fixos/custos-fixos.js";
 import { renderCar, updateCar, openCarContractDialog, updateSettings, payCarInstallment } from "./carro/carro.js";
@@ -95,6 +95,8 @@ function bindEvents() {
   });
   on(el.fixedCostAmountForm, "submit", saveFixedCostAmount);
   on(el.closeFixedCostAmountButton, "click", () => closeDialog(el.fixedCostAmountDialog));
+  on(el.fixedCostAdditionForm, "submit", saveFixedCostAddition);
+  on(el.closeFixedCostAdditionButton, "click", () => closeDialog(el.fixedCostAdditionDialog));
   on(el.incomeExceptionForm, "submit", saveIncomeException);
   on(el.closeIncomeExceptionButton, "click", closeIncomeExceptionDialog);
   on(document.querySelector("#openTaxTablesButton"), "click", () => document.querySelector("#taxTablesDialog")?.showModal());

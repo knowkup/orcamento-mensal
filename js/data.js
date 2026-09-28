@@ -36,6 +36,7 @@ export function createDefaultData() {
     closedMonths: [],
     closedMonthSnapshots: {},
     fixedCostAmountOverrides: {},
+    fixedCostAdditions: {},
     debtOverviewSelectedIds: null,
     debtOverviewOverrides: {},
     debtOverviewExcludedIds: [],
@@ -212,6 +213,9 @@ export function normalizeData(data) {
     closedMonths: data.closedMonths || [],
     closedMonthSnapshots: data.closedMonthSnapshots || {},
     fixedCostAmountOverrides: data.fixedCostAmountOverrides || {},
+    fixedCostAdditions: data.fixedCostAdditions && typeof data.fixedCostAdditions === "object" && !Array.isArray(data.fixedCostAdditions)
+      ? data.fixedCostAdditions
+      : defaults.fixedCostAdditions,
     debtOverviewSelectedIds: Array.isArray(data.debtOverviewSelectedIds)
       ? data.debtOverviewSelectedIds.filter((id) => typeof id === "string" && id)
       : defaults.debtOverviewSelectedIds,

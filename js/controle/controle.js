@@ -6,6 +6,7 @@ import { buildProjectionRows, uniqueGroups, groupKey } from "../planejamento/pla
 import { markDebtInstallmentPaid } from "../dividas/budget-integration.js";
 import { firstDueDate, rowDueDate, compareRowsByDueDate, rowOutstanding, rowIncomeOutstanding } from "../domain/row-utils.js";
 import { cardGeneralPurchaseAmount, cardGeneralPurchaseStorageKey } from "../domain/card-general-purchases.js";
+import { fixedCostAdditionAmount, fixedCostAdditionStorageKey } from "../domain/fixed-cost-additions.js";
 import { accountBalanceAtMonthEnd } from "../domain/closed-months.js";
 import { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned } from "./planned-dialog.js";
 export { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned };
@@ -188,6 +189,9 @@ export function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-edit-monthly-amount]").forEach((button) => {
     button.addEventListener("click", () => openMonthlyAmountDialog(button.dataset.editMonthlyAmount));
   });
+  el.monthlyBoard.querySelectorAll("[data-add-fixed-cost]").forEach((button) => {
+    button.addEventListener("click", () => openFixedCostAdditionDialog(button.dataset.addFixedCost));
+  });
   el.monthlyBoard.querySelectorAll("[data-edit-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => openPlannedDialog(button.dataset.editManualPlan, button.dataset.editManualKind));
   });
@@ -333,20 +337,27 @@ function monthlyBreakdown(row, month, locked = false) {
               : `data-pay-expense="${item.key}" data-expected="${item.value}" data-label="${escapeHtml(item.label)}"`;
             const isFixed = item.key.startsWith("child-fixed|");
             const isCardGeneral = item.isCardGeneralPurchases;
+            const additionHint = item.additionAmount > 0
+              ? ` · Meta ${currency.format(item.baseValue)} + acréscimos ${currency.format(item.additionAmount)}`
+              : "";
             // Compras gerais começa em R$ 0,00 e por isso é considerada quitada.
             // Ainda assim, ela precisa continuar editável para que o valor possa ser informado.
             const editAmountButton = !locked && (isCardGeneral || (isFixed && !done))
               ? `<button class="icon-button mini-icon" type="button" title="Editar valor deste mês" data-edit-monthly-amount="${item.key}">${icon("pencil")}</button>`
               : "";
+            const addAmountButton = !locked && item.isCardFixed && !done
+              ? `<button class="icon-button mini-icon" type="button" title="Adicionar gasto neste mês" data-add-fixed-cost="${item.key}">${icon("plus")}</button>`
+              : "";
             return `
               <div class="monthly-breakdown-row ${done ? "done" : ""}">
                 <div>
                   <strong>${escapeHtml(item.label)}</strong>
-                  <span>${item.dueDate ? formatDate(item.dueDate) : formatMonthLong(month)}</span>
+                  <span>${item.dueDate ? formatDate(item.dueDate) : formatMonthLong(month)}${additionHint}</span>
                 </div>
                 <div class="monthly-item-action">
                   <strong class="negative">-${currency.format(displayValue)}</strong>
                   ${editAmountButton}
+                  ${addAmountButton}
                   ${locked ? "" : `<button class="small-button pay ${done ? "danger-mini" : ""}" type="button" ${attr}>${done ? "Excluir pagamento" : "Pagar"}</button>`}
                 </div>
               </div>
@@ -721,7 +732,9 @@ export function openMonthlyAmountDialog(key) {
   const cost = state.data.fixedCosts.find((item) => item.id === id);
   const overrideKey = `${id}:${month}`;
   const overrides = state.data.fixedCostAmountOverrides || {};
-  const current = overrides[overrideKey] !== undefined ? overrides[overrideKey] : Number(cost?.amount || 0);
+  const additionAmount = fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month);
+  const currentBase = overrides[overrideKey] !== undefined ? overrides[overrideKey] : Number(cost?.amount || 0);
+  const current = Number(currentBase || 0) + additionAmount;
   el.fixedCostAmountForm.elements.key.value = overrideKey;
   el.fixedCostAmountForm.elements.amount.value = formatCurrencyInput(current);
   el.fixedCostAmountTitle.textContent = cost?.name || "Custo fixo";
@@ -743,8 +756,46 @@ export async function saveFixedCostAmount(event) {
     if (state.saveStateFn) await state.saveStateFn("Compras gerais atualizadas para o mês.");
     return;
   }
-  state.data.fixedCostAmountOverrides = { ...(state.data.fixedCostAmountOverrides || {}), [key]: amount };
+  const { rowId: id, month } = splitOccurrenceKey(key);
+  const additionAmount = fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month);
+  state.data.fixedCostAmountOverrides = {
+    ...(state.data.fixedCostAmountOverrides || {}),
+    [key]: Math.max(0, amount - additionAmount)
+  };
   el.fixedCostAmountDialog.close();
   if (state.saveStateFn) await state.saveStateFn("Valor do custo fixo ajustado para o mês.");
+}
+
+export function openFixedCostAdditionDialog(key) {
+  if (!canChangeOccurrence(key)) return;
+  const { rowId, month } = splitOccurrenceKey(key);
+  if (!rowId.startsWith("child-fixed|")) return;
+  const id = rowId.replace("child-fixed|", "");
+  const cost = state.data.fixedCosts.find((item) => item.id === id);
+  if (!cost || cost.paymentMethod !== "Cartão de crédito" || !cost.cardId) return;
+  el.fixedCostAdditionForm.reset();
+  el.fixedCostAdditionForm.elements.key.value = fixedCostAdditionStorageKey(id, month);
+  el.fixedCostAdditionTitle.textContent = `Adicionar gasto · ${cost.name || "Custo fixo"}`;
+  el.fixedCostAdditionDialog.showModal();
+}
+
+export async function saveFixedCostAddition(event) {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const key = String(form.get("key"));
+  const { rowId: id, month } = splitOccurrenceKey(key);
+  const occurrenceKey = `child-fixed|${id}:${month}`;
+  if (!canChangeOccurrence(occurrenceKey)) return;
+  const amount = parseCurrencyInput(form.get("amount"));
+  if (amount <= 0) {
+    showToast("Informe um acréscimo maior que zero.", "error");
+    return;
+  }
+  state.data.fixedCostAdditions = {
+    ...(state.data.fixedCostAdditions || {}),
+    [key]: fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month) + amount
+  };
+  el.fixedCostAdditionDialog.close();
+  if (state.saveStateFn) await state.saveStateFn("Gasto adicional incluído somente neste mês.");
 }
 
