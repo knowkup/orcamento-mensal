@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   fixedCostAdditionAmount,
   fixedCostAdditionStorageKey,
+  fixedCostBaseValue,
   fixedCostMonthlyValue
 } from "../js/domain/fixed-cost-additions.js";
 
@@ -29,4 +30,5 @@ test("combines a monthly value adjustment with its addition", () => {
     fixedCostMonthlyValue(cost, { "gasolina:2026-10": 1500 }, { "gasolina:2026-10": 300 }, "2026-10"),
     1800
   );
+  assert.equal(fixedCostBaseValue(cost, { "gasolina:2026-10": 1500 }, "2026-10"), 1500);
 });

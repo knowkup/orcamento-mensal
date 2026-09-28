@@ -14,7 +14,7 @@ import { normalizedIncomeChanges } from "../data.js";
 import { getDebtInstallmentsForMonth } from "../dividas/budget-integration.js";
 import { buildProjectionTotals, plannedInstallmentMonths, valuesFromMonthlyMap } from "../domain/projection.js";
 import { cardGeneralPurchaseAmount, cardGeneralPurchaseOccurrenceKey } from "../domain/card-general-purchases.js";
-import { fixedCostAdditionAmount, fixedCostMonthlyValue } from "../domain/fixed-cost-additions.js";
+import { fixedCostAdditionAmount, fixedCostBaseValue, fixedCostMonthlyValue } from "../domain/fixed-cost-additions.js";
 
 export function renderProjection() {
   const months = currentMonths(12);
@@ -891,7 +891,7 @@ export function fixedChildrenForGroup(key, month) {
         key: `child-fixed|${item.id}:${month}`,
         label: item.name || "Custo fixo",
         value: fixedCostMonthlyValue(item, overrides, additions, month),
-        baseValue: Number(item.amount || 0),
+        baseValue: fixedCostBaseValue(item, overrides, month),
         additionAmount,
         isCardFixed: item.paymentMethod === "Cartão de crédito" && Boolean(item.cardId),
         dueDate: monthDayDate(month, item.dueDay || 1)

@@ -2060,6 +2060,18 @@ label {
   font-weight: 600;
 }
 
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  width: auto;
+  min-height: auto;
+}
+
 input,
 select {
   width: 100%;

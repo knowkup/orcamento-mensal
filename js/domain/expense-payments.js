@@ -3,6 +3,17 @@ function positiveAmount(value) {
   return Number.isFinite(amount) ? Math.max(0, amount) : 0;
 }
 
+export function expensePaymentEntries(data, key) {
+  const payments = data?.expensePayments?.[key];
+  if (Array.isArray(payments)) {
+    return payments
+      .map((payment) => ({ ...payment, amount: positiveAmount(payment?.amount) }))
+      .filter((payment) => payment.amount > 0);
+  }
+  const legacyAmount = positiveAmount(data?.paidAmounts?.[key]);
+  return legacyAmount ? [{ amount: legacyAmount, date: data?.paidDates?.[key] || "" }] : [];
+}
+
 export function expensePaidAmount(data, key, fallback = 0) {
   const payments = data?.expensePayments?.[key];
   if (Array.isArray(payments)) {

@@ -11,8 +11,11 @@ export function fixedCostAdditionAmount(additions, costId, month) {
   return positiveAmount(additions?.[fixedCostAdditionStorageKey(costId, month)]);
 }
 
-export function fixedCostMonthlyValue(cost, overrides, additions, month) {
+export function fixedCostBaseValue(cost, overrides, month) {
   const baseValue = overrides?.[fixedCostAdditionStorageKey(cost.id, month)];
-  const plannedValue = baseValue === undefined ? positiveAmount(cost.amount) : positiveAmount(baseValue);
-  return plannedValue + fixedCostAdditionAmount(additions, cost.id, month);
+  return baseValue === undefined ? positiveAmount(cost.amount) : positiveAmount(baseValue);
+}
+
+export function fixedCostMonthlyValue(cost, overrides, additions, month) {
+  return fixedCostBaseValue(cost, overrides, month) + fixedCostAdditionAmount(additions, cost.id, month);
 }

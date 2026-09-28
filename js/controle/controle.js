@@ -7,6 +7,8 @@ import { markDebtInstallmentPaid } from "../dividas/budget-integration.js";
 import { firstDueDate, rowDueDate, compareRowsByDueDate, rowOutstanding, rowIncomeOutstanding } from "../domain/row-utils.js";
 import { cardGeneralPurchaseAmount, cardGeneralPurchaseStorageKey } from "../domain/card-general-purchases.js";
 import { fixedCostAdditionAmount, fixedCostAdditionStorageKey } from "../domain/fixed-cost-additions.js";
+import { incomeReceiptEntries } from "../domain/income-receipts.js";
+import { expensePaymentEntries } from "../domain/expense-payments.js";
 import { accountBalanceAtMonthEnd } from "../domain/closed-months.js";
 import { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned } from "./planned-dialog.js";
 export { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned };
@@ -175,6 +177,12 @@ export function renderMonthlyControl() {
   el.monthlyBoard.querySelectorAll("[data-cancel-payment]").forEach((button) => {
     button.addEventListener("click", () => cancelPaidOccurrence(button.dataset.cancelPayment));
   });
+  el.monthlyBoard.querySelectorAll("[data-delete-income-transaction]").forEach((button) => {
+    button.addEventListener("click", () => deleteReceivedTransaction(button.dataset.deleteIncomeTransaction, Number(button.dataset.transactionIndex), Number(button.dataset.expected)));
+  });
+  el.monthlyBoard.querySelectorAll("[data-delete-expense-transaction]").forEach((button) => {
+    button.addEventListener("click", () => deletePaidTransaction(button.dataset.deleteExpenseTransaction, Number(button.dataset.transactionIndex), Number(button.dataset.expected)));
+  });
   el.monthlyBoard.querySelectorAll("[data-delete-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => deleteManualPlanned(button.dataset.deleteManualPlan));
   });
@@ -191,6 +199,9 @@ export function renderMonthlyControl() {
   });
   el.monthlyBoard.querySelectorAll("[data-add-fixed-cost]").forEach((button) => {
     button.addEventListener("click", () => openFixedCostAdditionDialog(button.dataset.addFixedCost));
+  });
+  el.monthlyBoard.querySelectorAll("[data-remove-fixed-cost]").forEach((button) => {
+    button.addEventListener("click", () => openFixedCostAdditionDialog(button.dataset.removeFixedCost, "remove"));
   });
   el.monthlyBoard.querySelectorAll("[data-edit-manual-plan]").forEach((button) => {
     button.addEventListener("click", () => openPlannedDialog(button.dataset.editManualPlan, button.dataset.editManualKind));
@@ -239,12 +250,10 @@ export function monthlyItems(items, month, kind, scope = "pending", locked = fal
       : (scope === "realized" && hasExpensePayment ? `data-cancel-payment="${key}"` : done ? `data-cancel-payment="${key}"` : `data-pay-expense="${key}" data-expected="${value}" data-outstanding="${expenseRemaining}" data-label="${escapeHtml(row.label)}"`);
     const buttonClass = kind === "expense" ? `pay ${done ? "danger-mini" : ""}` : "";
     const buttonLabel = kind === "income"
-      ? (scope === "realized" && hasIncomeReceipt ? "Estornar recebimentos" : partialIncome ? "Receber restante" : "Receber")
-      : (scope === "realized" && hasExpensePayment ? "Estornar pagamento" : done ? "Excluir pagamento" : partialExpense ? "Pagar restante" : "Pagar");
+      ? (scope === "realized" && hasIncomeReceipt ? "Estornar todos os recebimentos" : partialIncome ? "Receber restante" : "Receber")
+      : (scope === "realized" && hasExpensePayment ? "Estornar todos os pagamentos" : done ? "Excluir pagamento" : partialExpense ? "Pagar restante" : "Pagar");
     const actionButton = locked ? "" : scope === "realized"
-      ? (kind === "expense" && !done
-        ? (hasExpensePayment ? `<button class="small-button danger-mini" type="button" ${attr}>Estornar</button>` : "")
-        : `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`)
+      ? `<button class="small-button danger-mini icon-only" type="button" title="${buttonLabel}" ${attr}>${icon("trash-2")}</button>`
       : `<button class="small-button ${buttonClass}" type="button" ${attr}>${buttonLabel}</button>`;
     const marker = (() => {
       if (row.creditorId) return creditorLogoHtml(row.creditorId);
@@ -257,10 +266,11 @@ export function monthlyItems(items, month, kind, scope = "pending", locked = fal
       return sourceLogoHtml(row.logoUrl, row.origin || row.label);
     })();
     const breakdown = kind === "expense" && scope !== "realized" ? monthlyBreakdown(row, month, locked) : "";
+    const realizedBreakdown = scope === "realized" ? monthlyRealizedBreakdown(row, month, kind, locked) : "";
     const dueDate = rowDueDate(row, month);
     const dateLabel = kind === "income" ? "Recebimento" : "Vencimento";
     const accountCount = monthlyAccountCount(row, month);
-    const hasBreakdown = kind === "expense" && Boolean(breakdown);
+    const hasBreakdown = Boolean(breakdown || realizedBreakdown);
     const isManual = isManualPlannedRow(row);
     const manualKind = row.manualType === "planned-income" ? "income" : "expense";
     const manualMenu = isManual && scope !== "realized" && !locked ? `
@@ -277,8 +287,8 @@ export function monthlyItems(items, month, kind, scope = "pending", locked = fal
       ? (done ? "Recebido" : partialIncome ? "Parcial" : "Pendente")
       : rowOutstanding(row, month, value) <= 0 ? "Pago" : rowHasAnyPayment(row, month) ? "Parcial" : "Pendente";
     const statusTone = statusLabel === "Pendente" ? "pending" : statusLabel === "Parcial" ? "partial" : "done";
-    const chevron = scope !== "realized" && (hasBreakdown || isManual)
-      ? `<button class="monthly-chevron" type="button" title="${hasBreakdown ? "Expandir contas" : "Opções"}" data-toggle-monthly-details>${icon("chevron-down")}</button>`
+    const chevron = hasBreakdown || (scope !== "realized" && isManual)
+      ? `<button class="monthly-chevron" type="button" title="${hasBreakdown ? "Ver detalhes" : "Opções"}" data-toggle-monthly-details>${icon("chevron-down")}</button>`
       : `<span class="monthly-chevron placeholder"></span>`;
     return `
       <article class="monthly-item ${done ? "done" : ""} ${row.owner === "Kah" ? "owner-kah-card" : ""} ${kind === "income" ? "income-item" : "expense-item"}">
@@ -298,6 +308,7 @@ export function monthlyItems(items, month, kind, scope = "pending", locked = fal
         </div>
         ${chevron}
         ${breakdown}
+        ${realizedBreakdown}
         ${manualMenu}
       </article>
     `;
@@ -313,6 +324,41 @@ export function monthlyRealizedItems(entries, exits, month, locked = false) {
     ? `<div class="realized-group"><span>Pagamentos</span>${monthlyItems(exits, month, "expense", "realized", locked)}</div>`
     : "";
   return `${entryRows}${exitRows}`;
+}
+
+function monthlyRealizedBreakdown(row, month, kind, locked = false) {
+  const sources = [{ key: `${row.id}:${month}`, expected: Number(row.values?.[month] || 0) }];
+  if (kind === "expense") {
+    (row.children?.[month] || []).forEach((item) => sources.push({ key: item.key, expected: Number(item.value || 0) }));
+  }
+  const transactions = sources.flatMap((source) => {
+    const entries = kind === "income"
+      ? incomeReceiptEntries(state.data, source.key)
+      : expensePaymentEntries(state.data, source.key);
+    return entries.map((entry, index) => ({ ...entry, ...source, index }));
+  });
+  if (transactions.length < 2) return "";
+  const actionAttribute = kind === "income" ? "data-delete-income-transaction" : "data-delete-expense-transaction";
+  const itemLabel = kind === "income" ? "Recebimento" : "Pagamento";
+  return `
+    <details class="monthly-breakdown">
+      <summary>Movimentações registradas</summary>
+      <div class="monthly-breakdown-list">
+        ${transactions.map((transaction) => `
+          <div class="monthly-breakdown-row">
+            <div>
+              <strong>${itemLabel}</strong>
+              <span>${transaction.date ? formatDate(transaction.date) : "Data não informada"}</span>
+            </div>
+            <div class="monthly-item-action">
+              <strong class="${kind === "income" ? "positive" : "negative"}">${kind === "income" ? "" : "-"}${currency.format(transaction.amount)}</strong>
+              ${locked ? "" : `<button class="small-button danger-mini icon-only" type="button" title="Excluir esta movimentação" ${actionAttribute}="${transaction.key}" data-transaction-index="${transaction.index}" data-expected="${transaction.expected}">${icon("trash-2")}</button>`}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </details>
+  `;
 }
 
 export function monthlyAccountCount(row, month) {
@@ -338,7 +384,7 @@ function monthlyBreakdown(row, month, locked = false) {
             const isFixed = item.key.startsWith("child-fixed|");
             const isCardGeneral = item.isCardGeneralPurchases;
             const additionHint = item.additionAmount > 0
-              ? ` · Meta ${currency.format(item.baseValue)} + acréscimos ${currency.format(item.additionAmount)}`
+              ? ` · Meta ${currency.format(item.baseValue)} + Acréscimos ${currency.format(item.additionAmount)}`
               : "";
             // Compras gerais começa em R$ 0,00 e por isso é considerada quitada.
             // Ainda assim, ela precisa continuar editável para que o valor possa ser informado.
@@ -347,6 +393,9 @@ function monthlyBreakdown(row, month, locked = false) {
               : "";
             const addAmountButton = !locked && item.isCardFixed && !done
               ? `<button class="icon-button mini-icon" type="button" title="Adicionar gasto neste mês" data-add-fixed-cost="${item.key}">${icon("plus")}</button>`
+              : "";
+            const removeAmountButton = !locked && item.isCardFixed && !done && item.additionAmount > 0
+              ? `<button class="icon-button mini-icon" type="button" title="Remover acréscimo deste mês" data-remove-fixed-cost="${item.key}">${icon("minus")}</button>`
               : "";
             return `
               <div class="monthly-breakdown-row ${done ? "done" : ""}">
@@ -358,6 +407,7 @@ function monthlyBreakdown(row, month, locked = false) {
                   <strong class="negative">-${currency.format(displayValue)}</strong>
                   ${editAmountButton}
                   ${addAmountButton}
+                  ${removeAmountButton}
                   ${locked ? "" : `<button class="small-button pay ${done ? "danger-mini" : ""}" type="button" ${attr}>${done ? "Excluir pagamento" : "Pagar"}</button>`}
                 </div>
               </div>
@@ -468,7 +518,7 @@ export function openExpensePaymentDialog(key, expected, label, outstanding) {
   el.expensePaymentForm.elements.expected.value = expectedAmount;
   el.expensePaymentForm.elements.paidAmount.value = formatCurrencyInput(remainingAmount);
   el.expensePaymentForm.elements.paymentDate.value = state.data.paidDates?.[key] || todayIsoDate();
-  el.expensePaymentForm.elements.settlementStatus.value = "complete";
+  el.expensePaymentForm.elements.leavePending.checked = false;
   el.expensePaymentDialog.showModal();
 }
 
@@ -482,7 +532,7 @@ export async function confirmPaidOccurrence(event) {
   el.expensePaymentDialog.close();
   await registerPaidOccurrence(key, amount, paymentDate, {
     expected: Number(form.get("expected") || 0),
-    settlementStatus: String(form.get("settlementStatus") || "pending")
+    leavePending: form.get("leavePending") === "on"
   });
 }
 
@@ -508,7 +558,7 @@ export async function registerPaidOccurrence(key, amount, paymentDate, options =
     state.data.expensePayments = { ...(state.data.expensePayments || {}), [key]: payments };
     state.data.paidAmounts[key] = totalPaid;
   }
-  const completed = options.settlementStatus === "complete" || !hasExpected || totalPaid >= expected - 0.005;
+  const completed = !options.leavePending || !hasExpected || totalPaid >= expected - 0.005;
   state.data.paidOccurrences = completed
     ? [...new Set([...(state.data.paidOccurrences || []), key])]
     : (state.data.paidOccurrences || []).filter((item) => item !== key);
@@ -537,6 +587,40 @@ export async function cancelPaidOccurrence(key) {
   if (state.saveStateFn) await state.saveStateFn("Pagamento cancelado.");
 }
 
+export async function deletePaidTransaction(key, index, expected) {
+  if (!canChangeOccurrence(key)) return;
+  const payments = expensePaymentEntries(state.data, key);
+  if (!payments[index]) return;
+  const nextPayments = payments.filter((_, paymentIndex) => paymentIndex !== index);
+  const totalPaid = nextPayments.reduce((total, payment) => total + Number(payment.amount || 0), 0);
+  const wasCompleted = (state.data.paidOccurrences || []).includes(key);
+  state.data.expensePayments = { ...(state.data.expensePayments || {}) };
+  state.data.paidAmounts = { ...(state.data.paidAmounts || {}) };
+  state.data.paidDates = { ...(state.data.paidDates || {}) };
+  if (nextPayments.length) {
+    state.data.expensePayments[key] = nextPayments;
+    state.data.paidAmounts[key] = totalPaid;
+    state.data.paidDates[key] = nextPayments.at(-1)?.date || "";
+  } else {
+    delete state.data.expensePayments[key];
+    delete state.data.paidAmounts[key];
+    delete state.data.paidDates[key];
+  }
+  const completed = totalPaid >= Number(expected || 0) - 0.005 && totalPaid > 0;
+  state.data.paidOccurrences = completed
+    ? [...new Set([...(state.data.paidOccurrences || []), key])]
+    : (state.data.paidOccurrences || []).filter((item) => item !== key);
+  applyCashMovement(key, -totalPaid);
+  if (wasCompleted && !completed) {
+    syncExpenseSource(key, false);
+    const { rowId, month } = splitOccurrenceKey(key);
+    if (rowId.startsWith("auto-debt-")) {
+      try { await markDebtInstallmentPaid(rowId.replace("auto-debt-", ""), month, false); } catch (error) { console.error(error); }
+    }
+  }
+  if (state.saveStateFn) await state.saveStateFn("Movimentação de pagamento excluída.");
+}
+
 export async function toggleReceivedOccurrence(key) {
   const received = state.data.receivedOccurrences || [];
   if (received.includes(key)) {
@@ -555,6 +639,29 @@ export async function cancelReceivedOccurrence(key) {
   if (state.data.receivedPayments) delete state.data.receivedPayments[key];
   applyCashMovement(key, 0);
   if (state.saveStateFn) await state.saveStateFn("Recebimentos estornados.");
+}
+
+export async function deleteReceivedTransaction(key, index, expected) {
+  if (!canChangeOccurrence(key)) return;
+  const receipts = incomeReceiptEntries(state.data, key);
+  if (!receipts[index]) return;
+  const nextReceipts = receipts.filter((_, receiptIndex) => receiptIndex !== index);
+  const totalReceived = nextReceipts.reduce((total, receipt) => total + Number(receipt.amount || 0), 0);
+  state.data.receivedPayments = { ...(state.data.receivedPayments || {}) };
+  state.data.receivedAmounts = { ...(state.data.receivedAmounts || {}) };
+  if (nextReceipts.length) {
+    state.data.receivedPayments[key] = nextReceipts;
+    state.data.receivedAmounts[key] = totalReceived;
+  } else {
+    delete state.data.receivedPayments[key];
+    delete state.data.receivedAmounts[key];
+  }
+  const completed = totalReceived >= Number(expected || 0) - 0.005 && totalReceived > 0;
+  state.data.receivedOccurrences = completed
+    ? [...new Set([...(state.data.receivedOccurrences || []), key])]
+    : (state.data.receivedOccurrences || []).filter((item) => item !== key);
+  applyCashMovement(key, totalReceived);
+  if (state.saveStateFn) await state.saveStateFn("Movimentação de recebimento excluída.");
 }
 
 export function splitOccurrenceKey(key) {
@@ -725,6 +832,7 @@ export function openMonthlyAmountDialog(key) {
     el.fixedCostAmountForm.elements.amount.value = formatCurrencyInput(current);
     el.fixedCostAmountTitle.textContent = `Compras gerais · ${group?.name || "Cartão"}`;
     el.fixedCostAmountEyebrow.textContent = "Cartão de crédito";
+    el.fixedCostAmountFieldLabel.textContent = "Valor deste mês";
     el.fixedCostAmountDialog.showModal();
     return;
   }
@@ -732,13 +840,12 @@ export function openMonthlyAmountDialog(key) {
   const cost = state.data.fixedCosts.find((item) => item.id === id);
   const overrideKey = `${id}:${month}`;
   const overrides = state.data.fixedCostAmountOverrides || {};
-  const additionAmount = fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month);
   const currentBase = overrides[overrideKey] !== undefined ? overrides[overrideKey] : Number(cost?.amount || 0);
-  const current = Number(currentBase || 0) + additionAmount;
   el.fixedCostAmountForm.elements.key.value = overrideKey;
-  el.fixedCostAmountForm.elements.amount.value = formatCurrencyInput(current);
+  el.fixedCostAmountForm.elements.amount.value = formatCurrencyInput(currentBase);
   el.fixedCostAmountTitle.textContent = cost?.name || "Custo fixo";
   el.fixedCostAmountEyebrow.textContent = "Custo fixo";
+  el.fixedCostAmountFieldLabel.textContent = "Valor-base deste mês";
   el.fixedCostAmountDialog.showModal();
 }
 
@@ -756,26 +863,31 @@ export async function saveFixedCostAmount(event) {
     if (state.saveStateFn) await state.saveStateFn("Compras gerais atualizadas para o mês.");
     return;
   }
-  const { rowId: id, month } = splitOccurrenceKey(key);
-  const additionAmount = fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month);
   state.data.fixedCostAmountOverrides = {
     ...(state.data.fixedCostAmountOverrides || {}),
-    [key]: Math.max(0, amount - additionAmount)
+    [key]: amount
   };
   el.fixedCostAmountDialog.close();
   if (state.saveStateFn) await state.saveStateFn("Valor do custo fixo ajustado para o mês.");
 }
 
-export function openFixedCostAdditionDialog(key) {
+export function openFixedCostAdditionDialog(key, operation = "add") {
   if (!canChangeOccurrence(key)) return;
   const { rowId, month } = splitOccurrenceKey(key);
   if (!rowId.startsWith("child-fixed|")) return;
   const id = rowId.replace("child-fixed|", "");
   const cost = state.data.fixedCosts.find((item) => item.id === id);
   if (!cost || cost.paymentMethod !== "Cartão de crédito" || !cost.cardId) return;
+  const additionAmount = fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month);
+  if (operation === "remove" && additionAmount <= 0) return;
   el.fixedCostAdditionForm.reset();
   el.fixedCostAdditionForm.elements.key.value = fixedCostAdditionStorageKey(id, month);
-  el.fixedCostAdditionTitle.textContent = `Adicionar gasto · ${cost.name || "Custo fixo"}`;
+  el.fixedCostAdditionForm.elements.operation.value = operation;
+  el.fixedCostAdditionTitle.textContent = `${operation === "remove" ? "Remover acréscimo" : "Adicionar gasto"} · ${cost.name || "Custo fixo"}`;
+  el.fixedCostAdditionHint.textContent = operation === "remove"
+    ? `Você pode remover até ${currency.format(additionAmount)} dos Acréscimos deste mês. O valor-base não será alterado.`
+    : "Este acréscimo vale apenas para este mês. A meta recorrente dos próximos meses não será alterada.";
+  el.fixedCostAdditionButtonLabel.textContent = operation === "remove" ? "Remover acréscimo" : "Adicionar gasto";
   el.fixedCostAdditionDialog.showModal();
 }
 
@@ -783,6 +895,7 @@ export async function saveFixedCostAddition(event) {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const key = String(form.get("key"));
+  const operation = String(form.get("operation") || "add");
   const { rowId: id, month } = splitOccurrenceKey(key);
   const occurrenceKey = `child-fixed|${id}:${month}`;
   if (!canChangeOccurrence(occurrenceKey)) return;
@@ -791,11 +904,16 @@ export async function saveFixedCostAddition(event) {
     showToast("Informe um acréscimo maior que zero.", "error");
     return;
   }
-  state.data.fixedCostAdditions = {
-    ...(state.data.fixedCostAdditions || {}),
-    [key]: fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month) + amount
-  };
+  const currentAddition = fixedCostAdditionAmount(state.data.fixedCostAdditions, id, month);
+  if (operation === "remove" && amount > currentAddition) {
+    showToast(`Você pode remover no máximo ${currency.format(currentAddition)} dos Acréscimos.`, "error");
+    return;
+  }
+  const nextAddition = operation === "remove" ? currentAddition - amount : currentAddition + amount;
+  state.data.fixedCostAdditions = { ...(state.data.fixedCostAdditions || {}) };
+  if (nextAddition > 0) state.data.fixedCostAdditions[key] = nextAddition;
+  else delete state.data.fixedCostAdditions[key];
   el.fixedCostAdditionDialog.close();
-  if (state.saveStateFn) await state.saveStateFn("Gasto adicional incluído somente neste mês.");
+  if (state.saveStateFn) await state.saveStateFn(operation === "remove" ? "Acréscimo removido somente neste mês." : "Gasto adicional incluído somente neste mês.");
 }
 
