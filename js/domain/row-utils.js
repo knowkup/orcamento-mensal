@@ -27,6 +27,19 @@ export function rowOutstanding(row, month, value) {
   // Um pagamento feito na linha consolidada (por exemplo, na fatura do cartão)
   // precisa prevalecer sobre a soma das contas internas dessa mesma linha.
   if (hasPaidAmount(key)) return paidOutstandingAmount(key, value);
+  const sources = row.sourceRows?.[month] || [];
+  if (sources.length) {
+    return sources.reduce((total, source) => {
+      const sourceKey = `${source.id}:${month}`;
+      if (hasPaidAmount(sourceKey)) return total + paidOutstandingAmount(sourceKey, source.value);
+      if (source.children.length) {
+        return total + source.children.reduce((childTotal, item) => (
+          childTotal + paidOutstandingAmount(item.key, item.value)
+        ), 0);
+      }
+      return total + paidOutstandingAmount(sourceKey, source.value);
+    }, 0);
+  }
   const children = row.children?.[month] || [];
   if (children.length) {
     return children.reduce((total, item) => (

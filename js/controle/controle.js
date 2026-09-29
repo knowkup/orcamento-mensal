@@ -10,6 +10,7 @@ import { fixedCostAdditionAmount, fixedCostAdditionStorageKey } from "../domain/
 import { incomeReceiptEntries } from "../domain/income-receipts.js";
 import { expensePaymentEntries } from "../domain/expense-payments.js";
 import { accountBalanceAtMonthEnd } from "../domain/closed-months.js";
+import { consolidateCardInvoices } from "../domain/card-invoice-aggregation.js";
 import { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned } from "./planned-dialog.js";
 export { openPlannedDialog, closePlannedDialog, updatePlannedFields, addPlannedPurchase, deleteManualPlanned };
 
@@ -30,11 +31,15 @@ function canChangeOccurrence(key) {
 
 function resolveAutoMonth() {
   const current = todayIsoDate().slice(0, 7);
-  const rows = buildProjectionRows([current], true);
+  const rows = buildMonthlyRows(current);
   const entries = rows.filter((r) => r.kind === "income").map((r) => ({ row: r, value: r.values[current] || 0 })).filter((i) => i.value > 0);
   const exits = rows.filter((r) => r.kind === "expense").map((r) => ({ row: r, value: r.values[current] || 0 })).filter((i) => i.value > 0 || rowHasAnyPayment(i.row, current));
   const hasPending = entries.some((i) => rowIncomeOutstanding(i.row, current, i.value) > 0) || exits.some((i) => rowOutstanding(i.row, current, i.value) > 0);
   return hasPending ? current : nextMonths(1)[0];
+}
+
+function buildMonthlyRows(month) {
+  return consolidateCardInvoices(buildProjectionRows([month], true), month);
 }
 
 export function navigateControlMonth(direction) {
@@ -49,7 +54,7 @@ export function navigateControlMonth(direction) {
 export function renderMonthlyControl() {
   const month = state.controlMonth ?? resolveAutoMonth();
   const isClosed = (state.data.closedMonths || []).includes(month);
-  const rows = buildProjectionRows([month], true);
+  const rows = buildMonthlyRows(month);
   const entries = rows
     .filter((row) => row.kind === "income")
     .map((row) => ({ row, value: row.values[month] || 0 }))
@@ -429,7 +434,12 @@ export function compareMonthlyEntries(a, b, month, kind) {
 }
 
 export function rowHasAnyPayment(row, month) {
-  return hasPaidAmount(`${row.id}:${month}`) || (row.children?.[month] || []).some((item) => hasPaidAmount(item.key));
+  if (hasPaidAmount(`${row.id}:${month}`)) return true;
+  const sources = row.sourceRows?.[month] || [];
+  if (sources.length) return sources.some((source) => (
+    hasPaidAmount(`${source.id}:${month}`) || source.children.some((item) => hasPaidAmount(item.key))
+  ));
+  return (row.children?.[month] || []).some((item) => hasPaidAmount(item.key));
 }
 
 export function rowReceivedAmount(row, month, fallback) {
@@ -440,6 +450,16 @@ export function rowReceivedAmount(row, month, fallback) {
 export function rowPaidAmount(row, month, fallback) {
   const key = `${row.id}:${month}`;
   if (hasPaidAmount(key)) return paidAmount(key, fallback);
+  const sources = row.sourceRows?.[month] || [];
+  if (sources.length) {
+    return sources.reduce((total, source) => {
+      const sourceKey = `${source.id}:${month}`;
+      if (hasPaidAmount(sourceKey)) return total + paidAmount(sourceKey, source.value);
+      return total + source.children.reduce((childTotal, item) => (
+        childTotal + (hasPaidAmount(item.key) ? paidAmount(item.key, item.value) : 0)
+      ), 0);
+    }, 0);
+  }
   return (row.children?.[month] || []).reduce((total, item) => (
     total + (hasPaidAmount(item.key) ? paidAmount(item.key, item.value) : 0)
   ), 0);
@@ -724,7 +744,7 @@ export async function closeMonth() {
     showToast("Este mês já está fechado e congelado.", "error");
     return;
   }
-  const rows = buildProjectionRows([month], true);
+  const rows = buildMonthlyRows(month);
   const entries = rows.filter((row) => row.kind === "income" && (row.values[month] || 0) > 0);
   const exits = rows.filter((row) => row.kind === "expense" && ((row.values[month] || 0) > 0 || rowHasAnyPayment(row, month)));
   const hasPending = entries.some((row) => rowIncomeOutstanding(row, month, row.values[month] || 0) > 0)
