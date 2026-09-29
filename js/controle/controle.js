@@ -787,7 +787,7 @@ export function openReceiveDialog(key, expected) {
   el.receiveForm.elements.expected.value = Number(expected || 0);
   el.receiveForm.elements.amount.value = formatCurrencyInput(receivedOutstandingAmount(key, Number(expected || 0)));
   el.receiveForm.elements.receivedDate.value = todayIsoDate();
-  el.receiveForm.elements.settlementStatus.value = "complete";
+  el.receiveForm.elements.leavePending.checked = false;
   el.receiveDialog.showModal();
 }
 
@@ -798,7 +798,7 @@ export async function confirmReceivedOccurrence(event) {
   if (!canChangeOccurrence(key)) return;
   const amount = parseCurrencyInput(form.get("amount"));
   const expected = Number(form.get("expected") || 0);
-  const settlementStatus = String(form.get("settlementStatus") || "pending");
+  const leavePending = form.get("leavePending") === "on";
   if (amount <= 0) {
     showToast("Informe um valor recebido maior que zero.", "error");
     return;
@@ -812,7 +812,7 @@ export async function confirmReceivedOccurrence(event) {
   const totalReceived = payments.reduce((total, payment) => total + Number(payment.amount || 0), 0);
   state.data.receivedPayments = { ...(state.data.receivedPayments || {}), [key]: payments };
   state.data.receivedAmounts = { ...(state.data.receivedAmounts || {}), [key]: totalReceived };
-  const completed = settlementStatus === "complete" || totalReceived >= expected - 0.005;
+  const completed = !leavePending || totalReceived >= expected - 0.005;
   state.data.receivedOccurrences = completed
     ? [...new Set([...(state.data.receivedOccurrences || []), key])]
     : (state.data.receivedOccurrences || []).filter((item) => item !== key);
