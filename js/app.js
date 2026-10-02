@@ -183,7 +183,7 @@ function showView(name) {
       if (subtitle) subtitle.textContent = view.dataset.subtitle || "";
     }
   });
-  const bottomPrimary = ["planejamento", "controle", "divdashboard", "divrota"];
+  const bottomPrimary = ["planejamento", "controle", "divrota"];
   document.querySelectorAll(".bottom-tab[data-view]").forEach((t) => {
     t.classList.toggle("active", t.dataset.view === name);
   });

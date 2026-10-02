@@ -53,10 +53,6 @@
           </button>
 
           <p class="nav-group-label">Dívidas</p>
-          <button class="nav-tab" type="button" data-view="divdashboard">
-            <i data-lucide="layout-dashboard"></i>
-            <span>Dashboard</span>
-          </button>
           <button class="nav-tab" type="button" data-view="divrota">
             <i data-lucide="route"></i>
             <span>Rota Financeira</span>
@@ -64,10 +60,6 @@
           <button class="nav-tab" type="button" data-view="divespera">
             <i data-lucide="pause-circle"></i>
             <span>Em Espera</span>
-          </button>
-          <button class="nav-tab" type="button" data-view="divradar">
-            <i data-lucide="eye-off"></i>
-            <span>Fora do Radar</span>
           </button>
           <button class="nav-tab" type="button" data-view="divquitadas">
             <i data-lucide="check-circle"></i>
@@ -321,47 +313,6 @@
           </div>
         </section>
 
-        <!-- ── DÍVIDAS — Dashboard ─────────────────────────── -->
-        <section class="view" id="divdashboardView" data-title="Dashboard Dívidas" data-eyebrow="Visão Geral">
-          <div class="vertical-stack">
-            <div id="dashboardNextAction"></div>
-            <div id="dashboardSummary"></div>
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Prazo</p><h2>Pressão por horizonte</h2></div>
-              </div>
-              <div class="pressure-grid" id="deadlinePressure"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Próximos vencimentos</p><h2>Frente de pagamento</h2></div>
-                <button class="primary-button" type="button" data-new-debt-status="Ativa">
-                  <i data-lucide="plus"></i><span>Nova dívida</span>
-                </button>
-              </div>
-              <div id="dashboardUpcoming"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Estratégia</p><h2>Frente sugerida de pagamento</h2></div>
-              </div>
-              <div id="paymentFront"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Análise</p><h2>Insights</h2></div>
-              </div>
-              <div class="insights-grid" id="dashboardInsights"></div>
-            </section>
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Histórico</p><h2>Dívidas renegociadas</h2></div>
-              </div>
-              <div id="renegotiatedHistoryList"></div>
-            </section>
-          </div>
-        </section>
-
         <!-- ── DÍVIDAS — Rota Financeira ──────────────────── -->
         <section class="view" id="divrotaView" data-title="Rota Financeira" data-eyebrow="Dívidas Priorizadas" data-subtitle="Organize a ordem das dívidas que você pretende quitar.">
           <div class="vertical-stack">
@@ -390,11 +341,6 @@
         <!-- ── DÍVIDAS — Em Espera ────────────────────────── -->
         <section class="view" id="divesperaView" data-title="Dívidas em espera" data-eyebrow="Fora da frente atual" data-subtitle="Acompanhe compromissos reconhecidos que ainda não entraram na frente de pagamento principal.">
           <div class="vertical-stack">
-            <div class="route-top-bar">
-              <button class="primary-button" type="button" data-new-debt-status="Em espera">
-                <i data-lucide="plus"></i><span>Nova dívida</span>
-              </button>
-            </div>
             <div class="filter-row" id="waitingCreditorFilters"></div>
             <div class="debt-metrics" id="waitingDebtMetrics"></div>
             <div class="route-sort-bar">
@@ -405,31 +351,12 @@
                 <option value="due">Vencimento</option>
                 <option value="balance">Saldo</option>
               </select>
-            </div>
-            <div id="waitingDebts"></div>
-          </div>
-        </section>
-
-        <!-- ── DÍVIDAS — Fora do Radar ────────────────────── -->
-        <section class="view" id="divradarView" data-title="Fora do Radar" data-eyebrow="Fora da frente atual" data-subtitle="Dívidas reconhecidas mas que não estão sendo atacadas no momento.">
-          <div class="vertical-stack">
-            <div class="route-top-bar">
-              <button class="primary-button" type="button" data-new-debt-status="Fora do radar">
-                <i data-lucide="plus"></i><span>Nova dívida</span>
-              </button>
-            </div>
-            <div class="filter-row" id="hiddenCreditorFilters"></div>
-            <div class="debt-metrics" id="hiddenDebtMetrics"></div>
-            <div class="route-sort-bar">
-              <span>Ordenar</span>
-              <select class="ghost-btn" id="hiddenDebtSort">
-                <option value="priority">Prioridade</option>
-                <option value="trail">Ordem manual</option>
-                <option value="due">Vencimento</option>
-                <option value="balance">Saldo</option>
+              <select class="ghost-btn" id="waitingDebtSortDirection" aria-label="Direção da ordenação">
+                <option value="desc">Decrescente</option>
+                <option value="asc">Crescente</option>
               </select>
             </div>
-            <div id="hiddenDebts"></div>
+            <div id="waitingDebts"></div>
           </div>
         </section>
 
@@ -1194,7 +1121,6 @@
             <select id="debtStatus">
               <option value="Ativa">Ativa (Rota Financeira)</option>
               <option value="Em espera">Em espera</option>
-              <option value="Fora do radar">Fora do radar</option>
             </select>
           </label>
         </div>
@@ -1352,10 +1278,6 @@
         <i data-lucide="check-square"></i>
         <span>Controle</span>
       </button>
-      <button class="bottom-tab" type="button" data-view="divdashboard">
-        <i data-lucide="layout-dashboard"></i>
-        <span>Dashboard</span>
-      </button>
       <button class="bottom-tab" type="button" data-view="divrota">
         <i data-lucide="route"></i>
         <span>Rota</span>
@@ -1379,7 +1301,6 @@
         <button class="mais-item" type="button" data-view="ferias"><i data-lucide="sliders"></i><span>Simulador</span></button>
         <p class="mais-group-label">Dívidas</p>
         <button class="mais-item" type="button" data-view="divespera"><i data-lucide="pause-circle"></i><span>Em Espera</span></button>
-        <button class="mais-item" type="button" data-view="divradar"><i data-lucide="eye-off"></i><span>Fora do Radar</span></button>
         <button class="mais-item" type="button" data-view="divquitadas"><i data-lucide="check-circle"></i><span>Quitadas</span></button>
         <button class="mais-item" type="button" data-view="divrenegociacao"><i data-lucide="refresh-ccw"></i><span>Renegociação</span></button>
         <button class="mais-item" type="button" data-view="divposrenegociacao"><i data-lucide="chart-no-axes-combined"></i><span>Painel</span></button>

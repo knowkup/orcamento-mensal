@@ -4,7 +4,7 @@ import { $, brl, emptyCard, escapeHtml, creditorLogoHtml, getCreditorName, showT
 import { debtBalance, payoffTodayValue, remainingInstallmentsCount } from './calc.js';
 import { creditorFilterEntries } from '../domain/debt-filters.js';
 
-const PANORAMA_STATUSES = ['Ativa', 'Em espera', 'Fora do radar'];
+const PANORAMA_STATUSES = ['Ativa', 'Em espera'];
 
 function overviewDebts() {
   return state.debts.filter((debt) => PANORAMA_STATUSES.includes(debt.status));

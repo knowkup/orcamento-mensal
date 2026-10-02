@@ -584,7 +584,7 @@ Para mudancas de dados:
 - Stack atual deve ser evoluida, nao descartada.
 - Modulos de Dividas tem imports circulares sensiveis; evitar codigo novo executando no topo dos modulos.
 - Em Dividas, preferir ligar eventos dentro de funcoes chamadas apos render/boot, nunca em inicializacao de modulo sem necessidade.
-- Mudancas em bindings de Dividas devem ter rollback facil e homologacao imediata nas abas Dashboard, Rota, Em Espera, Fora do Radar e Quitadas.
+- Mudancas em bindings de Dividas devem ter rollback facil e homologacao imediata nas abas Rota, Em Espera e Quitadas.
 
 ---
 

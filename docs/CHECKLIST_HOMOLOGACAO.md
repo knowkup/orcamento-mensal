@@ -105,7 +105,6 @@ Correcao preparada no pacote seguinte:
 - Ordenar a Rota por ordem, prioridade, vencimento, saldo e nome funciona.
 - Abrir e fechar detalhes de uma divida funciona pelo nome e pelo botao de expansao.
 - Em Espera carrega.
-- Fora do Radar carrega.
 - Quitadas carrega.
 - Renegociacao carrega.
 - Limpar selecao de renegociacao funciona.
@@ -115,9 +114,9 @@ Correcao preparada no pacote seguinte:
 - Importar JSON de Dividas permite selecionar o arquivo.
 - Limpar todos os dados abre apenas o modal de confirmacao.
 - Abrir uma divida funciona.
-- Criar divida ativa, em espera e fora do radar abre o formulario com o status correto.
+- Criar divida ativa e em espera abre o formulario com o status correto.
 - Editar e salvar uma divida preserva parcelas e pagamentos existentes.
-- Mover dividas entre Rota, Em Espera e Fora do Radar funciona.
+- Mover dividas entre Rota e Em Espera funciona.
 - Registrar pagamento de divida funciona.
 - Fechar o modal de pagamento sem salvar funciona.
 - Editar uma parcela, salvar e fechar o modal funciona.
@@ -129,7 +128,6 @@ Correcao preparada no pacote seguinte:
 - Reordenar pela seta para cima/baixo funciona em Ordem da Rota.
 - Arrastar uma divida para outra posicao atualiza e preserva a nova ordem.
 - Ordenar e reordenar Em Espera por seletor, setas e arraste funciona.
-- Ordenar e reordenar Fora do Radar por seletor, setas e arraste funciona.
 - Criar, editar e excluir credor sem dividas funciona.
 - Credor vinculado bloqueia exclusao e mostra aviso.
 - O mesmo cadastro de credor aparece no Orcamento e nas Dividas.

@@ -104,7 +104,7 @@ export function isPaidOffDebt(debt) {
 }
 
 export async function synchronizePaidOffDebts() {
-  const completed = state.debts.filter(debt => ['Ativa', 'Em espera', 'Fora do radar'].includes(debt.status) && isPaidOffDebt(debt));
+  const completed = state.debts.filter(debt => ['Ativa', 'Em espera'].includes(debt.status) && isPaidOffDebt(debt));
   if (!completed.length) return [];
   const batch = writeBatch();
   completed.forEach(debt => {

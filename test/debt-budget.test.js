@@ -36,11 +36,6 @@ test('ignores debts outside the budget or outside the active route', () => {
     installments,
     month: '2026-06'
   }), null);
-  assert.equal(debtInstallmentForMonth({
-    debt: { ...debt, status: 'Fora do radar' },
-    installments,
-    month: '2026-06'
-  }), null);
 });
 
 test('never includes Consignado CLT in the monthly control', () => {

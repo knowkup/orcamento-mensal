@@ -31,18 +31,13 @@ import {
   updateOverviewSimulationInput
 } from './overview.js';
 import {
-  dropHiddenDebt,
   dropWaitingDebt,
-  endHiddenDebtDrag,
   endWaitingDebtDrag,
-  hiddenDebtDragOver,
-  moveHiddenDebt,
   moveWaitingDebt,
   setDebtInstallmentTab,
-  setHiddenDebtSort,
   setWaitingDebtSort,
+  setWaitingDebtSortDirection,
   showAllDebtInstallments,
-  startHiddenDebtDrag,
   startWaitingDebtDrag,
   toggleDebt,
   waitingDebtDragOver
@@ -71,7 +66,6 @@ import {
   closeDebtForm,
   goToDebtsAndNew,
   openDebtForm,
-  openDebtFromDashboard,
   saveDebt,
   syncDebtBudgetAvailability
 } from './debt-form.js';
@@ -218,22 +212,12 @@ export function bindDebtDataEvents() {
       showAllDebtInstallments();
       return;
     }
-    if (button.dataset.dashboardDebtId) {
-      openDebtFromDashboard(button.dataset.dashboardDebtId);
-      return;
-    }
     if (button.dataset.secondaryRouteMove) {
       const direction = Number(button.dataset.direction || 0);
       if (button.dataset.routeScope === 'waiting') {
         runDebtOperation(
           () => moveWaitingDebt(button.dataset.secondaryRouteMove, direction),
           'Não foi possível atualizar a ordem de espera.'
-        );
-      }
-      if (button.dataset.routeScope === 'hidden') {
-        runDebtOperation(
-          () => moveHiddenDebt(button.dataset.secondaryRouteMove, direction),
-          'Não foi possível atualizar a ordem fora do radar.'
         );
       }
       return;
@@ -256,8 +240,8 @@ export function bindDebtDataEvents() {
   document.getElementById('waitingDebtSort')?.addEventListener('change', (event) => {
     setWaitingDebtSort(event.target.value);
   });
-  document.getElementById('hiddenDebtSort')?.addEventListener('change', (event) => {
-    setHiddenDebtSort(event.target.value);
+  document.getElementById('waitingDebtSortDirection')?.addEventListener('change', (event) => {
+    setWaitingDebtSortDirection(event.target.value);
   });
   const trailRoad = document.getElementById('trailRoad');
   trailRoad?.addEventListener('click', (event) => {
@@ -288,13 +272,11 @@ export function bindDebtDataEvents() {
     const item = event.target.closest('[data-debt-route]');
     if (!item) return;
     if (item.dataset.debtRoute === 'waiting') startWaitingDebtDrag(event, item.dataset.debtId);
-    if (item.dataset.debtRoute === 'hidden') startHiddenDebtDrag(event, item.dataset.debtId);
   });
   document.addEventListener('dragover', (event) => {
     const item = event.target.closest('[data-debt-route]');
     if (!item) return;
     if (item.dataset.debtRoute === 'waiting') waitingDebtDragOver(event);
-    if (item.dataset.debtRoute === 'hidden') hiddenDebtDragOver(event);
   });
   document.addEventListener('drop', (event) => {
     const item = event.target.closest('[data-debt-route]');
@@ -302,15 +284,11 @@ export function bindDebtDataEvents() {
     if (item.dataset.debtRoute === 'waiting') {
       runDebtOperation(() => dropWaitingDebt(event, item.dataset.debtId), 'Não foi possível atualizar a ordem de espera.');
     }
-    if (item.dataset.debtRoute === 'hidden') {
-      runDebtOperation(() => dropHiddenDebt(event, item.dataset.debtId), 'Não foi possível atualizar a ordem fora do radar.');
-    }
   });
   document.addEventListener('dragend', (event) => {
     const item = event.target.closest('[data-debt-route]');
     if (!item) return;
     if (item.dataset.debtRoute === 'waiting') endWaitingDebtDrag();
-    if (item.dataset.debtRoute === 'hidden') endHiddenDebtDrag();
   });
 
   document.getElementById('closeRenegotiationModalButton')?.addEventListener('click', closeRenegotiationModal);

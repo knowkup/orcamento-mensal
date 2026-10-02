@@ -28,7 +28,7 @@ export function renderRenegotiation() {
     : 'Nenhuma dívida selecionada.';
 
   if (!eligible.length) {
-    list.innerHTML = emptyCard('Nenhuma dívida disponível', 'Dívidas da rota, em espera e fora do radar podem entrar em uma renegociação.');
+    list.innerHTML = emptyCard('Nenhuma dívida disponível', 'Dívidas da rota e em espera podem entrar em uma renegociação.');
     return;
   }
 

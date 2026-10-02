@@ -5,7 +5,6 @@ import { getDocs, debtsColl, debtDoc, installmentsColl, paymentsColl, debtCredit
 import { mergeCreditorCatalog } from '../domain/creditor-catalog.js';
 import { normalizeDebtBudgetFlags } from '../domain/debt-budget.js';
 import { synchronizePaidOffDebts } from './calc.js';
-import { renderDashboard, renderRenegotiatedHistory } from './dashboard.js';
 import { renderTrail } from './trail.js';
 import { renderDebts } from './debts.js';
 import { renderRenegotiation } from './renegotiation.js';
@@ -28,6 +27,7 @@ export async function loadDividas() {
   state.installments = installmentSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   state.payments = paymentSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   await migrateLegacyCreditors(legacyCreditors, legacyCreditorSnapshot.docs);
+  await migrateLegacyRadarDebts();
   await normalizeConsignadoBudgetFlags();
   state.creditors = mainState.data?.creditors || [];
   rebuildIndexes();
@@ -43,7 +43,6 @@ export function renderDividas() {
   renderRenegotiation();
   renderDebtOverview();
   renderTrail();
-  renderRenegotiatedHistory();
 }
 
 state.renderFn = renderDividas;
@@ -91,6 +90,28 @@ async function normalizeConsignadoBudgetFlags() {
     batch.update(debtDoc(debt.id), { includeInBudget: false, updatedAt: serverTimestamp() });
   });
   await batch.commit();
+}
+
+async function migrateLegacyRadarDebts() {
+  const legacyDebts = state.debts
+    .filter(debt => debt.status === 'Fora do radar')
+    .sort((a, b) => Number(a.payoffOrder || Number.MAX_SAFE_INTEGER) - Number(b.payoffOrder || Number.MAX_SAFE_INTEGER));
+  if (!legacyDebts.length) return;
+
+  const highestWaitingOrder = state.debts
+    .filter(debt => debt.status === 'Em espera')
+    .reduce((highest, debt) => Math.max(highest, Number(debt.payoffOrder || 0)), 0);
+
+  for (let start = 0; start < legacyDebts.length; start += 450) {
+    const batch = writeBatch();
+    legacyDebts.slice(start, start + 450).forEach((debt, index) => {
+      const payoffOrder = highestWaitingOrder + start + index + 1;
+      debt.status = 'Em espera';
+      debt.payoffOrder = payoffOrder;
+      batch.update(debtDoc(debt.id), { status: 'Em espera', payoffOrder, updatedAt: serverTimestamp() });
+    });
+    await batch.commit();
+  }
 }
 
 export { navigateTo };

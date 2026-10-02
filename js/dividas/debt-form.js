@@ -131,7 +131,6 @@ export async function changeDebtStatus(id, status) {
   const messages = {
     Ativa: 'Dívida movida para Rota Financeira.',
     'Em espera': 'Dívida movida para espera.',
-    'Fora do radar': 'Dívida movida para fora do radar.',
     Quitada: 'Dívida movida para quitadas.'
   };
   showToast(messages[status] || 'Situação atualizada com sucesso.');
@@ -162,25 +161,15 @@ export function goToDebtsAndNew(defaultStatus = 'Ativa') {
   openDebtForm('new', null, defaultStatus);
 }
 
-export function openDebtFromDashboard(id) {
-  navigateTo('divrota');
-  state.expandedDebtId = id;
-  if (state.renderFn) state.renderFn();
-  const road = document.getElementById('trailRoad');
-  if (road) road.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 export function openDebtFromTrail(id) {
   const debt = state.debts.find(item => item.id === id);
   const view = debt && debt.status === 'Quitada' ? 'divquitadas'
-    : debt && debt.status === 'Fora do radar' ? 'divradar'
     : debt && debt.status === 'Em espera' ? 'divespera'
     : 'divrota';
   navigateTo(view);
   state.expandedDebtId = id;
   if (state.renderFn) state.renderFn();
   const targetId = debt && debt.status === 'Quitada' ? 'paidOffDebts'
-    : debt && debt.status === 'Fora do radar' ? 'hiddenDebts'
     : debt && debt.status === 'Em espera' ? 'waitingDebts'
     : 'trailRoad';
   const target = document.getElementById(targetId);

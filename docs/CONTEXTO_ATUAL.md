@@ -9,7 +9,7 @@ Este arquivo e o resumo de onboarding para Codex, Claude ou qualquer agente em o
 O projeto deixou de ser apenas um app de Orcamento Mensal. Agora ele unifica:
 
 - Orcamento Mensal: planejamento, controle mensal, parcelamentos, custos fixos, carro, FGTS, ferias e preferencias.
-- Rota Financeira: dashboard de dividas, rota de quitacao, dividas em espera, fora do radar, quitadas e renegociacao.
+- Rota Financeira: rota de quitacao, dividas em espera, quitadas e renegociacao.
 
 O objetivo nao e criar um dashboard generico. O app precisa preservar a logica real da planilha original e, ao mesmo tempo, permitir controlar a frente de dividas.
 
@@ -47,10 +47,8 @@ Grupo Orcamento:
 
 Grupo Dividas:
 
-- `divdashboard`
 - `divrota`
 - `divespera`
-- `divradar`
 - `divquitadas`
 - `divrenegociacao`
 
@@ -117,7 +115,6 @@ Status principais:
 
 - `Ativa`: entra na Rota Financeira.
 - `Em espera`: reconhecida, mas fora da frente principal.
-- `Fora do radar`: arquivada/fora do acompanhamento ativo.
 - `Quitada`: encerrada.
 - `Renegociada`: divida original consolidada em uma renegociacao.
 
@@ -135,9 +132,8 @@ Arquivos relevantes:
 - `debt-components.js`: composicao visual compartilhada das linhas da Rota.
 - `debt-order.js`: persistencia e ciclo de arraste compartilhados.
 - `operation.js`: tratamento comum de falhas das acoes assincronas.
-- `dashboard.js`: dashboard estrategico de dividas.
 - `trail.js`: Rota Financeira e ordenacao da frente de quitacao.
-- `debts.js`: listas de espera, fora do radar, quitadas e componentes de divida.
+- `debts.js`: listas de espera, quitadas e componentes de divida.
 - `debt-form.js`: cadastro/edicao de dividas e geracao de parcelas.
 - `payment.js`: pagamentos, quitacao e edicao de parcelas.
 - `renegotiation.js`: consolidacao/renegociacao.

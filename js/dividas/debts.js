@@ -1,7 +1,6 @@
 import { state } from './state.js';
 import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml } from './utils.js';
-import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceLabel, paidOffDifferenceClass, paidOffClosedDateKey, isOpenInstallment, openInstallmentsForDebt, debtProgress, nextInstallment, installmentProgress, payoffTodayHtml, routeInstallmentStatusLabel } from './calc.js';
-import { renderDashboard } from './dashboard.js';
+import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceLabel, paidOffDifferenceClass, paidOffClosedDateKey, isOpenInstallment, openInstallmentsForDebt, debtProgress, nextInstallment, installmentProgress, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
 import { moveItemByDirection, moveItemToTargetPosition } from '../domain/reorder.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
 import { creditorFilterEntries, filterDebtsByCreditor } from '../domain/debt-filters.js';
@@ -33,15 +32,19 @@ export function priorityScore(debt) {
   return overdueScore + dueScore + monthlyImpact / 35 + balance / 2500 + criticalityScore;
 }
 
-export function sortDebts(items, mode) {
+export function sortDebts(items, mode, direction = 'desc') {
   if (mode === 'trail') return [...items].sort((a, b) => trailOrderValue(a) - trailOrderValue(b));
-  if (mode === 'priority') return [...items].sort((a, b) => priorityScore(b) - priorityScore(a));
+  const multiplier = direction === 'asc' ? 1 : -1;
+  if (mode === 'priority') return [...items].sort((a, b) => multiplier * (priorityScore(a) - priorityScore(b)));
   if (mode === 'due') return [...items].sort((a, b) => {
     const na = nextInstallment(a), nb = nextInstallment(b);
-    return String(na?.dueDate || '9999').localeCompare(String(nb?.dueDate || '9999'));
+    if (!na && !nb) return 0;
+    if (!na) return 1;
+    if (!nb) return -1;
+    return multiplier * String(na?.dueDate || '9999').localeCompare(String(nb?.dueDate || '9999'));
   });
-  if (mode === 'balance') return [...items].sort((a, b) => debtBalance(b) - debtBalance(a));
-  if (mode === 'name') return [...items].sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
+  if (mode === 'balance') return [...items].sort((a, b) => multiplier * (debtBalance(a) - debtBalance(b)));
+  if (mode === 'name') return [...items].sort((a, b) => multiplier * String(a.name || '').localeCompare(String(b.name || ''), 'pt-BR'));
   return items;
 }
 
@@ -69,7 +72,7 @@ export function sortedTrailDebts() {
 }
 
 export function eligibleRenegotiationDebts() {
-  return state.debts.filter(d => ['Ativa', 'Em espera', 'Fora do radar'].includes(d.status));
+  return state.debts.filter(d => ['Ativa', 'Em espera'].includes(d.status));
 }
 
 export function selectedRenegotiationDebts() {
@@ -89,11 +92,6 @@ export function nextActiveRouteOrder(exceptId = null) {
 
 export function orderedWaitingDebts() {
   return [...state.debts.filter(d => d.status === 'Em espera')]
-    .sort((a, b) => trailOrderValue(a) - trailOrderValue(b));
-}
-
-export function orderedHiddenDebts() {
-  return [...state.debts.filter(d => d.status === 'Fora do radar')]
     .sort((a, b) => trailOrderValue(a) - trailOrderValue(b));
 }
 
@@ -152,21 +150,12 @@ export function debtActionMenu(debt) {
   const actionsByStatus = {
     Ativa: [
       ['Mover para Em Espera', 'changeDebtStatus', 'Em espera'],
-      ['Mover para Fora do Radar', 'changeDebtStatus', 'Fora do radar'],
       ['Quitar dívida', 'openPayoffModal'],
       ['Editar dívida', 'openDebtForm'],
       ['Excluir dívida', 'openDeleteModal', 'danger']
     ],
     'Em espera': [
       ['Mover para Rota Financeira', 'changeDebtStatus', 'Ativa'],
-      ['Mover para Fora do Radar', 'changeDebtStatus', 'Fora do radar'],
-      ['Quitar dívida', 'openPayoffModal'],
-      ['Editar dívida', 'openDebtForm'],
-      ['Excluir dívida', 'openDeleteModal', 'danger']
-    ],
-    'Fora do radar': [
-      ['Mover para Rota Financeira', 'changeDebtStatus', 'Ativa'],
-      ['Mover para Em Espera', 'changeDebtStatus', 'Em espera'],
       ['Quitar dívida', 'openPayoffModal'],
       ['Editar dívida', 'openDebtForm'],
       ['Excluir dívida', 'openDeleteModal', 'danger']
@@ -174,7 +163,6 @@ export function debtActionMenu(debt) {
     Quitada: [
       ['Restaurar para Rota Financeira', 'changeDebtStatus', 'Ativa'],
       ['Restaurar para Em Espera', 'changeDebtStatus', 'Em espera'],
-      ['Restaurar para Fora do Radar', 'changeDebtStatus', 'Fora do radar'],
       ['Editar dívida', 'openDebtForm'],
       ['Excluir dívida', 'openDeleteModal', 'danger']
     ]
@@ -214,8 +202,7 @@ export function debtRouteGridRow(debt, index, mode) {
   const nextLabel = next ? formatDateBR(next.dueDate) : 'Sem parcela';
   const progressValue = debt.status === 'Quitada' ? 100 : debtProgress(debt);
   const config = {
-    waiting: { className: 'waiting-route-item' },
-    hidden: { className: 'hidden-route-item' }
+    waiting: { className: 'waiting-route-item' }
   }[mode] || {};
   return '<div class="route-item ' + config.className + (isExpanded ? ' expanded' : '') + '" data-debt-id="' + escapeHtml(debt.id) + '" data-debt-route="' + mode + '" draggable="true">' +
     '<button class="drag-handle" title="Arrastar para reordenar">⋮⋮</button>' +
@@ -256,15 +243,16 @@ function renderWaitingDebtMetrics(waitingDebts) {
   const waitingIds = new Set(waitingDebts.map(d => d.id));
   const waitingInstallments = state.installments.filter(i => isOpenInstallment(i) && waitingIds.has(i.debtId));
   const totalBalance = waitingDebts.reduce((sum, debt) => sum + debtBalance(debt), 0);
+  const payoffToday = waitingDebts.reduce((sum, debt) => sum + (payoffTodayValue(debt) || debtBalance(debt)), 0);
   const month = new Date().toISOString().slice(0, 7);
   const monthlyPressure = waitingInstallments
     .filter(i => String(i.dueDate || '').startsWith(month))
     .reduce((sum, item) => sum + Number(item.expectedValue || 0), 0);
   const maxPriority = waitingDebts.filter(d => d.criticality === 'Máxima').length;
   container.innerHTML =
-    debtMetric('Saldo em Espera', brl(totalBalance), '◌', 'blue') +
+    debtMetric('Saldo restante', brl(totalBalance), '◌', 'blue') +
     debtMetric('Dívidas em Espera', String(waitingDebts.length), '▥', '') +
-    debtMetric('Parcelas Pendentes', String(waitingInstallments.length), '◷', 'red') +
+    debtMetric('Quitação hoje', brl(payoffToday), '✓', 'green') +
     debtMetric('Pressão no Mês', brl(monthlyPressure), maxPriority ? '!' : '▤', maxPriority ? 'red' : 'green');
 }
 
@@ -280,7 +268,6 @@ function bindCreditorFilterButtons(container) {
 
 function applyCreditorFilter(scope, id) {
   if (scope === 'waiting') state.selectedWaitingCreditorFilter = id;
-  if (scope === 'hidden') state.selectedHiddenCreditorFilter = id;
   if (scope === 'paidOff') state.selectedPaidOffCreditorFilter = id;
   state.expandedDebtId = null;
   renderDebts();
@@ -295,20 +282,6 @@ function renderCreditorFilters({ containerId, scope, debts, selectedId }) {
   });
   container.innerHTML = html;
   bindCreditorFilterButtons(container);
-}
-
-function renderHiddenDebtMetrics(hiddenDebts) {
-  const container = $('hiddenDebtMetrics');
-  if (!container) return;
-  const hiddenIds = new Set(hiddenDebts.map(d => d.id));
-  const hiddenInstallments = state.installments.filter(i => isOpenInstallment(i) && hiddenIds.has(i.debtId));
-  const totalBalance = hiddenDebts.reduce((sum, debt) => sum + debtBalance(debt), 0);
-  const creditorsCount = new Set(hiddenDebts.map(d => d.creditorId).filter(Boolean)).size;
-  container.innerHTML =
-    debtMetric('Saldo Fora do Radar', brl(totalBalance), '◎', 'blue') +
-    debtMetric('Dívidas Arquivadas', String(hiddenDebts.length), '▥', '') +
-    debtMetric('Credores', String(creditorsCount), '◌', 'green') +
-    debtMetric('Parcelas Reconhecidas', String(hiddenInstallments.length), '◷', 'red');
 }
 
 function renderPaidOffDebtMetrics(filteredPaidOffDebts) {
@@ -329,33 +302,27 @@ function renderPaidOffDebtMetrics(filteredPaidOffDebts) {
 export function renderDebts() {
   const waitingAll = state.debts.filter(d => d.status === 'Em espera');
   const waitingFiltered = filterDebtsByCreditor(waitingAll, state.selectedWaitingCreditorFilter);
-  const waiting = sortDebts(waitingFiltered, state.selectedWaitingDebtSort);
-  const hiddenAll = state.debts.filter(d => d.status === 'Fora do radar');
-  const hiddenFiltered = filterDebtsByCreditor(hiddenAll, state.selectedHiddenCreditorFilter);
-  const hidden = sortDebts(hiddenFiltered, state.selectedHiddenDebtSort);
+  const waiting = sortDebts(waitingFiltered, state.selectedWaitingDebtSort, state.selectedWaitingDebtSortDirection);
   const paidOffAll = state.debts.filter(d => d.status === 'Quitada');
   const paidOffFiltered = filterDebtsByCreditor(paidOffAll, state.selectedPaidOffCreditorFilter);
   const paidOff = sortPaidOffDebts(paidOffFiltered);
+  const waitingDirection = $('waitingDebtSortDirection');
+  if (waitingDirection) {
+    waitingDirection.value = state.selectedWaitingDebtSortDirection;
+    waitingDirection.disabled = state.selectedWaitingDebtSort === 'trail';
+  }
   renderCreditorFilters({ containerId: 'waitingCreditorFilters', scope: 'waiting', debts: waitingAll, selectedId: state.selectedWaitingCreditorFilter });
   renderWaitingDebtMetrics(waitingAll);
-  renderCreditorFilters({ containerId: 'hiddenCreditorFilters', scope: 'hidden', debts: hiddenAll, selectedId: state.selectedHiddenCreditorFilter });
-  renderHiddenDebtMetrics(hiddenAll);
   renderCreditorFilters({ containerId: 'paidOffCreditorFilters', scope: 'paidOff', debts: paidOffAll, selectedId: state.selectedPaidOffCreditorFilter });
   renderPaidOffDebtMetrics(paidOff);
   $('waitingDebts').innerHTML = waiting.length ? '<div class="route-panel"><div class="route-list">' + waiting.map((debt, index) => debtRouteGridRow(debt, index, 'waiting')).join('') + '</div></div>' : emptyCard('Nenhuma dívida em espera', state.selectedWaitingCreditorFilter === 'all' ? 'As dívidas fora da frente atual aparecerão aqui.' : 'Não há dívidas em espera para este credor.');
-  $('hiddenDebts').innerHTML = hidden.length ? '<div class="route-panel"><div class="route-list">' + hidden.map((debt, index) => debtRouteGridRow(debt, index, 'hidden')).join('') + '</div></div>' : emptyCard('Nada fora do radar', state.selectedHiddenCreditorFilter === 'all' ? 'As dívidas que você não quer acompanhar aparecerão aqui.' : 'Não há dívidas fora do radar para este credor.');
   $('paidOffDebts').innerHTML = paidOff.length ? '<div class="route-panel"><div class="route-list">' + paidOff.map((debt, index) => paidOffDebtRow(debt, index)).join('') + '</div></div>' : emptyCard('Nenhuma dívida quitada', state.selectedPaidOffCreditorFilter === 'all' ? 'Quando uma dívida ficar sem parcelas abertas, ela aparecerá aqui.' : 'Não há dívidas quitadas para este credor.');
-  renderDashboard();
 }
 
 // --- Ações de filtro e ordenação ---
 
 export function filterWaitingByCreditor(id) {
   applyCreditorFilter('waiting', id);
-}
-
-export function filterHiddenByCreditor(id) {
-  applyCreditorFilter('hidden', id);
 }
 
 export function filterPaidOffByCreditor(id) {
@@ -368,8 +335,8 @@ export function setWaitingDebtSort(mode) {
   renderDebts();
 }
 
-export function setHiddenDebtSort(mode) {
-  state.selectedHiddenDebtSort = mode;
+export function setWaitingDebtSortDirection(direction) {
+  state.selectedWaitingDebtSortDirection = direction === 'asc' ? 'asc' : 'desc';
   state.expandedDebtId = null;
   renderDebts();
 }
@@ -439,45 +406,6 @@ export function endWaitingDebtDrag() {
   endDebtDrag({
     stateKey: 'draggedWaitingDebtId',
     draggingSelector: '.waiting-route-item.dragging'
-  });
-}
-
-// --- Drag & drop Fora do radar ---
-
-export async function moveHiddenDebt(id, direction) {
-  const route = orderedHiddenDebts().map((debt, index) => ({ ...debt, payoffOrder: index + 1 }));
-  const reordered = moveItemByDirection(route, id, direction);
-  if (!reordered) return;
-  await persistDebtOrder(reordered, { message: 'Ordem fora do radar atualizada.' });
-}
-
-export function startHiddenDebtDrag(event, id) {
-  beginDebtDrag(event, id, {
-    stateKey: 'draggedHiddenDebtId',
-    itemSelector: '.hidden-route-item'
-  });
-}
-
-export function hiddenDebtDragOver(event) {
-  allowDebtDrop(event);
-}
-
-export async function dropHiddenDebt(event, targetId) {
-  const options = {
-    stateKey: 'draggedHiddenDebtId',
-    draggingSelector: '.hidden-route-item.dragging'
-  };
-  const sourceId = takeDebtDropSource(event, options);
-  const route = orderedHiddenDebts();
-  const reordered = moveItemToTargetPosition(route, sourceId, targetId);
-  if (!reordered) return;
-  await persistDebtOrder(reordered, { message: 'Ordem fora do radar atualizada.' });
-}
-
-export function endHiddenDebtDrag() {
-  endDebtDrag({
-    stateKey: 'draggedHiddenDebtId',
-    draggingSelector: '.hidden-route-item.dragging'
   });
 }
 

@@ -6,7 +6,6 @@ const debtModules = [
   'js/dividas/debt-components.js',
   'js/dividas/debt-order.js',
   'js/dividas/operation.js',
-  'js/dividas/dashboard.js',
   'js/dividas/data.js',
   'js/dividas/debt-form.js',
   'js/dividas/debts.js',
@@ -86,7 +85,7 @@ test('migrated static controls have event bindings', async () => {
   const overview = await readFile('js/dividas/overview.js', 'utf8');
   const ids = [
     'waitingDebtSort',
-    'hiddenDebtSort',
+    'waitingDebtSortDirection',
     'selectAllDebtOverviewButton',
     'createOverviewConsolidationButton',
     'closeDebtFormButton',
@@ -107,4 +106,14 @@ test('migrated static controls have event bindings', async () => {
   assert.match(events, /createOverviewConsolidation/);
   assert.match(overview, /selectedCreditorIds/);
   assert.match(overview, /visibleDebts/);
+});
+
+test('removed debt views and legacy status are not exposed by the UI', async () => {
+  const html = await readFile('index.html', 'utf8');
+  const debtSources = await Promise.all(
+    debtModules.map(file => readFile(file, 'utf8'))
+  );
+
+  assert.doesNotMatch(html, /divdashboard|divradar|Fora do Radar/i);
+  debtSources.forEach(source => assert.doesNotMatch(source, /Fora do radar/i));
 });
