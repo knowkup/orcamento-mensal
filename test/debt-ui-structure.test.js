@@ -117,3 +117,12 @@ test('removed debt views and legacy status are not exposed by the UI', async () 
   assert.doesNotMatch(html, /divdashboard|divradar|Fora do Radar/i);
   debtSources.forEach(source => assert.doesNotMatch(source, /Fora do radar/i));
 });
+
+test('trail includes a payoff forecast driven by open installments', async () => {
+  const html = await readFile('index.html', 'utf8');
+  const trail = await readFile('js/dividas/trail.js', 'utf8');
+
+  assert.match(html, /id=["']payoffTimeline["']/);
+  assert.match(trail, /function renderPayoffTimeline/);
+  assert.match(trail, /openInstallmentsForDebt/);
+});

@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { $, brl, escapeHtml, emptyCard, getCreditorName, compactTagsForDebt, formatDateBR, routeProgressHtml } from './utils.js';
-import { debtBalance, nextInstallment, debtProgress, payoffTodayHtml, routeInstallmentStatusLabel } from './calc.js';
+import { debtBalance, nextInstallment, debtProgress, openInstallmentsForDebt, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
 import { debtMetric, sortedTrailDebts, orderedTrailDebts } from './debts.js';
 import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder.js';
 import { renderDebtRouteItem } from './debt-components.js';
@@ -13,7 +13,8 @@ export function renderTrail() {
   const road = $('trailRoad');
   const position = $('trailPositionTitle');
   const nextTarget = $('nextTarget');
-  if (!metrics || !road || !position || !nextTarget) return;
+  const payoffTimeline = $('payoffTimeline');
+  if (!metrics || !road || !position || !nextTarget || !payoffTimeline) return;
 
   const allRoute = sortedTrailDebts();
   const route = allRoute.filter(d => !d.isConsignado);
@@ -41,6 +42,7 @@ export function renderTrail() {
   if (!allRoute.length) {
     nextTarget.innerHTML = '';
     road.innerHTML = emptyCard('Rota vazia', 'Cadastre dívidas na Rota Financeira para montar sua ordem de quitação.');
+    payoffTimeline.innerHTML = '';
     return;
   }
 
@@ -109,6 +111,81 @@ export function renderTrail() {
   }
 
   road.innerHTML = roadHtml;
+  renderPayoffTimeline(allRoute, payoffTimeline);
+}
+
+function renderPayoffTimeline(route, container) {
+  const items = route
+    .filter(debt => debtBalance(debt) > 0)
+    .map(debt => {
+      const installments = openInstallmentsForDebt(debt)
+        .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
+      return { debt, installments, lastDue: installments.at(-1)?.dueDate || '' };
+    })
+    .sort((a, b) => {
+      if (!a.lastDue) return 1;
+      if (!b.lastDue) return -1;
+      return a.lastDue.localeCompare(b.lastDue);
+    });
+
+  if (!items.length) {
+    container.innerHTML = '';
+    return;
+  }
+
+  const scheduled = items.filter(item => item.lastDue);
+  const first = scheduled[0];
+  const last = scheduled.at(-1);
+  const groups = new Map();
+  items.forEach(item => {
+    const key = item.lastDue ? item.lastDue.slice(0, 7) : 'unknown';
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  });
+
+  container.innerHTML =
+    '<div class="payoff-timeline-heading">' +
+      '<div><p class="eyebrow">Rota Financeira</p><h2>Previsão de quitação</h2><p>Datas calculadas pelas parcelas ainda em aberto.</p></div>' +
+      '<div class="payoff-timeline-summary">' +
+        '<div><span>Próximo encerramento</span><strong>' + escapeHtml(first ? formatMonthYear(first.lastDue) : 'Sem previsão') + '</strong></div>' +
+        '<div><span>Rota concluída em</span><strong>' + escapeHtml(last ? formatMonthYear(last.lastDue) : 'Sem previsão') + '</strong></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="payoff-timeline-list">' +
+      [...groups.entries()].map(([key, group]) => payoffTimelineGroup(key, group)).join('') +
+    '</div>';
+}
+
+function payoffTimelineGroup(key, items) {
+  const isUnknown = key === 'unknown';
+  return '<section class="payoff-timeline-month">' +
+    '<div class="payoff-timeline-marker" aria-hidden="true"><span></span></div>' +
+    '<div class="payoff-timeline-content">' +
+      '<div class="payoff-timeline-month-heading"><h3>' + escapeHtml(isUnknown ? 'Sem previsão' : formatMonthYear(items[0].lastDue)) + '</h3><span>' + items.length + (items.length === 1 ? ' dívida termina' : ' dívidas terminam') + '</span></div>' +
+      '<div class="payoff-timeline-debts">' +
+        items.map(payoffTimelineDebt).join('') +
+      '</div>' +
+    '</div>' +
+  '</section>';
+}
+
+function payoffTimelineDebt({ debt, installments }) {
+  const payoffToday = payoffTodayValue(debt);
+  const installmentLabel = installments.length + (installments.length === 1 ? ' parcela restante' : ' parcelas restantes');
+  const payoffLabel = payoffToday ? 'Quitação hoje ' + brl(payoffToday) : 'Saldo ' + brl(debtBalance(debt));
+  return '<div class="payoff-timeline-debt">' +
+    '<div><strong>' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</strong><span>' + escapeHtml(installmentLabel) + ' · ' + payoffLabel + '</span></div>' +
+    '<strong>' + brl(debtBalance(debt)) + '</strong>' +
+  '</div>';
+}
+
+function formatMonthYear(date) {
+  if (!date) return 'Sem previsão';
+  const value = new Intl.DateTimeFormat('pt-BR', { month: 'short', year: 'numeric' })
+    .format(new Date(date + 'T00:00:00'))
+    .replace('.', '')
+    .replace(' de ', '/');
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 // --- Ordenação ---
