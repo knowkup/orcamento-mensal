@@ -68,7 +68,7 @@ export function sortPaidOffDebts(items) {
 
 export function sortedTrailDebts() {
   if (state.selectedTrailDebtSort === 'trail') return orderedTrailDebts();
-  return sortDebts(state.debts.filter(d => d.status === 'Ativa'), state.selectedTrailDebtSort);
+  return sortDebts(state.debts.filter(d => d.status === 'Ativa'), state.selectedTrailDebtSort, state.selectedTrailDebtSortDirection);
 }
 
 export function eligibleRenegotiationDebts() {
@@ -241,19 +241,16 @@ function renderWaitingDebtMetrics(waitingDebts) {
   const container = $('waitingDebtMetrics');
   if (!container) return;
   const waitingIds = new Set(waitingDebts.map(d => d.id));
-  const waitingInstallments = state.installments.filter(i => isOpenInstallment(i) && waitingIds.has(i.debtId));
   const totalBalance = waitingDebts.reduce((sum, debt) => sum + debtBalance(debt), 0);
   const payoffToday = waitingDebts.reduce((sum, debt) => sum + (payoffTodayValue(debt) || debtBalance(debt)), 0);
-  const month = new Date().toISOString().slice(0, 7);
-  const monthlyPressure = waitingInstallments
-    .filter(i => String(i.dueDate || '').startsWith(month))
-    .reduce((sum, item) => sum + Number(item.expectedValue || 0), 0);
-  const maxPriority = waitingDebts.filter(d => d.criticality === 'Máxima').length;
+  const monthlyCommitment = waitingDebts
+    .filter(debt => debtBalance(debt) > 0)
+    .reduce((sum, debt) => sum + Number(debt.installmentValue || 0), 0);
   container.innerHTML =
     debtMetric('Saldo restante', brl(totalBalance), '◌', 'blue') +
-    debtMetric('Dívidas em Espera', String(waitingDebts.length), '▥', '') +
     debtMetric('Quitação hoje', brl(payoffToday), '✓', 'green') +
-    debtMetric('Pressão no Mês', brl(monthlyPressure), maxPriority ? '!' : '▤', maxPriority ? 'red' : 'green');
+    debtMetric('Dívidas em Espera', String(waitingDebts.length), '▥', '') +
+    debtMetric('Compromisso mensal', brl(monthlyCommitment), '▤', 'green');
 }
 
 function creditorFilterButton(scope, id, labelHtml, count, active) {

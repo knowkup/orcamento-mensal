@@ -48,6 +48,7 @@ import {
   moveDebtInTrail,
   routeDragOver,
   setTrailDebtSort,
+  setTrailDebtSortDirection,
   startRouteDrag
 } from './trail.js';
 import {
@@ -236,6 +237,9 @@ export function bindDebtDataEvents() {
   });
   document.getElementById('trailDebtSort')?.addEventListener('change', (event) => {
     setTrailDebtSort(event.target.value);
+  });
+  document.getElementById('trailDebtSortDirection')?.addEventListener('change', (event) => {
+    setTrailDebtSortDirection(event.target.value);
   });
   document.getElementById('waitingDebtSort')?.addEventListener('change', (event) => {
     setWaitingDebtSort(event.target.value);

@@ -1,10 +1,11 @@
 import { state } from './state.js';
-import { $, brl, escapeHtml, emptyCard, getCreditorName, compactTagsForDebt, formatDateBR, routeProgressHtml } from './utils.js';
+import { $, brl, escapeHtml, emptyCard, getCreditorName, creditorLogoHtml, compactTagsForDebt, formatDateBR, routeProgressHtml } from './utils.js';
 import { debtBalance, nextInstallment, debtProgress, openInstallmentsForDebt, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
 import { debtMetric, sortedTrailDebts, orderedTrailDebts } from './debts.js';
 import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder.js';
 import { renderDebtRouteItem } from './debt-components.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
+import { creditorFilterEntries, filterDebtsByCreditor } from '../domain/debt-filters.js';
 
 // --- Render principal da Rota Financeira ---
 
@@ -14,11 +15,14 @@ export function renderTrail() {
   const position = $('trailPositionTitle');
   const nextTarget = $('nextTarget');
   const payoffTimeline = $('payoffTimeline');
-  if (!metrics || !road || !position || !nextTarget || !payoffTimeline) return;
+  const creditorFilters = $('trailCreditorFilters');
+  const sortDirection = $('trailDebtSortDirection');
+  if (!metrics || !road || !position || !nextTarget || !payoffTimeline || !creditorFilters || !sortDirection) return;
 
   const allRoute = sortedTrailDebts();
   const route = allRoute.filter(d => !d.isConsignado);
   const consignadoRoute = allRoute.filter(d => !!d.isConsignado);
+  const visibleRoute = filterDebtsByCreditor(route, state.selectedTrailCreditorFilter);
 
   const totalBalance = route.reduce((sum, debt) => sum + debtBalance(debt), 0);
   const monthlyCommitment = route
@@ -26,14 +30,15 @@ export function renderTrail() {
     .reduce((sum, debt) => sum + Number(debt.installmentValue || 0), 0);
   const next = route.find(debt => debtBalance(debt) > 0) || null;
 
+  renderTrailCreditorFilters(creditorFilters, route);
+  sortDirection.value = state.selectedTrailDebtSortDirection;
+  sortDirection.disabled = state.selectedTrailDebtSort === 'trail';
+
   metrics.innerHTML =
-    '<div class="route-summary-copy"><div class="metric-label">Frente atual</div><strong>' + (route.length ? route.length + (route.length === 1 ? ' dívida na rota' : ' dívidas na rota') : 'Nenhuma dívida ativa na rota') + '</strong><span>' + (route.length ? 'Aqui ficam apenas os compromissos que ainda pedem ação.' : 'Cadastre ou reative uma dívida para montar sua próxima frente.') + '</span></div>' +
-    '<div class="route-summary-metrics">' +
+    debtMetric('Saldo restante', brl(totalBalance), '◌', 'blue') +
+    debtMetric('Quitação hoje', brl(route.reduce((sum, debt) => sum + (payoffTodayValue(debt) || debtBalance(debt)), 0)), '✓', 'green') +
     debtMetric('Dívidas ativas', String(route.length), '⇄', 'blue') +
-    debtMetric('Saldo ativo', brl(totalBalance), '▣', 'red') +
-    debtMetric('Próximo alvo', next ? getCreditorName(next.creditorId) : '-', '!', next ? 'amber' : '') +
-    debtMetric('Compromisso mensal', brl(monthlyCommitment), '▤', 'green') +
-    '</div>';
+    debtMetric('Compromisso mensal', brl(monthlyCommitment), '▤', 'green');
 
   position.textContent = next
     ? 'Próximo alvo: ' + getCreditorName(next.creditorId) + ' · ' + next.name
@@ -66,8 +71,8 @@ export function renderTrail() {
 
   let roadHtml = '';
 
-  if (route.length) {
-    roadHtml += '<div class="route-panel"><div class="route-list">' + route.map((debt, index) => {
+  if (visibleRoute.length) {
+    roadHtml += '<div class="route-panel"><div class="route-list">' + visibleRoute.map((debt, index) => {
       const balance = debtBalance(debt);
       const done = balance === 0;
       const current = !done && debt.id === next?.id;
@@ -86,6 +91,8 @@ export function renderTrail() {
         reorderActions
       });
     }).join('') + '</div></div>';
+  } else {
+    roadHtml += emptyCard('Nenhuma dívida para este credor', 'Escolha outro credor ou veja todas as dívidas da rota.');
   }
 
   if (consignadoRoute.length) {
@@ -112,6 +119,25 @@ export function renderTrail() {
 
   road.innerHTML = roadHtml;
   renderPayoffTimeline(allRoute, payoffTimeline);
+}
+
+function renderTrailCreditorFilters(container, debts) {
+  let html = trailCreditorFilterButton('all', 'Todos', debts.length, state.selectedTrailCreditorFilter === 'all');
+  creditorFilterEntries(debts, getCreditorName).forEach(({ id, name, count }) => {
+    html += trailCreditorFilterButton(id, creditorLogoHtml(id) + escapeHtml(name), count, state.selectedTrailCreditorFilter === id);
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('[data-trail-creditor-filter]').forEach(button => {
+    button.addEventListener('click', () => {
+      state.selectedTrailCreditorFilter = button.dataset.trailCreditorFilter;
+      state.expandedDebtId = null;
+      renderTrail();
+    });
+  });
+}
+
+function trailCreditorFilterButton(id, labelHtml, count, active) {
+  return '<button class="filter-chip ' + (active ? 'is-active' : '') + '" type="button" data-trail-creditor-filter="' + escapeHtml(id) + '">' + labelHtml + '<span class="filter-count">' + count + '</span></button>';
 }
 
 function renderPayoffTimeline(route, container) {
@@ -192,6 +218,12 @@ function formatMonthYear(date) {
 
 export function setTrailDebtSort(mode) {
   state.selectedTrailDebtSort = mode;
+  state.expandedDebtId = null;
+  renderTrail();
+}
+
+export function setTrailDebtSortDirection(direction) {
+  state.selectedTrailDebtSortDirection = direction === 'asc' ? 'asc' : 'desc';
   state.expandedDebtId = null;
   renderTrail();
 }

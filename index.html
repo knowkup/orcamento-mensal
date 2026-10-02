@@ -322,7 +322,8 @@
               </button>
             </div>
             <h2 id="trailPositionTitle" hidden></h2>
-            <div class="route-summary" id="trailMetrics"></div>
+            <div class="filter-row" id="trailCreditorFilters"></div>
+            <div class="debt-metrics" id="trailMetrics"></div>
             <div id="nextTarget"></div>
             <div class="route-sort-bar">
               <span>Ordenar</span>
@@ -332,6 +333,10 @@
                 <option value="due">Vencimento</option>
                 <option value="balance">Saldo</option>
                 <option value="name">Nome</option>
+              </select>
+              <select class="ghost-btn" id="trailDebtSortDirection" aria-label="Direção da ordenação">
+                <option value="desc">Decrescente</option>
+                <option value="asc">Crescente</option>
               </select>
             </div>
             <div id="trailRoad"></div>

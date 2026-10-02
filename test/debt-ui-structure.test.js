@@ -86,6 +86,7 @@ test('migrated static controls have event bindings', async () => {
   const ids = [
     'waitingDebtSort',
     'waitingDebtSortDirection',
+    'trailDebtSortDirection',
     'selectAllDebtOverviewButton',
     'createOverviewConsolidationButton',
     'closeDebtFormButton',
