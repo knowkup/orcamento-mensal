@@ -125,5 +125,6 @@ test('trail includes a payoff forecast driven by open installments', async () =>
 
   assert.match(html, /id=["']payoffTimeline["']/);
   assert.match(trail, /function renderPayoffTimeline/);
-  assert.match(trail, /openInstallmentsForDebt/);
+  assert.match(trail, /buildDebtPayoffForecast/);
+  assert.match(trail, /payoffForecastChart/);
 });
