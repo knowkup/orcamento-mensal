@@ -3343,6 +3343,8 @@ select {
 .installment-row { display: grid; grid-template-columns: 0.6fr 1fr 1fr 1fr 1fr 0.8fr 1fr; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); font-size: 13px; }
 .compact-installments .installment-row { grid-template-columns: 0.7fr 1fr 1fr 0.8fr minmax(132px, 0.8fr); min-height: 58px; }
 .mini-action { min-height: 34px; padding: 8px 10px; font-size: 12px; }
+.installment-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.installment-rescheduled { display: block; margin-top: 3px; color: var(--amber); font-size: 11px; font-weight: 650; }
 .installment-row:last-child { border-bottom: 0; }
 .installment-row.header { color: var(--muted); font-size: 12px; font-weight: 650; background: rgba(13,32,56,0.02); }
 .installment-empty { padding: 18px; color: var(--muted); font-size: 13px; }
@@ -3821,6 +3823,7 @@ select {
   .installment-row > div::before { content: attr(data-label); color: var(--muted); font-size: 12px; font-weight: 650; }
   .installment-row > div:empty { display: none; }
   .installment-row .ghost-btn { width: 100%; }
+  .installment-actions { width: 100%; }
   .payment-row { grid-template-columns: 1fr; }
   .payoff-layout { grid-template-columns: 1fr; gap: 12px; }
   .next-target-card { grid-template-columns: 1fr; padding: 16px; border-radius: 16px; }

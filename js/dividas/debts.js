@@ -1,5 +1,6 @@
 import { state } from './state.js';
 import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml } from './utils.js';
+import { state as appState } from '../state.js';
 import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceLabel, paidOffDifferenceClass, paidOffClosedDateKey, isOpenInstallment, openInstallmentsForDebt, debtProgress, nextInstallment, installmentProgress, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
 import { moveItemByDirection, moveItemToTargetPosition } from '../domain/reorder.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
@@ -125,12 +126,19 @@ export function installmentRowsForDebt(debt) {
     visible.forEach(item => {
       const statusClass = item.status === 'Paga' || item.status === 'Quitada' ? 'green' : item.status === 'Renegociada' ? 'blue' : 'amber';
       const payment = paymentForInstallment(item.id);
+      const originalDueDate = item.originalDueDate || item.dueDate;
+      const wasRescheduled = Boolean(item.originalDueDate);
+      const canReschedule = currentTab === 'pending'
+        && (appState.data?.closedMonths || []).includes(String(originalDueDate || '').slice(0, 7));
       const actionHtml = currentTab === 'paid'
         ? (payment ? '<button class="ghost-btn mini-action" type="button" data-delete-type="payment" data-delete-id="' + escapeHtml(payment.id) + '">Excluir pagamento</button>' : '')
-        : '<button class="ghost-btn mini-action" type="button" data-payment-installment-id="' + escapeHtml(item.id) + '">Registrar pagamento</button>';
+        : '<div class="installment-actions">' +
+          '<button class="ghost-btn mini-action" type="button" data-payment-installment-id="' + escapeHtml(item.id) + '">Registrar pagamento</button>' +
+          (canReschedule ? '<button class="ghost-btn mini-action" type="button" data-reschedule-installment-id="' + escapeHtml(item.id) + '">Reagendar</button>' : '') +
+        '</div>';
       html += '<div class="installment-row">' +
         '<div data-label="Parcela"><strong>' + (item.isDownPayment ? 'Entrada' : item.number + '/' + item.total) + '</strong></div>' +
-        '<div data-label="Vencimento">' + formatDateBR(item.dueDate) + '</div>' +
+        '<div data-label="Vencimento">' + formatDateBR(item.dueDate) + (wasRescheduled ? '<small class="installment-rescheduled">Venceu em ' + formatDateBR(originalDueDate) + '</small>' : '') + '</div>' +
         '<div data-label="Valor">' + brl(item.expectedValue) + '</div>' +
         '<div data-label="Status"><span class="tag ' + statusClass + '">' + escapeHtml(item.status || 'Pendente') + '</span></div>' +
         '<div data-label="Ação">' + actionHtml + '</div>' +

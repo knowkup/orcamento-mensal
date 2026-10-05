@@ -1048,6 +1048,26 @@
       </div>
     </dialog>
 
+    <!-- Reagendar parcela vencida -->
+    <dialog class="dialog" id="divRescheduleInstallmentDialog">
+      <div class="stack-form">
+        <div class="panel-heading">
+          <div><p class="eyebrow">Parcela vencida</p><h2>Reagendar pagamento</h2></div>
+          <button class="icon-button" id="closeRescheduleInstallmentModalButton" type="button" title="Fechar">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <label>Dívida<input id="rescheduleDebtName" type="text" readonly></label>
+        <label>Parcela<input id="rescheduleInstallmentLabel" type="text" readonly></label>
+        <label>Vencimento original<input id="rescheduleOriginalDue" type="text" readonly></label>
+        <label>Programar pagamento para<input id="rescheduleTargetMonth" type="month" required></label>
+        <p class="muted-hint">O mês já fechado não será alterado. A parcela passará a aparecer no Controle Mensal e no Planejamento do mês escolhido.</p>
+        <button class="primary-button full" id="saveRescheduleInstallmentButton" type="button">
+          <i data-lucide="calendar-clock"></i><span>Confirmar reagendamento</span>
+        </button>
+      </div>
+    </dialog>
+
     <!-- Quitar dívida -->
     <dialog class="dialog" id="divPayoffDialog">
       <div class="stack-form">

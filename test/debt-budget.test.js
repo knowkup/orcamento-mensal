@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { debtInstallmentForMonth, debtBudgetRow, normalizeDebtBudgetFlags } from '../js/domain/debt-budget.js';
+import { debtInstallmentForMonth, debtInstallmentsForMonth, debtBudgetRow, normalizeDebtBudgetFlags } from '../js/domain/debt-budget.js';
 
 const debt = {
   id: 'debt-1',
@@ -85,4 +85,18 @@ test('builds the same auto-debt projection contract', () => {
     },
     value: 150
   });
+});
+
+test('includes a rescheduled installment alongside the regular installment in the same month', () => {
+  const result = debtInstallmentsForMonth({
+    debt,
+    month: '2026-10',
+    installments: [
+      { id: 'late', debtId: 'debt-1', number: 1, dueDate: '2026-10-09', originalDueDate: '2026-09-09', expectedValue: 150, status: 'Pendente' },
+      { id: 'regular', debtId: 'debt-1', number: 2, dueDate: '2026-10-09', expectedValue: 200, status: 'Pendente' }
+    ]
+  });
+
+  assert.deepEqual(result.map(item => item.id), ['late', 'regular']);
+  assert.equal(debtBudgetRow({ debt, installment: result[0], creditorName: 'Banco', month: '2026-10' }).row.id, 'auto-debt-debt-1|late');
 });

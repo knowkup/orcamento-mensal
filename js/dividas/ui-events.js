@@ -58,8 +58,11 @@ import {
   confirmPayoffDebt,
   saveInstallmentEdit,
   savePayment,
+  closeRescheduleInstallmentModal,
+  openRescheduleInstallmentModal,
   openPaymentForm,
   openPayoffModal,
+  saveRescheduledInstallment,
   updatePayoffSummary
 } from './payment.js';
 import {
@@ -201,6 +204,10 @@ export function bindDebtDataEvents() {
       openPaymentForm(button.dataset.paymentInstallmentId);
       return;
     }
+    if (button.dataset.rescheduleInstallmentId) {
+      openRescheduleInstallmentModal(button.dataset.rescheduleInstallmentId);
+      return;
+    }
     if (button.dataset.deleteType && button.dataset.deleteId) {
       openDeleteModal(button.dataset.deleteType, button.dataset.deleteId);
       return;
@@ -302,6 +309,8 @@ export function bindDebtDataEvents() {
   document.getElementById('confirmDeleteButton')?.addEventListener('click', () => runDebtOperation(confirmDelete, 'Não foi possível concluir a exclusão.'));
   document.getElementById('closeDebtPaymentModalButton')?.addEventListener('click', closePaymentForm);
   document.getElementById('saveDebtPaymentButton')?.addEventListener('click', () => runDebtOperation(savePayment, 'Não foi possível registrar o pagamento.'));
+  document.getElementById('closeRescheduleInstallmentModalButton')?.addEventListener('click', closeRescheduleInstallmentModal);
+  document.getElementById('saveRescheduleInstallmentButton')?.addEventListener('click', () => runDebtOperation(saveRescheduledInstallment, 'Não foi possível reagendar a parcela.'));
   document.getElementById('closeDebtPayoffModalButton')?.addEventListener('click', closePayoffModal);
   document.getElementById('payoffValue')?.addEventListener('input', updatePayoffSummary);
   document.getElementById('confirmDebtPayoffButton')?.addEventListener('click', () => runDebtOperation(confirmPayoffDebt, 'Não foi possível quitar a dívida.'));

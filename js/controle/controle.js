@@ -587,7 +587,8 @@ export async function registerPaidOccurrence(key, amount, paymentDate, options =
   if (completed) syncExpenseSource(key, true, totalPaid, state.data.paidDates[key]);
   const { rowId: _rId, month: _rMonth } = splitOccurrenceKey(key);
   if (completed && _rId.startsWith('auto-debt-')) {
-    try { await markDebtInstallmentPaid(_rId.replace('auto-debt-', ''), _rMonth, true, totalPaid, paymentDate); } catch (e) { console.error(e); }
+    const [_debtId, _installmentId = ''] = _rId.replace('auto-debt-', '').split('|');
+    try { await markDebtInstallmentPaid(_debtId, _rMonth, true, totalPaid, paymentDate, _installmentId); } catch (e) { console.error(e); }
   }
   if (state.saveStateFn) await state.saveStateFn(completed ? "Pagamento marcado como concluído." : "Pagamento parcial registrado.");
 }
@@ -602,7 +603,8 @@ export async function cancelPaidOccurrence(key) {
   syncExpenseSource(key, false);
   const { rowId: _cId, month: _cMonth } = splitOccurrenceKey(key);
   if (_cId.startsWith('auto-debt-')) {
-    try { await markDebtInstallmentPaid(_cId.replace('auto-debt-', ''), _cMonth, false); } catch (e) { console.error(e); }
+    const [_debtId, _installmentId = ''] = _cId.replace('auto-debt-', '').split('|');
+    try { await markDebtInstallmentPaid(_debtId, _cMonth, false, undefined, undefined, _installmentId); } catch (e) { console.error(e); }
   }
   if (state.saveStateFn) await state.saveStateFn("Pagamento cancelado.");
 }
@@ -635,7 +637,8 @@ export async function deletePaidTransaction(key, index, expected) {
     syncExpenseSource(key, false);
     const { rowId, month } = splitOccurrenceKey(key);
     if (rowId.startsWith("auto-debt-")) {
-      try { await markDebtInstallmentPaid(rowId.replace("auto-debt-", ""), month, false); } catch (error) { console.error(error); }
+      const [debtId, installmentId = ''] = rowId.replace('auto-debt-', '').split('|');
+      try { await markDebtInstallmentPaid(debtId, month, false, undefined, undefined, installmentId); } catch (error) { console.error(error); }
     }
   }
   if (state.saveStateFn) await state.saveStateFn("Movimentação de pagamento excluída.");

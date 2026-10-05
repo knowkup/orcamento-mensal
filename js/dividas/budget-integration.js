@@ -1,28 +1,28 @@
 import { state, rebuildIndexes } from './state.js';
 import { state as mainState } from '../state.js';
 import { addDoc, updateDoc, deleteDoc, installmentDoc, paymentsColl, paymentDoc, serverTimestamp } from './firebase.js';
-import { debtInstallmentForMonth, debtBudgetRow } from '../domain/debt-budget.js';
+import { debtInstallmentsForMonth, debtBudgetRow } from '../domain/debt-budget.js';
 
 export function getDebtInstallmentsForMonth(month) {
   return state.debts
     .filter(d => d.includeInBudget && !d.isConsignado && d.status === 'Ativa')
     .flatMap(debt => {
-      const installment = debtInstallmentForMonth({
+      const installments = debtInstallmentsForMonth({
         debt,
         installments: state.installments,
         month,
         paidOccurrences: mainState.data?.paidOccurrences || []
       });
-      if (!installment) return [];
+      if (!installments.length) return [];
       const creditorName = (state.creditors.find(c => c.id === debt.creditorId)
         || (mainState.data?.creditors || []).find(c => c.id === debt.creditorId))?.name || '';
-      return [debtBudgetRow({ debt, installment, creditorName, month })];
+      return installments.map(installment => debtBudgetRow({ debt, installment, creditorName, month }));
     });
 }
 
-export async function markDebtInstallmentPaid(debtId, month, paid, amount, paymentDate) {
+export async function markDebtInstallmentPaid(debtId, month, paid, amount, paymentDate, installmentId = '') {
   const installment = state.installments.find(
-    i => i.debtId === debtId
+    i => (installmentId ? i.id === installmentId : i.debtId === debtId)
       && i.status === (paid ? 'Pendente' : 'Paga')
       && String(i.dueDate || '').startsWith(month)
   );

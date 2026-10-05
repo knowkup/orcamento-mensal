@@ -1,8 +1,10 @@
 import { state } from './state.js';
-import { $, brl, parseMoney, showToast, getCreditorName, formatDateBR } from './utils.js';
+import { state as appState } from '../state.js';
+import { $, brl, parseMoney, showToast, getCreditorName, formatDateBR, currentMonthKey } from './utils.js';
 import { debtBalance, openInstallmentsForDebt, synchronizePaidOffDebts } from './calc.js';
 import { paymentsColl, installmentDoc, debtDoc, addDoc, updateDoc, deleteDoc, writeBatch, serverTimestamp } from './firebase.js';
 import { paymentBreakdown } from '../domain/debt-transactions.js';
+import { firstOpenMonth, rescheduleInstallment } from '../domain/debt-rescheduling.js';
 
 // --- Modal payoff (quitar dívida) ---
 
@@ -120,6 +122,62 @@ export function openPaymentForm(installmentId) {
 export function closePaymentForm() {
   state.paymentInstallmentId = null;
   document.getElementById('divPaymentDialog')?.close();
+}
+
+// --- Reagendamento de parcela vencida ---
+
+export function openRescheduleInstallmentModal(installmentId) {
+  closeDebtFormIfOpen();
+  closePaymentForm();
+  closePayoffModal();
+  closeInstallmentModal();
+  const inst = state.installments.find(item => item.id === installmentId);
+  if (!inst || inst.status !== 'Pendente') return showToast('Parcela pendente não encontrada.');
+  const originalDueDate = inst.originalDueDate || inst.dueDate;
+  const closedMonths = appState.data?.closedMonths || [];
+  if (!closedMonths.includes(String(originalDueDate || '').slice(0, 7))) {
+    return showToast('Apenas parcelas de meses já fechados podem ser reagendadas.');
+  }
+  const debt = state.debts.find(item => item.id === inst.debtId);
+  if (debt) state.expandedDebtId = debt.id;
+  state.reschedulingInstallmentId = installmentId;
+  $('rescheduleDebtName').value = debt ? getCreditorName(debt.creditorId) + ' · ' + debt.name : 'Dívida não encontrada';
+  $('rescheduleInstallmentLabel').value = inst.number + '/' + inst.total;
+  $('rescheduleOriginalDue').value = formatDateBR(originalDueDate);
+  $('rescheduleTargetMonth').value = firstOpenMonth(closedMonths, currentMonthKey());
+  document.getElementById('divRescheduleInstallmentDialog').showModal();
+}
+
+export function closeRescheduleInstallmentModal() {
+  state.reschedulingInstallmentId = null;
+  document.getElementById('divRescheduleInstallmentDialog')?.close();
+}
+
+export async function saveRescheduledInstallment() {
+  if (!state.reschedulingInstallmentId) return showToast('Nenhuma parcela selecionada.');
+  const inst = state.installments.find(item => item.id === state.reschedulingInstallmentId);
+  if (!inst) return showToast('Parcela não encontrada.');
+  const closedMonths = appState.data?.closedMonths || [];
+  const minimumMonth = firstOpenMonth(closedMonths, currentMonthKey());
+  let change;
+  try {
+    change = rescheduleInstallment(inst, $('rescheduleTargetMonth').value, closedMonths, minimumMonth);
+  } catch (error) {
+    showToast(error.message, 'error');
+    return;
+  }
+
+  await updateDoc(installmentDoc(inst.id), {
+    ...change,
+    rescheduledAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  Object.assign(inst, change);
+  state.expandedDebtId = inst.debtId;
+  closeRescheduleInstallmentModal();
+  if (state.renderFn) state.renderFn();
+  if (appState.renderFn) appState.renderFn();
+  showToast('Parcela reagendada para ' + formatDateBR(change.dueDate) + '.');
 }
 
 export async function savePayment() {
