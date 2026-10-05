@@ -16,12 +16,14 @@ export function plannedInstallmentMonths(item) {
 export function buildProjectionTotals(rows, months, initialBalance = 0, valueReaders = {}) {
   const incomeValue = valueReaders.incomeValue || ((row, month) => row.values?.[month]);
   const expenseValue = valueReaders.expenseValue || ((row, month) => row.values?.[month]);
+  const rowsForMonth = valueReaders.rowsForMonth || (() => rows);
   let accumulated = Number(initialBalance || 0);
   return months.map((month) => {
-    const income = rows
+    const monthlyRows = rowsForMonth(month, rows);
+    const income = monthlyRows
       .filter((row) => row.kind === "income")
       .reduce((total, row) => total + Number(incomeValue(row, month) || 0), 0);
-    const expense = rows
+    const expense = monthlyRows
       .filter((row) => row.kind === "expense")
       .reduce((total, row) => total + Number(expenseValue(row, month) || 0), 0);
     const balance = income - expense;

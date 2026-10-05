@@ -15,6 +15,7 @@ import { getDebtInstallmentsForMonth } from "../dividas/budget-integration.js";
 import { buildProjectionTotals, plannedInstallmentMonths, valuesFromMonthlyMap } from "../domain/projection.js";
 import { cardGeneralPurchaseAmount, cardGeneralPurchaseOccurrenceKey } from "../domain/card-general-purchases.js";
 import { fixedCostAdditionAmount, fixedCostBaseValue, fixedCostMonthlyValue } from "../domain/fixed-cost-additions.js";
+import { consolidateCardInvoices } from "../domain/card-invoice-aggregation.js";
 
 export function renderProjection() {
   const months = currentMonths(12);
@@ -132,15 +133,15 @@ function _renderMonthlySummary(totals, months, rows) {
   const summaryEl = document.querySelector("#projMonthlySummary");
   if (!summaryEl) return;
   const fmt = (v) => currency.format(v);
-  const openingBalance = projectionOpeningBalance();
 
   const rowsHtml = totals.map((t) => {
     const isExpanded = _expandedSummaryMonth === t.month;
     const negAccum = t.accumulated < 0;
     const negBal = t.balance < 0;
+    const monthRows = projectionRowsForMonth(rows, t.month);
 
-    const incomeRows = rows.filter((r) => r.kind === "income" && rowIncomeOutstanding(r, t.month, r.values[t.month] || 0) > 0);
-    const expenseRows = rows.filter((r) => r.kind === "expense" && rowOutstanding(r, t.month, r.values[t.month] || 0) > 0);
+    const incomeRows = monthRows.filter((r) => r.kind === "income" && rowIncomeOutstanding(r, t.month, r.values[t.month] || 0) > 0);
+    const expenseRows = monthRows.filter((r) => r.kind === "expense" && rowOutstanding(r, t.month, r.values[t.month] || 0) > 0);
 
     const detailHtml = isExpanded ? `
       <div class="mst-detail">
@@ -198,11 +199,6 @@ function _renderMonthlySummary(totals, months, rows) {
   }).join("");
 
   summaryEl.innerHTML = `
-    <div class="mst-opening-balance">
-      <span>Saldo inicial do período</span>
-      <strong class="${openingBalance >= 0 ? "positive" : "negative"}">${fmt(openingBalance)}</strong>
-      <small>Não é uma entrada de julho.</small>
-    </div>
     <div class="mst-table">
       <div class="mst-header">
         <span>Mês</span>
@@ -922,9 +918,17 @@ export function differenceValue(line, months, month, index) {
 
 export function buildTotals(rows, months) {
   return buildProjectionTotals(rows, months, projectionOpeningBalance(), {
+    // O Controle Mensal permite baixar uma fatura única que reúne parcelas e
+    // custos fixos. A projeção precisa usar essa mesma fatura ao apurar cada
+    // mês para não recolocar seus componentes como pendências.
+    rowsForMonth: (month, allRows) => projectionRowsForMonth(allRows, month),
     incomeValue: (row, month) => rowIncomeOutstanding(row, month, row.values[month] || 0),
     expenseValue: (row, month) => rowOutstanding(row, month, row.values[month] || 0)
   });
+}
+
+function projectionRowsForMonth(rows, month) {
+  return consolidateCardInvoices(rows, month);
 }
 
 function projectionOpeningBalance() {
