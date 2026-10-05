@@ -2,7 +2,9 @@ import { state, el, currency } from "../state.js";
 import { nextMonths, currentMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "../utils.js";
 
 let _expandedSummaryMonth = null;
-let _chartPeriod = 6;
+const SUMMARY_MONTHS = 12;
+const CHART_MONTHS = 24;
+let _chartPeriod = 12;
 let _periodSelectorReady = false;
 import { calcNetClt } from "../taxes.js";
 import { getCreditorName, getInstallmentCard, ownerRank } from "../creditors.js";
@@ -18,12 +20,13 @@ import { fixedCostAdditionAmount, fixedCostBaseValue, fixedCostMonthlyValue } fr
 import { consolidateCardInvoices } from "../domain/card-invoice-aggregation.js";
 
 export function renderProjection() {
-  const months = currentMonths(12);
+  const months = currentMonths(SUMMARY_MONTHS);
   const rows = buildProjectionRows(months, true);
   const totals = buildTotals(rows, months);
+  const chart = buildChartProjection();
 
   _initPeriodSelector();
-  renderPlanningChart(totals, months);
+  renderPlanningChart(chart.totals, chart.months);
   _renderEvents(totals, months, rows);
   _renderMonthlySummary(totals, months, rows);
   _renderProjectionTable(rows, months, totals);
@@ -308,10 +311,8 @@ function _initPeriodSelector() {
       document.querySelectorAll("[data-chart-period]").forEach((b) =>
         b.classList.toggle("chart-seg-active", b === btn)
       );
-      const m12 = currentMonths(12);
-      const r12 = buildProjectionRows(m12, true);
-      const t12 = buildTotals(r12, m12);
-      renderPlanningChart(t12, m12);
+      const chart = buildChartProjection();
+      renderPlanningChart(chart.totals, chart.months);
     });
   });
 }
@@ -319,6 +320,7 @@ function _initPeriodSelector() {
 export function renderPlanningChart(totals, months) {
   const chartTotals = totals.slice(0, _chartPeriod);
   const accValues = chartTotals.map((t) => t.accumulated);
+  const compactXAxis = chartTotals.length > 12;
 
   const Y_MIN = Math.min(-3000, ...accValues);
   const Y_MAX = Math.max(20000, ...accValues);
@@ -375,6 +377,7 @@ export function renderPlanningChart(totals, months) {
   }).join("");
 
   const valLabels = chartTotals.map((t, i) => {
+    if (compactXAxis && i % 2) return "";
     const xPct = (xPos(i) / W * 100).toFixed(2);
     const yPct = (yPos(t.accumulated) / SVG_H * 100).toFixed(2);
     const cls = t.accumulated >= 0 ? "acc-val-pos" : "acc-val-neg";
@@ -416,7 +419,10 @@ export function renderPlanningChart(totals, months) {
           const neg = t.accumulated < 0 ? " negative" : "";
           const [y, m] = t.month.split("-").map(Number);
           const mName = new Intl.DateTimeFormat("pt-BR", { month: "long" }).format(new Date(y, m - 1, 1));
-          const mLabel = mName.charAt(0).toUpperCase() + mName.slice(1) + "/" + y;
+          const monthLabel = mName.charAt(0).toUpperCase() + mName.slice(1);
+          const mLabel = compactXAxis
+            ? (i % 2 ? "" : `${monthLabel.slice(0, 3)}/${String(y).slice(-2)}`)
+            : `${monthLabel}/${y}`;
           return `<button class="acc-month-btn${neg}${active}" type="button" data-chart-month="${t.month}" title="${currency.format(t.accumulated)}">${mLabel}</button>`;
         }).join("")}
       </div>
@@ -458,14 +464,22 @@ export function renderPlanningChart(totals, months) {
     btn.addEventListener("click", () => {
       const month = btn.dataset.chartMonth;
       _expandedSummaryMonth = _expandedSummaryMonth === month ? null : month;
-      const months12 = currentMonths(12);
-      const rows12 = buildProjectionRows(months12, true);
-      const totals12 = buildTotals(rows12, months12);
-      renderPlanningChart(totals12, months12);
-      _renderMonthlySummary(totals12, months12, rows12);
+      const chart = buildChartProjection();
+      const monthCount = Math.max(SUMMARY_MONTHS, chart.months.indexOf(month) + 1);
+      const summaryMonths = chart.months.slice(0, monthCount);
+      const summaryRows = buildProjectionRows(summaryMonths, true);
+      const summaryTotals = buildTotals(summaryRows, summaryMonths);
+      renderPlanningChart(chart.totals, chart.months);
+      _renderMonthlySummary(summaryTotals, summaryMonths, summaryRows);
       document.querySelector("#projMonthlySummary")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
     });
   });
+}
+
+function buildChartProjection() {
+  const months = currentMonths(CHART_MONTHS);
+  const rows = buildProjectionRows(months, true);
+  return { months, totals: buildTotals(rows, months) };
 }
 
 export function buildProjectionRows(months, keepPaidValues = false) {
