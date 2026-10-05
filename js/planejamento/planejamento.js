@@ -1,5 +1,5 @@
 import { state, el, currency } from "../state.js";
-import { nextMonths, currentMonths, formatMonth, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, isIncomeReceived, installmentDueDate, monthDayDate, addMonthsToDate } from "../utils.js";
+import { nextMonths, currentMonths, formatMonthLong, escapeHtml, icon, refreshIcons, syncProjectionTopScroll, isOccurrencePaid, installmentDueDate, monthDayDate, addMonthsToDate } from "../utils.js";
 
 let _expandedSummaryMonth = null;
 const SUMMARY_MONTHS = 12;
@@ -8,7 +8,7 @@ let _chartPeriod = 12;
 let _periodSelectorReady = false;
 import { calcNetClt } from "../taxes.js";
 import { getCreditorName, getInstallmentCard, ownerRank } from "../creditors.js";
-import { metric, groupRow, totalRow, isPlannedIncome, isManualPlannedRow } from "../components.js";
+import { isPlannedIncome, isManualPlannedRow } from "../components.js";
 import { ensureCarPayments } from "../carro/carro.js";
 import { openPlannedDialog, deleteManualPlanned } from "../controle/planned-dialog.js";
 import { rowOutstanding, rowIncomeOutstanding, firstDueDate, compareRowsByDueDate } from "../domain/row-utils.js";
@@ -29,7 +29,6 @@ export function renderProjection() {
   renderPlanningChart(chart.totals, chart.months);
   _renderEvents(totals, months, rows);
   _renderMonthlySummary(totals, months, rows);
-  _renderProjectionTable(rows, months, totals);
   requestAnimationFrame(syncProjectionTopScroll);
 }
 
@@ -238,70 +237,6 @@ function _renderMonthlySummary(totals, months, rows) {
   });
 }
 
-function _renderProjectionTable(rows, months, totals) {
-  const monthHeaders = months.map((month) => `<th>${formatMonth(month)}</th>`).join("");
-  const body = [
-    groupRow("Entradas", months.length),
-    ...rows.filter((row) => row.kind === "income").map((row) => projectionRow(row, months)),
-    totalRow("Total entradas", months, (month) => totals.find((item) => item.month === month).income, "positive"),
-    groupRow("Saídas", months.length),
-    ...rows.filter((row) => row.kind === "expense").map((row) => projectionRow(row, months)),
-    totalRow("Total saídas", months, (month) => -totals.find((item) => item.month === month).expense, "negative"),
-    totalRow("Resultado do mês", months, (month) => totals.find((item) => item.month === month).balance, "balance"),
-    totalRow("Saldo acumulado", months, (month) => totals.find((item) => item.month === month).accumulated, "balance")
-  ].join("");
-
-  el.projectionTable.innerHTML = `
-    <thead>
-      <tr>
-        <th class="sticky-col">Linha</th>
-        <th>Origem</th>
-        ${monthHeaders}
-      </tr>
-    </thead>
-    <tbody>${body}</tbody>
-  `;
-  el.projectionTable.querySelectorAll("[data-edit-income-line]").forEach((button) => {
-    button.addEventListener("click", () => openPlannedDialog(button.dataset.editIncomeLine, "income"));
-  });
-  el.projectionTable.querySelectorAll("[data-delete-manual-plan]").forEach((button) => {
-    button.addEventListener("click", () => deleteManualPlanned(button.dataset.deleteManualPlan));
-  });
-}
-
-function projectionRow(row, months) {
-  const sectionClass = `${row.kind === "income" ? "income-row" : "expense-row"} ${row.owner === "Kah" ? "owner-kah" : ""}`;
-  const editAction = row.kind === "income" && isPlannedIncome(row.id)
-    ? `<button class="icon-button mini-icon row-edit" type="button" title="Editar entrada" data-edit-income-line="${row.id}">${icon("pencil")}</button>`
-    : "";
-  const deleteAction = isManualPlannedRow(row)
-    ? `<button class="icon-button mini-icon danger-mini row-edit" type="button" title="Excluir lançamento" data-delete-manual-plan="${row.id}">${icon("trash-2")}</button>`
-    : "";
-  return `
-    <tr class="${sectionClass}">
-      <th class="sticky-col">
-        <span>${escapeHtml(row.label)}</span>
-        ${editAction}
-        ${deleteAction}
-      </th>
-      <td>${escapeHtml(row.origin || "-")}</td>
-      ${months.map((month) => projectionCell(row, month)).join("")}
-    </tr>
-  `;
-}
-
-function projectionCell(row, month) {
-  const value = row.values[month] || 0;
-  const key = `${row.id}:${month}`;
-  const done = row.kind === "expense" ? isOccurrencePaid(key) : isIncomeReceived(key);
-  const displayValue = row.kind === "expense" ? rowOutstanding(row, month, value) : rowIncomeOutstanding(row, month, value);
-  if (!displayValue && !done) return `<td class="muted-cell">-</td>`;
-  const sign = row.kind === "income" ? "" : "-";
-  const className = row.kind === "income" ? "positive" : "negative";
-  const status = done ? `<small class="cell-status">${row.kind === "income" ? "recebido no controle" : "pago no controle"}</small>` : "";
-  return `<td><span class="${className}">${sign}${currency.format(displayValue)}</span>${status}</td>`;
-}
-
 function _initPeriodSelector() {
   if (_periodSelectorReady) return;
   _periodSelectorReady = true;
@@ -414,7 +349,7 @@ export function renderPlanningChart(totals, months) {
         <div class="acc-tooltip" id="accTooltip" hidden></div>
       </div>
       <div class="acc-months-row">
-        ${chartTotals.map((t) => {
+        ${chartTotals.map((t, i) => {
           const active = _expandedSummaryMonth === t.month ? " acc-lbl-active" : "";
           const neg = t.accumulated < 0 ? " negative" : "";
           const [y, m] = t.month.split("-").map(Number);
