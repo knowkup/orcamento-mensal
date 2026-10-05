@@ -128,3 +128,9 @@ test('trail includes a payoff forecast driven by open installments', async () =>
   assert.match(trail, /buildDebtPayoffForecast/);
   assert.match(trail, /payoffForecastChart/);
 });
+
+test('waiting debt metrics follow the selected creditor filter', async () => {
+  const debts = await readFile('js/dividas/debts.js', 'utf8');
+
+  assert.match(debts, /renderWaitingDebtMetrics\(waitingFiltered\)/);
+});

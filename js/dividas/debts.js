@@ -248,7 +248,6 @@ export function paidOffDebtRow(debt, index) {
 function renderWaitingDebtMetrics(waitingDebts) {
   const container = $('waitingDebtMetrics');
   if (!container) return;
-  const waitingIds = new Set(waitingDebts.map(d => d.id));
   const totalBalance = waitingDebts.reduce((sum, debt) => sum + debtBalance(debt), 0);
   const payoffToday = waitingDebts.reduce((sum, debt) => sum + (payoffTodayValue(debt) || debtBalance(debt)), 0);
   const monthlyCommitment = waitingDebts
@@ -317,7 +316,7 @@ export function renderDebts() {
     waitingDirection.disabled = state.selectedWaitingDebtSort === 'trail';
   }
   renderCreditorFilters({ containerId: 'waitingCreditorFilters', scope: 'waiting', debts: waitingAll, selectedId: state.selectedWaitingCreditorFilter });
-  renderWaitingDebtMetrics(waitingAll);
+  renderWaitingDebtMetrics(waitingFiltered);
   renderCreditorFilters({ containerId: 'paidOffCreditorFilters', scope: 'paidOff', debts: paidOffAll, selectedId: state.selectedPaidOffCreditorFilter });
   renderPaidOffDebtMetrics(paidOff);
   $('waitingDebts').innerHTML = waiting.length ? '<div class="route-panel"><div class="route-list">' + waiting.map((debt, index) => debtRouteGridRow(debt, index, 'waiting')).join('') + '</div></div>' : emptyCard('Nenhuma dívida em espera', state.selectedWaitingCreditorFilter === 'all' ? 'As dívidas fora da frente atual aparecerão aqui.' : 'Não há dívidas em espera para este credor.');
