@@ -223,12 +223,15 @@ function payoffForecastChart(forecast) {
     const y = yPos(value);
     return `<line class="payoff-chart-grid" x1="${LEFT}" y1="${y.toFixed(1)}" x2="${W - RIGHT}" y2="${y.toFixed(1)}"/><text class="payoff-chart-y-label" x="${LEFT - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${escapeHtml(compactCurrency(value))}</text>`;
   }).join('');
-  const markers = events.map(event => {
-    const step = forecast.steps.find(item => item.month === event.month);
-    const x = xPos(event.month);
-    const y = yPos(step.commitment);
-    return `<circle class="payoff-chart-event" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" tabindex="0" data-payoff-event-month="${escapeHtml(event.month)}" data-payoff-event-x="${(x / W * 100).toFixed(2)}" data-payoff-event-y="${(y / H * 100).toFixed(2)}" aria-label="Ver dívidas previstas em ${escapeHtml(formatMonthYear(event.month))}"/>`;
-  }).join('');
+  const startMarker = `<circle class="payoff-chart-event" cx="${xPos(forecast.startMonth).toFixed(1)}" cy="${initialY.toFixed(1)}" r="6" tabindex="0" data-payoff-event-month="${escapeHtml(forecast.startMonth)}" data-payoff-event-x="${(xPos(forecast.startMonth) / W * 100).toFixed(2)}" data-payoff-event-y="${(initialY / H * 100).toFixed(2)}" aria-label="Ver dívidas previstas em ${escapeHtml(formatMonthYear(forecast.startMonth))}"/>`;
+  const markers = startMarker + events
+    .filter(event => event.month !== forecast.startMonth)
+    .map(event => {
+      const step = forecast.steps.find(item => item.month === event.month);
+      const x = xPos(event.month);
+      const y = yPos(step.commitment);
+      return `<circle class="payoff-chart-event" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" tabindex="0" data-payoff-event-month="${escapeHtml(event.month)}" data-payoff-event-x="${(x / W * 100).toFixed(2)}" data-payoff-event-y="${(y / H * 100).toFixed(2)}" aria-label="Ver dívidas previstas em ${escapeHtml(formatMonthYear(event.month))}"/>`;
+    }).join('');
   let previousYear = forecast.startMonth.slice(0, 4);
   const yearGuides = events.map(event => {
     const year = event.month.slice(0, 4);
@@ -250,29 +253,18 @@ function bindPayoffForecastEvents(container, route, forecast) {
   if (!tooltip) return;
   const show = circle => {
     const month = circle.dataset.payoffEventMonth;
-    const event = forecast.events.find(item => item.month === month);
-    if (!event) return;
+    const event = forecast.events.find(item => item.month === month) || { debts: [] };
     tooltip.innerHTML = payoffEventTooltip(route, month, event);
     tooltip.style.left = `${circle.dataset.payoffEventX}%`;
     tooltip.style.top = `${circle.dataset.payoffEventY}%`;
-    tooltip.style.maxHeight = '';
-    tooltip.style.overflowY = '';
     tooltip.classList.toggle('is-right', Number(circle.dataset.payoffEventX) > 64);
     tooltip.hidden = false;
 
     const area = tooltip.closest('.payoff-chart-area');
     const pointY = area.clientHeight * Number(circle.dataset.payoffEventY) / 100;
     const gap = 12;
-    const spaceAbove = pointY - gap;
     const spaceBelow = area.clientHeight - pointY - gap;
-    const opensAbove = tooltip.offsetHeight > spaceBelow && spaceAbove > spaceBelow;
-    const availableHeight = opensAbove ? spaceAbove : spaceBelow;
-
-    tooltip.classList.toggle('is-above', opensAbove);
-    if (tooltip.offsetHeight > availableHeight) {
-      tooltip.style.maxHeight = `${Math.max(96, Math.floor(availableHeight))}px`;
-      tooltip.style.overflowY = 'auto';
-    }
+    tooltip.classList.toggle('is-above', tooltip.offsetHeight > spaceBelow);
   };
   const hide = () => { tooltip.hidden = true; };
   container.querySelectorAll('[data-payoff-event-month]').forEach(circle => {
