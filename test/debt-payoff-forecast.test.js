@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { addMonthsToMonth, buildDebtPayoffForecast, monthAfterDueDate } from '../js/domain/debt-payoff-forecast.js';
 
-test('debt payoff forecast releases the monthly commitment only after the last due month', () => {
+test('debt payoff forecast marks the final due month and releases capacity in the following month', () => {
   const debt = { id: 'santander', status: 'Ativa', installmentValue: 1687.24 };
   const forecast = buildDebtPayoffForecast({
     debts: [debt],
@@ -14,7 +14,8 @@ test('debt payoff forecast releases the monthly commitment only after the last d
   });
 
   assert.equal(forecast.initialCommitment, 1687.24);
-  assert.deepEqual(forecast.events.map(event => event.month), ['2027-05']);
+  assert.deepEqual(forecast.events.map(event => event.month), ['2027-04']);
+  assert.equal(forecast.events[0].releaseMonth, '2027-05');
   assert.equal(forecast.events[0].released, 1687.24);
   assert.equal(forecast.steps.at(-1).commitment, 0);
 });

@@ -3585,12 +3585,25 @@ select {
 .payoff-chart-area { position: relative; min-height: 264px; }
 .payoff-chart-svg { display: block; width: 100%; height: 264px; overflow: visible; }
 .payoff-chart-grid { stroke: var(--border); stroke-width: 1; }
-.payoff-chart-y-label, .payoff-chart-x-label, .payoff-chart-debt { fill: var(--muted); font-size: 12px; font-weight: 600; }
+.payoff-chart-y-label, .payoff-chart-x-label, .payoff-chart-year-label { fill: var(--muted); font-size: 12px; font-weight: 600; }
 .payoff-chart-blue-area { fill: rgba(67,132,244,0.10); }
 .payoff-released-area { fill: rgba(29,185,125,0.18); }
 .payoff-chart-line { fill: none; stroke: var(--blue); stroke-width: 3.5; stroke-linejoin: round; stroke-linecap: round; }
+.payoff-chart-year-guide { stroke: rgba(89,112,143,0.45); stroke-width: 1; stroke-dasharray: 4 5; }
 .payoff-chart-event { fill: var(--green); stroke: var(--surface); stroke-width: 3; cursor: help; }
-.payoff-chart-release { fill: #087a4e; font-size: 12px; font-weight: 800; }
+.payoff-chart-event:focus { outline: none; stroke: var(--ink); stroke-width: 3; }
+.payoff-chart-tooltip { position: absolute; z-index: 4; width: min(330px, calc(100% - 20px)); padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 24px rgba(13,32,56,0.18); transform: translate(12px, 12px); }
+.payoff-chart-tooltip.is-right { transform: translate(calc(-100% - 12px), 12px); }
+.payoff-chart-tooltip.is-above { transform: translate(12px, calc(-100% - 12px)); }
+.payoff-chart-tooltip.is-right.is-above { transform: translate(calc(-100% - 12px), calc(-100% - 12px)); }
+.payoff-tooltip-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--ink); font-size: 13px; }
+.payoff-tooltip-head span { color: var(--muted); font-weight: 700; white-space: nowrap; }
+.payoff-tooltip-list { display: grid; gap: 5px; margin-top: 8px; }
+.payoff-tooltip-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 6px 8px; border-radius: 8px; color: var(--ink); font-size: 12px; }
+.payoff-tooltip-row.is-ending { background: var(--green-soft); }
+.payoff-tooltip-row span { min-width: 0; }
+.payoff-tooltip-row small { display: block; margin-top: 2px; color: #087a4e; font-size: 11px; font-weight: 700; }
+.payoff-tooltip-row strong { white-space: nowrap; font-size: 12px; }
 .payoff-chart-hint, .payoff-forecast-note, .payoff-forecast-empty { margin: 6px 0 0 56px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .payoff-forecast-note { color: #9b5d00; }
 .payoff-forecast-empty { padding: 18px 0 4px; }
@@ -3861,8 +3874,8 @@ select {
   .payoff-chart-svg { height: 232px; }
   .payoff-chart-legend, .payoff-chart-hint, .payoff-forecast-note, .payoff-forecast-empty { margin-left: 0; }
   .payoff-chart-legend { gap: 10px; }
-  .payoff-chart-y-label, .payoff-chart-x-label, .payoff-chart-debt { font-size: 10px; }
-  .payoff-chart-release { font-size: 10px; }
+  .payoff-chart-y-label, .payoff-chart-x-label, .payoff-chart-year-label { font-size: 10px; }
+  .payoff-chart-tooltip { width: min(285px, calc(100% - 12px)); }
 }
 
 /* ── Cartões/crediários inline no modal de credor ────────────── */

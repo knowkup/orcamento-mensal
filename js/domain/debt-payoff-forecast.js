@@ -26,8 +26,8 @@ function installmentValueForForecast(debt, installments) {
 
 /**
  * Creates the step forecast used by the debt payoff chart.
- * The release happens in the month after the last pending installment,
- * because the last installment still occupies its due month.
+ * Each point represents the month of the final pending installment. The
+ * resulting budget capacity becomes available in the following month.
  */
 export function buildDebtPayoffForecast({ debts = [], installmentsByDebt = new Map(), fromMonth }) {
   const startMonth = isMonthKey(fromMonth) ? fromMonth : new Date().toISOString().slice(0, 7);
@@ -44,18 +44,19 @@ export function buildDebtPayoffForecast({ debts = [], installmentsByDebt = new M
         .sort((a, b) => String(a.dueDate || '').localeCompare(String(b.dueDate || '')));
       const monthlyValue = installmentValueForForecast(debt, datedInstallments);
       const lastInstallment = datedInstallments.at(-1);
+      const dueMonth = String(lastInstallment?.dueDate || '').slice(0, 7);
       const releaseMonth = monthAfterDueDate(lastInstallment?.dueDate);
 
-      if (!lastInstallment || !monthlyValue || !releaseMonth || releaseMonth <= startMonth) {
+      if (!lastInstallment || !monthlyValue || !dueMonth || !releaseMonth || dueMonth < startMonth) {
         withoutForecast.push(debt);
         return;
       }
 
       initialCommitment += monthlyValue;
-      const event = eventsByMonth.get(releaseMonth) || { month: releaseMonth, released: 0, debts: [] };
+      const event = eventsByMonth.get(dueMonth) || { month: dueMonth, releaseMonth, released: 0, debts: [] };
       event.released += monthlyValue;
       event.debts.push({ debt, monthlyValue, lastDueDate: lastInstallment.dueDate });
-      eventsByMonth.set(releaseMonth, event);
+      eventsByMonth.set(dueMonth, event);
     });
 
   const events = [...eventsByMonth.values()].sort((a, b) => a.month.localeCompare(b.month));
@@ -72,6 +73,6 @@ export function buildDebtPayoffForecast({ debts = [], installmentsByDebt = new M
     events,
     steps,
     withoutForecast,
-    endMonth: events.length ? addMonthsToMonth(events.at(-1).month, 2) : addMonthsToMonth(startMonth, 1)
+    endMonth: events.length ? events.at(-1).month : startMonth
   };
 }
