@@ -183,7 +183,7 @@ function showView(name) {
       if (subtitle) subtitle.textContent = view.dataset.subtitle || "";
     }
   });
-  const bottomPrimary = ["planejamento", "controle", "divrota"];
+  const bottomPrimary = ["planejamento", "controle", "divrota", "divposrenegociacao"];
   document.querySelectorAll(".bottom-tab[data-view]").forEach((t) => {
     t.classList.toggle("active", t.dataset.view === name);
   });
