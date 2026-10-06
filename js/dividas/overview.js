@@ -39,13 +39,13 @@ function bindDonutInteractions(container) {
   const originalValue = value?.textContent || '';
   const originalLabel = label?.textContent || '';
   const restore = () => {
-    donut.querySelectorAll('[data-donut-item]').forEach((item) => item.classList.remove('is-active', 'is-muted'));
+    donut.querySelectorAll('[data-donut-item]').forEach((item) => item.classList.remove('is-active'));
     if (value) value.textContent = originalValue;
     if (label) label.textContent = originalLabel;
   };
   donut.querySelectorAll('[data-donut-item]').forEach((item) => {
     const highlight = () => {
-      donut.querySelectorAll('[data-donut-item]').forEach((entry) => entry.classList.toggle('is-muted', entry !== item));
+      donut.querySelectorAll('[data-donut-item]').forEach((entry) => entry.classList.toggle('is-active', entry === item));
       item.classList.add('is-active');
       if (value) value.textContent = item.dataset.value;
       if (label) label.textContent = item.dataset.label;
@@ -96,8 +96,8 @@ function creditorBarsHtml(items, pendingTotal) {
 function bindCreditorInteractions(container) {
   const bars = [...container.querySelectorAll('[data-creditor-decision-bar]')];
   bars.forEach((bar) => {
-    const highlight = () => bars.forEach((item) => item.classList.toggle('is-muted', item !== bar));
-    const restore = () => bars.forEach((item) => item.classList.remove('is-muted'));
+    const highlight = () => bars.forEach((item) => item.classList.toggle('is-active', item === bar));
+    const restore = () => bars.forEach((item) => item.classList.remove('is-active'));
     bar.addEventListener('mouseenter', highlight);
     bar.addEventListener('mouseleave', restore);
     bar.addEventListener('focus', highlight);
