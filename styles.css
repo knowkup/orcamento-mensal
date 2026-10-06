@@ -3592,7 +3592,7 @@ select {
 .payoff-chart-year-guide { stroke: rgba(89,112,143,0.45); stroke-width: 1; stroke-dasharray: 4 5; }
 .payoff-chart-event { fill: var(--green); stroke: var(--surface); stroke-width: 3; cursor: help; }
 .payoff-chart-event:focus { outline: none; stroke: var(--ink); stroke-width: 3; }
-.payoff-chart-tooltip { position: absolute; z-index: 4; width: min(330px, calc(100% - 20px)); padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 24px rgba(13,32,56,0.18); transform: translate(12px, 12px); }
+.payoff-chart-tooltip { position: absolute; z-index: 4; box-sizing: border-box; width: min(330px, calc(100% - 20px)); padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 24px rgba(13,32,56,0.18); overscroll-behavior: contain; transform: translate(12px, 12px); }
 .payoff-chart-tooltip.is-right { transform: translate(calc(-100% - 12px), 12px); }
 .payoff-chart-tooltip.is-above { transform: translate(12px, calc(-100% - 12px)); }
 .payoff-chart-tooltip.is-right.is-above { transform: translate(calc(-100% - 12px), calc(-100% - 12px)); }

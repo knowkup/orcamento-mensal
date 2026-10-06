@@ -255,9 +255,24 @@ function bindPayoffForecastEvents(container, route, forecast) {
     tooltip.innerHTML = payoffEventTooltip(route, month, event);
     tooltip.style.left = `${circle.dataset.payoffEventX}%`;
     tooltip.style.top = `${circle.dataset.payoffEventY}%`;
+    tooltip.style.maxHeight = '';
+    tooltip.style.overflowY = '';
     tooltip.classList.toggle('is-right', Number(circle.dataset.payoffEventX) > 64);
-    tooltip.classList.toggle('is-above', Number(circle.dataset.payoffEventY) > 56);
     tooltip.hidden = false;
+
+    const area = tooltip.closest('.payoff-chart-area');
+    const pointY = area.clientHeight * Number(circle.dataset.payoffEventY) / 100;
+    const gap = 12;
+    const spaceAbove = pointY - gap;
+    const spaceBelow = area.clientHeight - pointY - gap;
+    const opensAbove = tooltip.offsetHeight > spaceBelow && spaceAbove > spaceBelow;
+    const availableHeight = opensAbove ? spaceAbove : spaceBelow;
+
+    tooltip.classList.toggle('is-above', opensAbove);
+    if (tooltip.offsetHeight > availableHeight) {
+      tooltip.style.maxHeight = `${Math.max(96, Math.floor(availableHeight))}px`;
+      tooltip.style.overflowY = 'auto';
+    }
   };
   const hide = () => { tooltip.hidden = true; };
   container.querySelectorAll('[data-payoff-event-month]').forEach(circle => {
