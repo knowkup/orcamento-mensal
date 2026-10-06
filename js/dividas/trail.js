@@ -273,12 +273,20 @@ function payoffForecastChart(forecast, route, commitmentLimit) {
     .map(month => {
       const nextTotal = payoffMonthTotals(route, addMonthsToMonth(month)).total;
       const available = Math.max(0, commitmentLimit - nextTotal);
-      const x = xPos(month).toFixed(1);
-      return `<text class="payoff-chart-free-label" x="${x}" y="${H - 29}" text-anchor="middle">Livre ${escapeHtml(brl(available))}/mês</text><text class="payoff-chart-x-label" x="${x}" y="${H - 10}" text-anchor="middle">${escapeHtml(formatMonthYear(month))}</text>`;
+      const pointY = month === forecast.startMonth
+        ? initialY
+        : yPos(forecast.steps.find(item => item.month === month)?.commitment ?? forecast.initialCommitment);
+      const pointX = xPos(month);
+      const isLeftEdge = pointX < LEFT + 55;
+      const isRightEdge = pointX > W - RIGHT - 55;
+      const labelX = isLeftEdge ? pointX + 10 : isRightEdge ? pointX - 10 : pointX;
+      const anchor = isLeftEdge ? 'start' : isRightEdge ? 'end' : 'middle';
+      const labelY = Math.min(pointY + 22, H - 29);
+      return `<text class="payoff-chart-free-label" x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}">↗ ${escapeHtml(brl(available))}</text><text class="payoff-chart-x-label" x="${pointX.toFixed(1)}" y="${H - 10}" text-anchor="middle">${escapeHtml(formatMonthYear(month))}</text>`;
     })
     .join('');
 
-  return `<div class="payoff-chart-wrap"><div class="payoff-chart-legend"><span><i class="payoff-chart-swatch remaining"></i>Compromisso que permanece</span><span><i class="payoff-chart-swatch released"></i>Espaço liberado</span></div><div class="payoff-chart-area"><svg class="payoff-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Compromissos mensais restantes e capacidade liberada pelas quitações">${grid}${yearGuides}<path class="payoff-chart-blue-area" d="${blueArea}"/><g>${releasedAreas.join('')}</g><path class="payoff-chart-line" d="${line}"/>${markers}${chartMarkers}</svg><div class="payoff-chart-tooltip" id="payoffChartTooltip" hidden></div></div><p class="payoff-chart-hint">Passe o mouse ou use Tab nas bolinhas para ver as dívidas previstas naquele mês.</p></div>`;
+  return `<div class="payoff-chart-wrap"><div class="payoff-chart-legend"><span><i class="payoff-chart-swatch remaining"></i>Compromisso que permanece</span><span><i class="payoff-chart-swatch released"></i>Espaço liberado</span><span class="payoff-chart-capacity-legend">↗ Folga no próximo mês</span></div><div class="payoff-chart-area"><svg class="payoff-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Compromissos mensais restantes e capacidade liberada pelas quitações">${grid}${yearGuides}<path class="payoff-chart-blue-area" d="${blueArea}"/><g>${releasedAreas.join('')}</g><path class="payoff-chart-line" d="${line}"/>${markers}${chartMarkers}</svg><div class="payoff-chart-tooltip" id="payoffChartTooltip" hidden></div></div><p class="payoff-chart-hint">Passe o mouse ou use Tab nas bolinhas para ver as dívidas previstas naquele mês.</p></div>`;
 }
 
 function bindPayoffForecastEvents(container, route, forecast, commitmentLimit) {

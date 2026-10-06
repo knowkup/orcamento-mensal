@@ -3584,6 +3584,7 @@ select {
 .payoff-chart-wrap { position: relative; margin-top: 18px; }
 .payoff-chart-legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 0 0 8px 56px; color: var(--muted); font-size: 12px; }
 .payoff-chart-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.payoff-chart-capacity-legend { color: #087a4e; font-weight: 700; }
 .payoff-chart-swatch { display: inline-block; width: 20px; height: 4px; border-radius: 999px; }
 .payoff-chart-swatch.remaining { background: var(--blue); }
 .payoff-chart-swatch.released { background: rgba(29,185,125,0.38); }
