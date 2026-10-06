@@ -3611,6 +3611,10 @@ select {
 .payoff-tooltip-row.is-paid small { color: #73829a; }
 .payoff-tooltip-row strong { white-space: nowrap; font-size: 12px; }
 .payoff-tooltip-row.is-paid strong { color: #5d6d85; }
+.payoff-tooltip-after { display: grid; gap: 3px; margin-top: 10px; padding: 10px; border-radius: 9px; background: var(--blue-soft); color: var(--muted); }
+.payoff-tooltip-after > span { color: var(--blue); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+.payoff-tooltip-after strong { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; color: var(--ink); font-size: 14px; }
+.payoff-tooltip-after strong small, .payoff-tooltip-after > small { color: var(--muted); font-size: 11px; font-weight: 600; }
 .payoff-chart-hint, .payoff-forecast-note, .payoff-forecast-empty { margin: 6px 0 0 56px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .payoff-forecast-note { color: #9b5d00; }
 .payoff-forecast-empty { padding: 18px 0 4px; }

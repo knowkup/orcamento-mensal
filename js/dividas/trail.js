@@ -7,7 +7,7 @@ import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder
 import { renderDebtRouteItem } from './debt-components.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
 import { creditorFilterEntries, filterDebtsByCreditor } from '../domain/debt-filters.js';
-import { buildDebtPayoffForecast } from '../domain/debt-payoff-forecast.js';
+import { addMonthsToMonth, buildDebtPayoffForecast } from '../domain/debt-payoff-forecast.js';
 
 // --- Render principal da Rota Financeira ---
 
@@ -277,6 +277,9 @@ function bindPayoffForecastEvents(container, route, forecast) {
 
 function payoffEventTooltip(route, month, event, includePaid = false) {
   const endingDebtIds = new Set(event.debts.map(item => item.debt.id));
+  const sortRows = (a, b) => Number(a.debt.isConsignado) - Number(b.debt.isConsignado)
+    || Number(b.ending) - Number(a.ending)
+    || b.value - a.value;
   const buildRows = predicate => route
     .filter(debt => debt.status === 'Ativa')
     .map(debt => {
@@ -287,7 +290,7 @@ function payoffEventTooltip(route, month, event, includePaid = false) {
       return installments.length ? { debt, value, ending: endingDebtIds.has(debt.id) } : null;
     })
     .filter(Boolean)
-    .sort((a, b) => Number(b.ending) - Number(a.ending) || b.value - a.value);
+    .sort(sortRows);
   const pendingDebts = buildRows(isDebtInstallmentOpen);
   const paidDebts = includePaid
     ? buildRows(installment => installment.status === 'Paga' || installment.status === 'Quitada')
@@ -305,12 +308,34 @@ function payoffEventTooltip(route, month, event, includePaid = false) {
       '<strong>' + escapeHtml(brl(item.value)) + '</strong>' +
     '</div>';
   }).join('');
+  const nextMonth = event.debts.length ? addMonthsToMonth(month) : '';
+  const nextTotals = nextMonth ? payoffMonthTotals(route, nextMonth) : null;
+  const nextBreakdown = nextTotals
+    ? 'Rota ' + brl(nextTotals.route) + (nextTotals.consignado ? ' · Folha ' + brl(nextTotals.consignado) : '')
+    : '';
   return '<div class="payoff-tooltip-head"><strong>Parcelas de ' + escapeHtml(formatMonthYear(month)) + '</strong><span>' + escapeHtml(brl(total)) + '</span></div>' +
     (includePaid ? '<div class="payoff-tooltip-total"><span>Pendente</span><strong>' + escapeHtml(brl(pendingTotal)) + '</strong></div>' : '') +
     '<div class="payoff-tooltip-list">' + rows(pendingDebts) + '</div>' +
     (paidDebts.length
       ? '<div class="payoff-tooltip-paid-head"><span>Parcelas pagas</span><strong>' + escapeHtml(brl(paidTotal)) + '</strong></div><div class="payoff-tooltip-list is-paid">' + rows(paidDebts, true) + '</div>'
+      : '') +
+    (nextTotals
+      ? '<div class="payoff-tooltip-after"><span>Após as quitações deste mês</span><strong><small>Total previsto em ' + escapeHtml(formatMonthYear(nextMonth)) + '</small>' + escapeHtml(brl(nextTotals.total)) + '/mês</strong><small>' + escapeHtml(nextBreakdown) + '</small></div>'
       : '');
+}
+
+function payoffMonthTotals(route, month) {
+  return route
+    .filter(debt => debt.status === 'Ativa')
+    .reduce((totals, debt) => {
+      const value = (state.installmentsByDebt.get(debt.id) || [])
+        .filter(installment => String(installment.dueDate || '').startsWith(month) && isDebtInstallmentOpen(installment))
+        .reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0);
+      if (debt.isConsignado) totals.consignado += value;
+      else totals.route += value;
+      totals.total += value;
+      return totals;
+    }, { route: 0, consignado: 0, total: 0 });
 }
 
 function compactCurrency(value) {
