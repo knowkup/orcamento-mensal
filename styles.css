@@ -3653,7 +3653,9 @@ select {
 .creditor-decision-name { overflow: hidden; color: var(--ink); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
 .creditor-decision-track { height: 9px; overflow: hidden; border-radius: 999px; background: rgba(13,32,56,0.07); }
 .creditor-decision-track i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--blue), var(--green)); }
-.creditor-decision-bar strong { color: var(--ink); font-size: 13px; white-space: nowrap; }
+.creditor-decision-value { display: grid; justify-items: end; gap: 2px; text-align: right; }
+.creditor-decision-value strong { color: var(--ink); font-size: 13px; white-space: nowrap; }
+.creditor-decision-value small { color: var(--muted); font-size: 10px; white-space: nowrap; }
 .insights-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .donut-panel { display: grid; grid-template-columns: 220px 1fr; gap: 22px; align-items: center; }
 .donut-legend { display: grid; gap: 10px; }

@@ -1,7 +1,7 @@
 import { state } from './state.js';
 import { state as mainState } from '../state.js';
 import { $, brl, emptyCard, escapeHtml, creditorLogoHtml, getCreditorName, showToast } from './utils.js';
-import { debtBalance, payoffTodayValue, remainingInstallmentsCount } from './calc.js';
+import { debtBalance, debtPaid, payoffTodayValue, remainingInstallmentsCount } from './calc.js';
 import { creditorFilterEntries } from '../domain/debt-filters.js';
 import { isDebtInstallmentOpen } from '../domain/debts.js';
 
@@ -68,12 +68,10 @@ function recordedInstallmentProgress(debts) {
       if (isDebtInstallmentOpen(installment)) {
         if (debt.status === 'Ativa') totals.inRoute += value;
         if (debt.status === 'Em espera') totals.waiting += value;
-      } else {
-        totals.paid += value;
       }
     });
     return totals;
-  }, { paid: 0, inRoute: 0, waiting: 0 });
+  }, { inRoute: 0, waiting: 0 });
 }
 
 function payoffExposure(debts) {
@@ -83,14 +81,14 @@ function payoffExposure(debts) {
     .filter((item) => item.value > 0);
 }
 
-function creditorBarsHtml(items) {
+function creditorBarsHtml(items, pendingTotal) {
   if (!items.length) return emptyCard('Sem saldo para quitar', 'Cadastre o valor de quitação ou as parcelas das dívidas abertas.');
   const largest = Math.max(...items.map((item) => item.value), 1);
   return '<div class="creditor-decision-list">' + items.map((item) =>
     '<div class="creditor-decision-bar" tabindex="0" data-creditor-decision-bar>' +
       '<div class="creditor-decision-name">' + escapeHtml(item.label) + '</div>' +
       '<div class="creditor-decision-track"><i style="width:' + (item.value / largest * 100).toFixed(2) + '%"></i></div>' +
-      '<strong>' + escapeHtml(brl(item.value)) + '</strong>' +
+      '<div class="creditor-decision-value"><strong>' + escapeHtml(brl(item.value)) + '</strong><small>' + escapeHtml((item.value / pendingTotal * 100).toLocaleString('pt-BR', { maximumFractionDigits: 1 })) + '% do total pendente</small></div>' +
     '</div>'
   ).join('') + '</div>';
 }
@@ -116,32 +114,35 @@ function renderDebtDecisionDashboard() {
 
   const debts = dashboardDebts();
   const progress = recordedInstallmentProgress(debts);
-  const recordedTotal = progress.paid + progress.inRoute + progress.waiting;
+  const actualPaid = debts.reduce((sum, debt) => sum + debtPaid(debt), 0);
+  const recordedTotal = actualPaid + progress.inRoute + progress.waiting;
   const exposure = payoffExposure(debts);
   const routePayoff = exposure.filter((item) => item.debt.status === 'Ativa').reduce((sum, item) => sum + item.value, 0);
   const waitingPayoff = exposure.filter((item) => item.debt.status === 'Em espera').reduce((sum, item) => sum + item.value, 0);
   const payoffTotal = routePayoff + waitingPayoff;
   const informed = exposure.filter((item) => item.informed).length;
   const estimated = exposure.length - informed;
-  const paidShare = recordedTotal ? progress.paid / recordedTotal * 100 : 0;
+  const paidShare = recordedTotal ? actualPaid / recordedTotal * 100 : 0;
+  const totalDebtCost = actualPaid + payoffTotal;
 
   metrics.innerHTML =
-    decisionMetric('Dívida registrada', brl(recordedTotal), 'Parcelas pagas e abertas registradas') +
-    decisionMetric('Quitado', brl(progress.paid), paidShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '% do total registrado', 'green') +
-    decisionMetric('Quitação hoje', brl(payoffTotal), informed + ' informado' + (informed === 1 ? '' : 's') + ' · ' + estimated + ' estimativa' + (estimated === 1 ? '' : 's'), 'red') +
+    decisionMetric('Total acompanhado', brl(recordedTotal), 'Pago real + parcelas ainda abertas') +
+    decisionMetric('Quitado', brl(actualPaid), paidShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '% pago de fato', 'green') +
+    decisionMetric('Custo total da dívida', brl(totalDebtCost), 'Pago real + quitação do que falta', 'red') +
     decisionMetric('Em espera hoje', brl(waitingPayoff), 'Valor para encerrar fora da rota', 'amber');
 
   progressDonut.innerHTML = donutHtml(recordedTotal, [
-    { label: 'Quitado', value: progress.paid, color: '#1db97d' },
+    { label: 'Quitado', value: actualPaid, color: '#1db97d' },
     { label: 'Em pagamento', value: progress.inRoute, color: '#4384f4' },
     { label: 'Em espera', value: progress.waiting, color: '#f0ad4e' }
-  ], 'parcelas registradas');
+  ], 'valor acompanhado');
   bindDonutInteractions(progressDonut);
 
-  payoffDonut.innerHTML = donutHtml(payoffTotal, [
+  payoffDonut.innerHTML = donutHtml(totalDebtCost, [
+    { label: 'Quitado', value: actualPaid, color: '#1db97d' },
     { label: 'Em rota', value: routePayoff, color: '#4384f4' },
     { label: 'Em espera', value: waitingPayoff, color: '#f0ad4e' }
-  ], 'para quitar hoje');
+  ], 'custo efetivo');
   bindDonutInteractions(payoffDonut);
 
   const creditors = new Map();
@@ -151,7 +152,7 @@ function renderDebtDecisionDashboard() {
     current.value += value;
     creditors.set(key, current);
   });
-  creditorBreakdown.innerHTML = creditorBarsHtml([...creditors.values()].sort((a, b) => b.value - a.value));
+  creditorBreakdown.innerHTML = creditorBarsHtml([...creditors.values()].sort((a, b) => b.value - a.value), payoffTotal);
   bindCreditorInteractions(creditorBreakdown);
 }
 
