@@ -8,7 +8,8 @@ import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder
 import { renderDebtRouteItem } from './debt-components.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
 import { creditorFilterEntries, filterDebtsByCreditor } from '../domain/debt-filters.js';
-import { buildDebtPayoffForecast } from '../domain/debt-payoff-forecast.js';
+import { addMonthsToMonth, buildDebtPayoffForecast } from '../domain/debt-payoff-forecast.js';
+import { bindMoneyInputs, formatCurrencyInput, parseCurrencyInput } from '../utils.js';
 
 // --- Render principal da Rota Financeira ---
 
@@ -167,7 +168,7 @@ function renderPayoffTimeline(route, allRoute, container) {
 
   container.innerHTML =
     '<div class="payoff-forecast-heading">' +
-      '<div><p class="eyebrow">Rota Financeira</p><h2>Previsão de quitação</h2><label class="payoff-commitment-limit"><span>Limite de compromissos mensais</span><div><em>R$</em><input type="number" min="0" step="0.01" inputmode="decimal" data-payoff-commitment-limit value="' + escapeHtml(String(commitmentLimit)) + '"></div></label></div>' +
+      '<div><p class="eyebrow">Rota Financeira</p><h2>Previsão de quitação</h2><label class="payoff-commitment-limit"><span>Limite de compromissos mensais</span><div><em>R$</em><input type="text" inputmode="decimal" data-money-input data-payoff-commitment-limit value="' + escapeHtml(formatCurrencyInput(commitmentLimit)) + '"></div></label></div>' +
       '<div class="payoff-forecast-summary">' +
         '<div><span>Próxima vaga no orçamento</span><strong>' + escapeHtml(firstVacancy) + '</strong>' + (first ? `<small>${escapeHtml(brl(first.released))}/mês livres</small>` : '') + '</div>' +
         '<div><span>Última quitação prevista</span><strong>' + escapeHtml(ending) + '</strong></div>' +
@@ -176,8 +177,9 @@ function renderPayoffTimeline(route, allRoute, container) {
     (chart || '<div class="payoff-forecast-empty">Não foi possível estimar os meses de encerramento com as parcelas atuais.</div>') +
     noDateNote;
 
+  bindMoneyInputs(container);
   bindPayoffCommitmentLimit(container, commitmentLimit);
-  if (chart) bindPayoffForecastEvents(container, allRoute, forecast, commitmentLimit);
+  if (chart) bindPayoffForecastEvents(container, allRoute, forecast);
 }
 
 function payoffCommitmentLimit(forecast) {
@@ -192,12 +194,13 @@ function bindPayoffCommitmentLimit(container, currentLimit) {
   const input = container.querySelector('[data-payoff-commitment-limit]');
   if (!input) return;
   input.addEventListener('change', async () => {
-    const value = Number(input.value);
+    const value = parseCurrencyInput(input.value);
     if (!Number.isFinite(value) || value < 0) {
-      input.value = String(currentLimit);
+      input.value = formatCurrencyInput(currentLimit);
       return;
     }
     mainState.data.debtCommitmentLimit = value;
+    input.value = formatCurrencyInput(value);
     if (mainState.saveStateFn) await mainState.saveStateFn('Limite de compromissos atualizado.');
   });
 }
@@ -273,14 +276,13 @@ function payoffForecastChart(forecast) {
   return `<div class="payoff-chart-wrap"><div class="payoff-chart-legend"><span><i class="payoff-chart-swatch remaining"></i>Compromisso que permanece</span><span><i class="payoff-chart-swatch released"></i>Espaço liberado</span></div><div class="payoff-chart-area"><svg class="payoff-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Compromissos mensais restantes e capacidade liberada pelas quitações">${grid}${yearGuides}<path class="payoff-chart-blue-area" d="${blueArea}"/><g>${releasedAreas.join('')}</g><path class="payoff-chart-line" d="${line}"/>${markers}${xLabels}</svg><div class="payoff-chart-tooltip" id="payoffChartTooltip" hidden></div></div><p class="payoff-chart-hint">Passe o mouse ou use Tab nas bolinhas para ver as dívidas previstas naquele mês.</p></div>`;
 }
 
-function bindPayoffForecastEvents(container, route, forecast, commitmentLimit) {
+function bindPayoffForecastEvents(container, route, forecast) {
   const tooltip = container.querySelector('#payoffChartTooltip');
   if (!tooltip) return;
   const show = circle => {
     const month = circle.dataset.payoffEventMonth;
     const event = forecast.events.find(item => item.month === month) || { debts: [] };
-    const commitmentAfter = forecast.steps.find(item => item.month === month)?.commitment ?? forecast.initialCommitment;
-    tooltip.innerHTML = payoffEventTooltip(route, month, event, month === forecast.startMonth, commitmentLimit, commitmentAfter);
+    tooltip.innerHTML = payoffEventTooltip(route, month, event, month === forecast.startMonth);
     tooltip.style.left = `${circle.dataset.payoffEventX}%`;
     tooltip.style.top = `${circle.dataset.payoffEventY}%`;
     tooltip.classList.toggle('is-right', Number(circle.dataset.payoffEventX) > 64);
@@ -301,7 +303,7 @@ function bindPayoffForecastEvents(container, route, forecast, commitmentLimit) {
   });
 }
 
-function payoffEventTooltip(route, month, event, includePaid = false, commitmentLimit = 0, commitmentAfter = 0) {
+function payoffEventTooltip(route, month, event, includePaid = false) {
   const endingDebtIds = new Set(event.debts.map(item => item.debt.id));
   const sortRows = (a, b) => Number(b.ending) - Number(a.ending) || b.value - a.value;
   const buildRows = predicate => {
@@ -337,16 +339,27 @@ function payoffEventTooltip(route, month, event, includePaid = false, commitment
       '<strong>' + escapeHtml(brl(item.value)) + '</strong>' +
     '</div>';
   }).join('');
-  const availableCapacity = Math.max(0, commitmentLimit - commitmentAfter);
+  const nextMonth = addMonthsToMonth(month);
+  const nextTotals = payoffMonthTotals(route, nextMonth);
   return '<div class="payoff-tooltip-head"><strong>Parcelas de ' + escapeHtml(formatMonthYear(month)) + '</strong><span>' + escapeHtml(brl(total)) + '</span></div>' +
     (includePaid ? '<div class="payoff-tooltip-total"><span>Pendente</span><strong>' + escapeHtml(brl(pendingTotal)) + '</strong></div>' : '') +
     '<div class="payoff-tooltip-list">' + rows(pendingDebts) + '</div>' +
     (paidDebts.length
       ? '<div class="payoff-tooltip-paid-head"><span>Parcelas pagas</span><strong>' + escapeHtml(brl(paidTotal)) + '</strong></div><div class="payoff-tooltip-list is-paid">' + rows(paidDebts, true) + '</div>'
       : '') +
-    (event.debts.length
-      ? '<div class="payoff-tooltip-after"><span>Espaço para novos compromissos</span><strong><small>Disponível após este mês</small>' + escapeHtml(brl(availableCapacity)) + '/mês</strong><small>Limite ' + escapeHtml(brl(commitmentLimit)) + ' · Compromissos ' + escapeHtml(brl(commitmentAfter)) + '</small></div>'
-      : '');
+    '<div class="payoff-tooltip-after"><span>Total previsto em ' + escapeHtml(formatMonthYear(nextMonth)) + '</span><strong>' + escapeHtml(brl(nextTotals.total)) + '/mês</strong><span>Espaço liberado no mês seguinte</span><strong>' + escapeHtml(brl(event.released)) + '/mês</strong></div>';
+}
+
+function payoffMonthTotals(route, month) {
+  return route
+    .filter(debt => debt.status === 'Ativa')
+    .reduce((totals, debt) => {
+      const value = (state.installmentsByDebt.get(debt.id) || [])
+        .filter(installment => String(installment.dueDate || '').startsWith(month) && isDebtInstallmentOpen(installment))
+        .reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0);
+      totals.total += value;
+      return totals;
+    }, { total: 0 });
 }
 
 function compactCurrency(value) {
