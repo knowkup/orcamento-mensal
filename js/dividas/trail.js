@@ -260,6 +260,7 @@ function bindPayoffCommitmentLimit(container, currentLimit) {
     mainState.data.debtCommitmentLimit = value;
     input.value = formatCurrencyInput(value);
     if (mainState.saveStateFn) await mainState.saveStateFn('Limite de compromissos atualizado.');
+    renderTrail();
   });
 }
 
