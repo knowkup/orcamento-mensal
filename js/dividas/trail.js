@@ -2,7 +2,7 @@ import { state } from './state.js';
 import { $, brl, escapeHtml, emptyCard, getCreditorName, creditorLogoHtml, compactTagsForDebt, formatDateBR, routeProgressHtml } from './utils.js';
 import { debtBalance, nextInstallment, debtProgress, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
 import { debtMetric, sortedTrailDebts, orderedTrailDebts } from './debts.js';
-import { openDebtInstallments } from '../domain/debts.js';
+import { isDebtInstallmentOpen } from '../domain/debts.js';
 import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder.js';
 import { renderDebtRouteItem } from './debt-components.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
@@ -120,7 +120,7 @@ export function renderTrail() {
   }
 
   road.innerHTML = roadHtml;
-  renderPayoffTimeline(route, payoffTimeline);
+  renderPayoffTimeline(route, allRoute, payoffTimeline);
 }
 
 function renderTrailCreditorFilters(container, debts) {
@@ -142,7 +142,7 @@ function trailCreditorFilterButton(id, labelHtml, count, active) {
   return '<button class="filter-chip ' + (active ? 'is-active' : '') + '" type="button" data-trail-creditor-filter="' + escapeHtml(id) + '">' + labelHtml + '<span class="filter-count">' + count + '</span></button>';
 }
 
-function renderPayoffTimeline(route, container) {
+function renderPayoffTimeline(route, allRoute, container) {
   const forecast = buildDebtPayoffForecast({
     debts: route,
     installmentsByDebt: state.installmentsByDebt,
@@ -174,7 +174,7 @@ function renderPayoffTimeline(route, container) {
     (chart || '<div class="payoff-forecast-empty">Não foi possível estimar os meses de encerramento com as parcelas atuais.</div>') +
     noDateNote;
 
-  if (chart) bindPayoffForecastEvents(container, route, forecast);
+  if (chart) bindPayoffForecastEvents(container, allRoute, forecast);
 }
 
 function payoffForecastChart(forecast) {
@@ -254,7 +254,7 @@ function bindPayoffForecastEvents(container, route, forecast) {
   const show = circle => {
     const month = circle.dataset.payoffEventMonth;
     const event = forecast.events.find(item => item.month === month) || { debts: [] };
-    tooltip.innerHTML = payoffEventTooltip(route, month, event);
+    tooltip.innerHTML = payoffEventTooltip(route, month, event, month === forecast.startMonth);
     tooltip.style.left = `${circle.dataset.payoffEventX}%`;
     tooltip.style.top = `${circle.dataset.payoffEventY}%`;
     tooltip.classList.toggle('is-right', Number(circle.dataset.payoffEventX) > 64);
@@ -275,26 +275,42 @@ function bindPayoffForecastEvents(container, route, forecast) {
   });
 }
 
-function payoffEventTooltip(route, month, event) {
+function payoffEventTooltip(route, month, event, includePaid = false) {
   const endingDebtIds = new Set(event.debts.map(item => item.debt.id));
-  const monthlyDebts = route
-    .filter(debt => debt.status === 'Ativa' && !debt.isConsignado)
+  const buildRows = predicate => route
+    .filter(debt => debt.status === 'Ativa')
     .map(debt => {
-      const installments = openDebtInstallments(state.installmentsByDebt.get(debt.id) || [])
-        .filter(installment => String(installment.dueDate || '').startsWith(month));
+      const installments = (state.installmentsByDebt.get(debt.id) || [])
+        .filter(installment => String(installment.dueDate || '').startsWith(month))
+        .filter(predicate);
       const value = installments.reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0);
       return installments.length ? { debt, value, ending: endingDebtIds.has(debt.id) } : null;
     })
     .filter(Boolean)
     .sort((a, b) => Number(b.ending) - Number(a.ending) || b.value - a.value);
-  const total = monthlyDebts.reduce((sum, item) => sum + item.value, 0);
+  const pendingDebts = buildRows(isDebtInstallmentOpen);
+  const paidDebts = includePaid
+    ? buildRows(installment => installment.status === 'Paga' || installment.status === 'Quitada')
+    : [];
+  const pendingTotal = pendingDebts.reduce((sum, item) => sum + item.value, 0);
+  const paidTotal = paidDebts.reduce((sum, item) => sum + item.value, 0);
+  const total = pendingTotal + paidTotal;
+  const rows = (items, paid = false) => items.map(item => {
+    const notes = [
+      item.ending && !paid ? 'Encerra neste mês' : '',
+      item.debt.isConsignado ? 'Consignado em folha' : ''
+    ].filter(Boolean);
+    return '<div class="payoff-tooltip-row' + (item.ending && !paid ? ' is-ending' : '') + (paid ? ' is-paid' : '') + '">' +
+      '<span>' + escapeHtml(getCreditorName(item.debt.creditorId) + ' · ' + item.debt.name) + (notes.length ? '<small>' + escapeHtml(notes.join(' · ')) + '</small>' : '') + '</span>' +
+      '<strong>' + escapeHtml(brl(item.value)) + '</strong>' +
+    '</div>';
+  }).join('');
   return '<div class="payoff-tooltip-head"><strong>Parcelas de ' + escapeHtml(formatMonthYear(month)) + '</strong><span>' + escapeHtml(brl(total)) + '</span></div>' +
-    '<div class="payoff-tooltip-list">' + monthlyDebts.map(item =>
-      '<div class="payoff-tooltip-row' + (item.ending ? ' is-ending' : '') + '">' +
-        '<span>' + escapeHtml(getCreditorName(item.debt.creditorId) + ' · ' + item.debt.name) + (item.ending ? '<small>Encerra neste mês</small>' : '') + '</span>' +
-        '<strong>' + escapeHtml(brl(item.value)) + '</strong>' +
-      '</div>'
-    ).join('') + '</div>';
+    (includePaid ? '<div class="payoff-tooltip-total"><span>Pendente</span><strong>' + escapeHtml(brl(pendingTotal)) + '</strong></div>' : '') +
+    '<div class="payoff-tooltip-list">' + rows(pendingDebts) + '</div>' +
+    (paidDebts.length
+      ? '<div class="payoff-tooltip-paid-head"><span>Parcelas pagas</span><strong>' + escapeHtml(brl(paidTotal)) + '</strong></div><div class="payoff-tooltip-list is-paid">' + rows(paidDebts, true) + '</div>'
+      : '');
 }
 
 function compactCurrency(value) {

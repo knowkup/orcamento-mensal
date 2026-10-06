@@ -3598,12 +3598,19 @@ select {
 .payoff-chart-tooltip.is-right.is-above { transform: translate(calc(-100% - 12px), calc(-100% - 12px)); }
 .payoff-tooltip-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--ink); font-size: 13px; }
 .payoff-tooltip-head span { color: var(--muted); font-weight: 700; white-space: nowrap; }
+.payoff-tooltip-total, .payoff-tooltip-paid-head { display: flex; justify-content: space-between; gap: 12px; padding: 8px 8px 0; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+.payoff-tooltip-total strong { color: var(--ink); font-size: 12px; }
+.payoff-tooltip-paid-head { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); color: #73829a; }
+.payoff-tooltip-paid-head strong { color: #5d6d85; font-size: 12px; }
 .payoff-tooltip-list { display: grid; gap: 5px; margin-top: 8px; }
 .payoff-tooltip-row { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 6px 8px; border-radius: 8px; color: var(--ink); font-size: 12px; }
 .payoff-tooltip-row.is-ending { background: var(--green-soft); }
+.payoff-tooltip-row.is-paid { background: #f1f4f8; color: #66758b; }
 .payoff-tooltip-row span { min-width: 0; }
 .payoff-tooltip-row small { display: block; margin-top: 2px; color: #087a4e; font-size: 11px; font-weight: 700; }
+.payoff-tooltip-row.is-paid small { color: #73829a; }
 .payoff-tooltip-row strong { white-space: nowrap; font-size: 12px; }
+.payoff-tooltip-row.is-paid strong { color: #5d6d85; }
 .payoff-chart-hint, .payoff-forecast-note, .payoff-forecast-empty { margin: 6px 0 0 56px; color: var(--muted); font-size: 12px; line-height: 1.4; }
 .payoff-forecast-note { color: #9b5d00; }
 .payoff-forecast-empty { padding: 18px 0 4px; }

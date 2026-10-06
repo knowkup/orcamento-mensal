@@ -127,7 +127,8 @@ test('trail includes a payoff forecast driven by open installments', async () =>
   assert.match(trail, /function renderPayoffTimeline/);
   assert.match(trail, /buildDebtPayoffForecast/);
   assert.match(trail, /payoffForecastChart/);
-  assert.match(trail, /openDebtInstallments\(state\.installmentsByDebt\.get\(debt\.id\) \|\| \[\]\)/);
+  assert.match(trail, /isDebtInstallmentOpen/);
+  assert.match(trail, /renderPayoffTimeline\(route, allRoute, payoffTimeline\)/);
   assert.match(trail, /\[forecast\.startMonth, \.\.\.events\.map\(event => event\.month\)\]/);
   assert.match(trail, /const startMarker = `<circle class="payoff-chart-event"/);
 });
