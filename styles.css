@@ -3605,6 +3605,10 @@ select {
 .payoff-chart-tooltip.is-right.is-above { transform: translate(calc(-100% - 12px), calc(-100% - 12px)); }
 .payoff-tooltip-head { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); color: var(--ink); font-size: 13px; }
 .payoff-tooltip-head span { color: var(--muted); font-weight: 700; white-space: nowrap; }
+.payoff-tooltip-commitment { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 8px; color: var(--muted); font-size: 12px; }
+.payoff-tooltip-commitment strong { color: var(--ink); white-space: nowrap; font-size: 12px; }
+.payoff-tooltip-commitment.is-total { margin-top: 1px; border-top: 1px solid var(--border); background: var(--blue-soft); color: var(--blue); font-weight: 700; }
+.payoff-tooltip-commitment.is-total strong { font-size: 13px; }
 .payoff-tooltip-total, .payoff-tooltip-paid-head { display: flex; justify-content: space-between; gap: 12px; padding: 8px 8px 0; color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
 .payoff-tooltip-total strong { color: var(--ink); font-size: 12px; }
 .payoff-tooltip-paid-head { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); color: #73829a; }

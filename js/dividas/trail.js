@@ -150,18 +150,20 @@ function renderPayoffTimeline(route, allRoute, container) {
     installmentsByDebt: state.installmentsByDebt,
     fromMonth: new Date().toISOString().slice(0, 7)
   });
+  const car = payoffCarForecast();
+  const timeline = buildPayoffTimeline(allRoute, forecast, car);
 
-  if (!forecast.events.length) {
+  if (timeline.points.length < 2) {
     container.innerHTML = '';
     return;
   }
 
-  const first = forecast.events.find(event => event.released > 0);
-  const last = forecast.events.at(-1);
-  const commitmentLimit = payoffCommitmentLimit(forecast);
+  const first = timeline.points.find((point, index) => index > 0 && point.released > 0);
+  const last = timeline.points.at(-1);
+  const commitmentLimit = payoffCommitmentLimit(timeline.initialCommitment);
   const firstVacancy = first ? formatMonthYear(first.releaseMonth) : 'Sem previsão';
   const ending = last ? formatMonthYear(last.month) : 'Sem previsão';
-  const chart = payoffForecastChart(forecast, allRoute, commitmentLimit);
+  const chart = payoffForecastChart(timeline, commitmentLimit);
   const noDateNote = forecast.withoutForecast.length
     ? `<p class="payoff-forecast-note">${forecast.withoutForecast.length === 1 ? 'Uma dívida ativa está' : `${forecast.withoutForecast.length} dívidas ativas estão`} sem data de término no gráfico.</p>`
     : '';
@@ -179,15 +181,71 @@ function renderPayoffTimeline(route, allRoute, container) {
 
   bindMoneyInputs(container);
   bindPayoffCommitmentLimit(container, commitmentLimit);
-  if (chart) bindPayoffForecastEvents(container, allRoute, forecast, commitmentLimit);
+  if (chart) bindPayoffForecastEvents(container, allRoute, forecast, car, timeline, commitmentLimit);
 }
 
-function payoffCommitmentLimit(forecast) {
+function payoffCommitmentLimit(initialCommitment) {
   const configured = mainState.data?.debtCommitmentLimit;
   const value = Number(configured);
   return configured !== null && configured !== '' && Number.isFinite(value) && value >= 0
     ? value
-    : forecast.initialCommitment;
+    : initialCommitment;
+}
+
+function payoffCarForecast() {
+  const car = mainState.data?.car || {};
+  const payments = Array.isArray(car.payments) ? car.payments : [];
+  const openPayments = payments.filter(payment => payment.status !== 'Pago');
+  const lastOpen = [...openPayments].sort((a, b) => carPaymentMonth(a).localeCompare(carPaymentMonth(b))).at(-1);
+  return {
+    name: car.name || 'Financiamento do carro',
+    payments,
+    endMonth: lastOpen ? carPaymentMonth(lastOpen) : ''
+  };
+}
+
+function carPaymentMonth(payment) {
+  return String(payment?.month || payment?.dueDate || '').slice(0, 7);
+}
+
+function carCommitmentForMonth(car, month) {
+  return car.payments
+    .filter(payment => carPaymentMonth(payment) === month)
+    .reduce((sum, payment) => sum + Number(payment.value || 0), 0);
+}
+
+function payoffMonthTotals(route, car, month) {
+  const debtTotal = route
+    .filter(debt => debt.status === 'Ativa')
+    .reduce((total, debt) => total + (state.installmentsByDebt.get(debt.id) || [])
+      .filter(installment => String(installment.dueDate || '').startsWith(month))
+      .reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0), 0);
+  const carTotal = carCommitmentForMonth(car, month);
+  return { debtTotal, carTotal, total: debtTotal + carTotal };
+}
+
+function buildPayoffTimeline(route, forecast, car) {
+  const startMonth = forecast.startMonth;
+  const eventMonths = [...new Set([
+    ...forecast.events.map(event => event.month),
+    car.endMonth
+  ].filter(month => month && month >= startMonth))].sort();
+  const months = [startMonth, ...eventMonths.filter(month => month !== startMonth)];
+  let previous = payoffMonthTotals(route, car, startMonth).total;
+  const points = months.map((month, index) => {
+    const nextTotal = payoffMonthTotals(route, car, addMonthsToMonth(month)).total;
+    const commitment = index === 0 ? previous : nextTotal;
+    const point = {
+      month,
+      commitment,
+      nextTotal,
+      released: index ? Math.max(0, previous - commitment) : 0,
+      releaseMonth: index ? addMonthsToMonth(month) : month
+    };
+    previous = commitment;
+    return point;
+  });
+  return { startMonth, initialCommitment: points[0]?.commitment || 0, points };
 }
 
 function bindPayoffCommitmentLimit(container, currentLimit) {
@@ -205,7 +263,7 @@ function bindPayoffCommitmentLimit(container, currentLimit) {
   });
 }
 
-function payoffForecastChart(forecast, route, commitmentLimit) {
+function payoffForecastChart(timeline, commitmentLimit) {
   const W = 960;
   const H = 264;
   const LEFT = 58;
@@ -214,25 +272,26 @@ function payoffForecastChart(forecast, route, commitmentLimit) {
   const BOTTOM = 42;
   const chartW = W - LEFT - RIGHT;
   const chartH = H - TOP - BOTTOM;
-  const events = forecast.events;
-  const chartMonths = [...new Set([forecast.startMonth, ...events.map(event => event.month)])];
+  const points = timeline.points;
+  const events = points.slice(1);
+  const chartMonths = points.map(point => point.month);
   const monthIndex = new Map(chartMonths.map((month, index) => [month, index]));
   const xPos = month => chartMonths.length === 1
     ? LEFT + chartW / 2
     : LEFT + (monthIndex.get(month) / (chartMonths.length - 1)) * chartW;
-  const yMax = Math.max(1, forecast.initialCommitment * 1.15);
+  const yMax = payoffChartMax(points.map(point => point.commitment));
   const yPos = value => TOP + (1 - value / yMax) * chartH;
   const zeroY = yPos(0);
-  const initialY = yPos(forecast.initialCommitment);
-  let previousMonth = forecast.startMonth;
-  let previousCommitment = forecast.initialCommitment;
+  const initialY = yPos(points[0].commitment);
+  let previousMonth = points[0].month;
+  let previousCommitment = points[0].commitment;
   let line = `M${xPos(previousMonth).toFixed(1)},${yPos(previousCommitment).toFixed(1)}`;
   let blueArea = `M${xPos(previousMonth).toFixed(1)},${zeroY.toFixed(1)} L${xPos(previousMonth).toFixed(1)},${yPos(previousCommitment).toFixed(1)}`;
   const releasedAreas = [];
 
   events.forEach((event, index) => {
     const x = xPos(event.month);
-    const nextCommitment = Math.max(0, previousCommitment - event.released);
+    const nextCommitment = event.commitment;
     const afterY = yPos(nextCommitment);
     line += ` H${x.toFixed(1)} V${afterY.toFixed(1)}`;
     blueArea += ` H${x.toFixed(1)} V${afterY.toFixed(1)}`;
@@ -242,25 +301,24 @@ function payoffForecastChart(forecast, route, commitmentLimit) {
     previousMonth = event.month;
     previousCommitment = nextCommitment;
   });
-  const endX = xPos(events.at(-1).month);
+  const endX = xPos(points.at(-1).month);
   line += ` H${endX.toFixed(1)}`;
   blueArea += ` H${endX.toFixed(1)} L${endX.toFixed(1)},${zeroY.toFixed(1)} Z`;
 
-  const ticks = [0, forecast.initialCommitment / 2, forecast.initialCommitment];
+  const ticks = [0, yMax / 2, yMax];
   const grid = ticks.map(value => {
     const y = yPos(value);
     return `<line class="payoff-chart-grid" x1="${LEFT}" y1="${y.toFixed(1)}" x2="${W - RIGHT}" y2="${y.toFixed(1)}"/><text class="payoff-chart-y-label" x="${LEFT - 10}" y="${(y + 4).toFixed(1)}" text-anchor="end">${escapeHtml(compactCurrency(value))}</text>`;
   }).join('');
-  const startMarker = `<circle class="payoff-chart-event" cx="${xPos(forecast.startMonth).toFixed(1)}" cy="${initialY.toFixed(1)}" r="6" tabindex="0" data-payoff-event-month="${escapeHtml(forecast.startMonth)}" data-payoff-event-x="${(xPos(forecast.startMonth) / W * 100).toFixed(2)}" data-payoff-event-y="${(initialY / H * 100).toFixed(2)}" aria-label="Ver dívidas previstas em ${escapeHtml(formatMonthYear(forecast.startMonth))}"/>`;
+  const startMarker = `<circle class="payoff-chart-event" cx="${xPos(timeline.startMonth).toFixed(1)}" cy="${initialY.toFixed(1)}" r="6" tabindex="0" data-payoff-event-month="${escapeHtml(timeline.startMonth)}" data-payoff-event-x="${(xPos(timeline.startMonth) / W * 100).toFixed(2)}" data-payoff-event-y="${(initialY / H * 100).toFixed(2)}" aria-label="Ver compromissos previstos em ${escapeHtml(formatMonthYear(timeline.startMonth))}"/>`;
   const markers = startMarker + events
-    .filter(event => event.month !== forecast.startMonth)
+    .filter(event => event.month !== timeline.startMonth)
     .map(event => {
-      const step = forecast.steps.find(item => item.month === event.month);
       const x = xPos(event.month);
-      const y = yPos(step.commitment);
-      return `<circle class="payoff-chart-event" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" tabindex="0" data-payoff-event-month="${escapeHtml(event.month)}" data-payoff-event-x="${(x / W * 100).toFixed(2)}" data-payoff-event-y="${(y / H * 100).toFixed(2)}" aria-label="Ver dívidas previstas em ${escapeHtml(formatMonthYear(event.month))}"/>`;
+      const y = yPos(event.commitment);
+      return `<circle class="payoff-chart-event" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6" tabindex="0" data-payoff-event-month="${escapeHtml(event.month)}" data-payoff-event-x="${(x / W * 100).toFixed(2)}" data-payoff-event-y="${(y / H * 100).toFixed(2)}" aria-label="Ver compromissos previstos em ${escapeHtml(formatMonthYear(event.month))}"/>`;
     }).join('');
-  let previousYear = forecast.startMonth.slice(0, 4);
+  let previousYear = timeline.startMonth.slice(0, 4);
   const yearGuides = events.map(event => {
     const year = event.month.slice(0, 4);
     if (year === previousYear) return '';
@@ -268,34 +326,36 @@ function payoffForecastChart(forecast, route, commitmentLimit) {
     const x = xPos(event.month);
     return `<line class="payoff-chart-year-guide" x1="${x.toFixed(1)}" y1="${TOP}" x2="${x.toFixed(1)}" y2="${zeroY.toFixed(1)}"/>`;
   }).join('');
-  const chartMarkers = [forecast.startMonth, ...events.map(event => event.month)]
-    .filter((month, index, all) => all.indexOf(month) === index)
-    .map(month => {
-      const nextTotal = payoffMonthTotals(route, addMonthsToMonth(month)).total;
-      const available = Math.max(0, commitmentLimit - nextTotal);
-      const pointY = month === forecast.startMonth
-        ? initialY
-        : yPos(forecast.steps.find(item => item.month === month)?.commitment ?? forecast.initialCommitment);
-      const pointX = xPos(month);
+  const chartMarkers = points.map(point => {
+      const available = Math.max(0, commitmentLimit - point.nextTotal);
+      const pointY = yPos(point.commitment);
+      const pointX = xPos(point.month);
       const isLeftEdge = pointX < LEFT + 55;
       const isRightEdge = pointX > W - RIGHT - 55;
       const labelX = isLeftEdge ? pointX + 10 : isRightEdge ? pointX - 10 : pointX;
       const anchor = isLeftEdge ? 'start' : isRightEdge ? 'end' : 'middle';
       const labelY = Math.min(pointY + 22, H - 29);
-      return `<text class="payoff-chart-free-label" x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}">↗ ${escapeHtml(brl(available))}</text><text class="payoff-chart-x-label" x="${pointX.toFixed(1)}" y="${H - 10}" text-anchor="middle">${escapeHtml(formatMonthYear(month))}</text>`;
+      return `<text class="payoff-chart-free-label" x="${labelX.toFixed(1)}" y="${labelY.toFixed(1)}" text-anchor="${anchor}">↗ ${escapeHtml(brl(available))}</text><text class="payoff-chart-x-label" x="${pointX.toFixed(1)}" y="${H - 10}" text-anchor="middle">${escapeHtml(formatMonthYear(point.month))}</text>`;
     })
     .join('');
 
   return `<div class="payoff-chart-wrap"><div class="payoff-chart-legend"><span><i class="payoff-chart-swatch remaining"></i>Compromisso que permanece</span><span><i class="payoff-chart-swatch released"></i>Espaço liberado</span><span class="payoff-chart-capacity-legend">↗ Folga no próximo mês</span></div><div class="payoff-chart-area"><svg class="payoff-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Compromissos mensais restantes e capacidade liberada pelas quitações">${grid}${yearGuides}<path class="payoff-chart-blue-area" d="${blueArea}"/><g>${releasedAreas.join('')}</g><path class="payoff-chart-line" d="${line}"/>${markers}${chartMarkers}</svg><div class="payoff-chart-tooltip" id="payoffChartTooltip" hidden></div></div><p class="payoff-chart-hint">Passe o mouse ou use Tab nas bolinhas para ver as dívidas previstas naquele mês.</p></div>`;
 }
 
-function bindPayoffForecastEvents(container, route, forecast, commitmentLimit) {
+function payoffChartMax(values) {
+  const maximum = Math.max(1, ...values);
+  if (maximum <= 10000) return Math.ceil(maximum / 1000) * 1000;
+  if (maximum <= 30000) return Math.ceil(maximum / 5000) * 5000;
+  return Math.ceil(maximum / 10000) * 10000;
+}
+
+function bindPayoffForecastEvents(container, route, forecast, car, timeline, commitmentLimit) {
   const tooltip = container.querySelector('#payoffChartTooltip');
   if (!tooltip) return;
   const show = circle => {
     const month = circle.dataset.payoffEventMonth;
     const event = forecast.events.find(item => item.month === month) || { debts: [] };
-    tooltip.innerHTML = payoffEventTooltip(route, month, event, month === forecast.startMonth, commitmentLimit);
+    tooltip.innerHTML = payoffEventTooltip(route, car, month, event, month === timeline.startMonth, commitmentLimit);
     tooltip.style.left = `${circle.dataset.payoffEventX}%`;
     tooltip.style.top = `${circle.dataset.payoffEventY}%`;
     tooltip.classList.toggle('is-right', Number(circle.dataset.payoffEventX) > 64);
@@ -316,7 +376,7 @@ function bindPayoffForecastEvents(container, route, forecast, commitmentLimit) {
   });
 }
 
-function payoffEventTooltip(route, month, event, includePaid = false, commitmentLimit = 0) {
+function payoffEventTooltip(route, car, month, event, includePaid = false, commitmentLimit = 0) {
   const endingDebtIds = new Set(event.debts.map(item => item.debt.id));
   const sortRows = (a, b) => Number(b.ending) - Number(a.ending) || b.value - a.value;
   const buildRows = predicate => {
@@ -341,7 +401,9 @@ function payoffEventTooltip(route, month, event, includePaid = false, commitment
     : [];
   const pendingTotal = pendingDebts.reduce((sum, item) => sum + item.value, 0);
   const paidTotal = paidDebts.reduce((sum, item) => sum + item.value, 0);
-  const total = pendingTotal + paidTotal;
+  const debtTotal = pendingTotal + paidTotal;
+  const carTotal = carCommitmentForMonth(car, month);
+  const total = debtTotal + carTotal;
   const rows = (items, paid = false) => items.map(item => {
     const notes = [
       item.ending && !paid ? 'Encerra neste mês' : '',
@@ -353,27 +415,17 @@ function payoffEventTooltip(route, month, event, includePaid = false, commitment
     '</div>';
   }).join('');
   const nextMonth = addMonthsToMonth(month);
-  const nextTotals = payoffMonthTotals(route, nextMonth);
+  const nextTotals = payoffMonthTotals(route, car, nextMonth);
   const available = Math.max(0, commitmentLimit - nextTotals.total);
-  return '<div class="payoff-tooltip-head"><strong>Parcelas de ' + escapeHtml(formatMonthYear(month)) + '</strong><span>' + escapeHtml(brl(total)) + '</span></div>' +
+  return '<div class="payoff-tooltip-head"><strong>Parcelas de ' + escapeHtml(formatMonthYear(month)) + '</strong><span>' + escapeHtml(brl(debtTotal)) + '</span></div>' +
+    (carTotal ? '<div class="payoff-tooltip-commitment"><span>Financiamento do carro</span><strong>' + escapeHtml(brl(carTotal)) + '</strong></div>' : '') +
+    '<div class="payoff-tooltip-commitment is-total"><span>Total de compromissos</span><strong>' + escapeHtml(brl(total)) + '</strong></div>' +
     (includePaid ? '<div class="payoff-tooltip-total"><span>Pendente</span><strong>' + escapeHtml(brl(pendingTotal)) + '</strong></div>' : '') +
     '<div class="payoff-tooltip-list">' + rows(pendingDebts) + '</div>' +
     (paidDebts.length
       ? '<div class="payoff-tooltip-paid-head"><span>Parcelas pagas</span><strong>' + escapeHtml(brl(paidTotal)) + '</strong></div><div class="payoff-tooltip-list is-paid">' + rows(paidDebts, true) + '</div>'
       : '') +
     '<div class="payoff-tooltip-after"><span>Total previsto em ' + escapeHtml(formatMonthYear(nextMonth)) + '</span><strong>' + escapeHtml(brl(nextTotals.total)) + '/mês</strong><span>Espaço livre no mês seguinte</span><strong>' + escapeHtml(brl(available)) + '/mês</strong></div>';
-}
-
-function payoffMonthTotals(route, month) {
-  return route
-    .filter(debt => debt.status === 'Ativa')
-    .reduce((totals, debt) => {
-      const value = (state.installmentsByDebt.get(debt.id) || [])
-        .filter(installment => String(installment.dueDate || '').startsWith(month) && isDebtInstallmentOpen(installment))
-        .reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0);
-      totals.total += value;
-      return totals;
-    }, { total: 0 });
 }
 
 function compactCurrency(value) {

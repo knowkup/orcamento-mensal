@@ -124,7 +124,9 @@ test('trail includes a payoff forecast driven by open installments', async () =>
   assert.match(trail, /payoffForecastChart/);
   assert.match(trail, /isDebtInstallmentOpen/);
   assert.match(trail, /renderPayoffTimeline\(route, allRoute, payoffTimeline\)/);
-  assert.match(trail, /\[forecast\.startMonth, \.\.\.events\.map\(event => event\.month\)\]/);
+  assert.match(trail, /buildPayoffTimeline\(allRoute, forecast, car\)/);
+  assert.match(trail, /function payoffCarForecast/);
+  assert.match(trail, /function payoffChartMax/);
   assert.match(trail, /const startMarker = `<circle class="payoff-chart-event"/);
 });
 
