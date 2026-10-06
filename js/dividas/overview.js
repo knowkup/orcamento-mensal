@@ -5,9 +5,71 @@ import { debtBalance, payoffTodayValue, remainingInstallmentsCount } from './cal
 import { creditorFilterEntries } from '../domain/debt-filters.js';
 
 const PANORAMA_STATUSES = ['Ativa', 'Em espera'];
+const DASHBOARD_COLORS = ['#4384f4', '#1db97d', '#f0ad4e', '#d86464', '#7f6cf2', '#4aa8ba'];
 
 function overviewDebts() {
   return state.debts.filter((debt) => PANORAMA_STATUSES.includes(debt.status));
+}
+
+function decisionMetric(label, value, detail, tone = 'blue') {
+  const icon = tone === 'green' ? '✓' : tone === 'amber' ? '◷' : tone === 'red' ? '▣' : '◌';
+  return '<div class="debt-metric"><div class="metric-icon ' + tone + '">' + icon + '</div><div><div class="metric-label">' + escapeHtml(label) + '</div><div class="debt-value">' + escapeHtml(value) + '</div><small class="decision-metric-detail">' + escapeHtml(detail) + '</small></div></div>';
+}
+
+function donutHtml(total, items, centerLabel) {
+  const visibleItems = items.filter((item) => item.value > 0);
+  if (!visibleItems.length) return emptyCard('Sem dívidas neste recorte', 'Quando houver saldo em aberto, ele aparecerá aqui.');
+  let current = 0;
+  const slices = visibleItems.map((item, index) => {
+    const start = current;
+    current += item.value / total * 100;
+    return (item.color || DASHBOARD_COLORS[index % DASHBOARD_COLORS.length]) + ' ' + start.toFixed(2) + '% ' + current.toFixed(2) + '%';
+  });
+  return '<div class="donut-panel"><div class="debt-donut" style="background:conic-gradient(' + slices.join(',') + ')"><div><strong>' + escapeHtml(brl(total)) + '</strong><span>' + escapeHtml(centerLabel) + '</span></div></div><div class="donut-legend">' + visibleItems.map((item, index) => {
+    const color = item.color || DASHBOARD_COLORS[index % DASHBOARD_COLORS.length];
+    const share = total ? item.value / total * 100 : 0;
+    return '<div class="donut-item"><i class="donut-dot" style="background:' + color + '"></i><span>' + escapeHtml(item.label) + '</span><strong>' + escapeHtml(share.toLocaleString('pt-BR', { maximumFractionDigits: 1 })) + '%</strong><small>' + escapeHtml(brl(item.value)) + '</small></div>';
+  }).join('') + '</div></div>';
+}
+
+function renderDebtDecisionDashboard() {
+  const metrics = $('debtDecisionMetrics');
+  const statusDonut = $('debtStatusDonut');
+  const creditorDonut = $('debtCreditorDonut');
+  if (!metrics || !statusDonut || !creditorDonut) return;
+
+  const debts = overviewDebts();
+  const route = debts.filter((debt) => debt.status === 'Ativa');
+  const waiting = debts.filter((debt) => debt.status === 'Em espera');
+  const routeBalance = route.reduce((sum, debt) => sum + debtBalance(debt), 0);
+  const waitingBalance = waiting.reduce((sum, debt) => sum + debtBalance(debt), 0);
+  const totalBalance = routeBalance + waitingBalance;
+  const monthlyCommitment = route.reduce((sum, debt) => sum + Number(debt.installmentValue || 0), 0);
+  const routeShare = totalBalance ? routeBalance / totalBalance * 100 : 0;
+
+  metrics.innerHTML =
+    decisionMetric('Saldo total', brl(totalBalance), debts.length + (debts.length === 1 ? ' dívida acompanhada' : ' dívidas acompanhadas')) +
+    decisionMetric('Em rota', brl(routeBalance), routeShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '% do saldo está na frente de pagamento', 'green') +
+    decisionMetric('Em espera', brl(waitingBalance), waiting.length + (waiting.length === 1 ? ' dívida aguardando espaço' : ' dívidas aguardando espaço'), 'amber') +
+    decisionMetric('Compromisso mensal', brl(monthlyCommitment), 'Parcelas da rota ativa', 'blue');
+
+  statusDonut.innerHTML = donutHtml(totalBalance, [
+    { label: 'Em rota', value: routeBalance, color: '#1db97d' },
+    { label: 'Em espera', value: waitingBalance, color: '#f0ad4e' }
+  ], 'saldo aberto');
+
+  const creditors = new Map();
+  debts.forEach((debt) => {
+    const key = debt.creditorId || 'sem-credor';
+    const current = creditors.get(key) || { label: getCreditorName(debt.creditorId), value: 0 };
+    current.value += debtBalance(debt);
+    creditors.set(key, current);
+  });
+  const creditorItems = [...creditors.values()].sort((a, b) => b.value - a.value);
+  const topCreditors = creditorItems.slice(0, 5);
+  const otherCreditors = creditorItems.slice(5).reduce((sum, item) => sum + item.value, 0);
+  if (otherCreditors) topCreditors.push({ label: 'Outros credores', value: otherCreditors, color: '#94a3b8' });
+  creditorDonut.innerHTML = donutHtml(totalBalance, topCreditors, 'por credor');
 }
 
 function selectedDebtIds() {
@@ -233,6 +295,7 @@ function renderOverviewSummary(selected, groups = []) {
 }
 
 export function renderDebtOverview() {
+  renderDebtDecisionDashboard();
   const allDebts = overviewDebts();
   const selectedIds = selectedDebtIds();
   const excludedIds = excludedDebtIds();

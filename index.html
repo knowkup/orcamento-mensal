@@ -329,7 +329,6 @@
               </select>
             </div>
             <div id="trailRoad"></div>
-            <section class="payoff-timeline-panel" id="payoffTimeline" aria-label="Previsão de quitação"></section>
           </div>
         </section>
 
@@ -401,8 +400,27 @@
         </section>
 
         <!-- ── DÍVIDAS — Depois da renegociação ──────────── -->
-        <section class="view" id="divposrenegociacaoView" data-title="Painel de dívidas" data-eyebrow="Panorama geral" data-subtitle="Acompanhe as dívidas que entram no seu painel consolidado.">
+        <section class="view" id="divposrenegociacaoView" data-title="Painel de dívidas" data-eyebrow="Decisões e cenários" data-subtitle="Veja a composição das dívidas, a capacidade do orçamento e as previsões de quitação.">
           <div class="vertical-stack">
+            <section class="debt-decision-dashboard">
+              <div class="panel-heading">
+                <div><p class="eyebrow">Visão para decisão</p><h2>Panorama das dívidas</h2></div>
+              </div>
+              <div class="debt-metrics" id="debtDecisionMetrics"></div>
+              <div class="debt-decision-grid">
+                <section class="debt-dashboard-card">
+                  <div><p class="eyebrow">Distribuição</p><h3>Rota e espera</h3></div>
+                  <div id="debtStatusDonut"></div>
+                </section>
+                <section class="debt-dashboard-card">
+                  <div><p class="eyebrow">Concentração</p><h3>Saldo por credor</h3></div>
+                  <div id="debtCreditorDonut"></div>
+                </section>
+              </div>
+            </section>
+
+            <section class="payoff-timeline-panel" id="payoffTimeline" aria-label="Previsão de quitação"></section>
+
             <section class="panel">
               <div class="panel-heading">
                 <div><p class="eyebrow">Panorama selecionado</p><h2>Simulação por situação</h2></div>
