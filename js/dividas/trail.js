@@ -1,7 +1,8 @@
 import { state } from './state.js';
 import { $, brl, escapeHtml, emptyCard, getCreditorName, creditorLogoHtml, compactTagsForDebt, formatDateBR, routeProgressHtml } from './utils.js';
-import { debtBalance, nextInstallment, debtProgress, openInstallmentsForDebt, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
+import { debtBalance, nextInstallment, debtProgress, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
 import { debtMetric, sortedTrailDebts, orderedTrailDebts } from './debts.js';
+import { openDebtInstallments } from '../domain/debts.js';
 import { moveItemToTargetPosition, moveItemByDirection } from '../domain/reorder.js';
 import { renderDebtRouteItem } from './debt-components.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
@@ -231,12 +232,12 @@ function payoffForecastChart(forecast) {
   let previousYear = forecast.startMonth.slice(0, 4);
   const yearGuides = events.map(event => {
     const year = event.month.slice(0, 4);
-    if (year === previousYear || event.month === events.at(-1).month) return '';
+    if (year === previousYear) return '';
     previousYear = year;
     const x = xPos(event.month);
-    return `<line class="payoff-chart-year-guide" x1="${x.toFixed(1)}" y1="${TOP}" x2="${x.toFixed(1)}" y2="${zeroY.toFixed(1)}"/><text class="payoff-chart-year-label" x="${x.toFixed(1)}" y="${H - 28}" text-anchor="middle">${escapeHtml(year)}</text>`;
+    return `<line class="payoff-chart-year-guide" x1="${x.toFixed(1)}" y1="${TOP}" x2="${x.toFixed(1)}" y2="${zeroY.toFixed(1)}"/>`;
   }).join('');
-  const xLabels = [forecast.startMonth, events.at(-1).month]
+  const xLabels = [forecast.startMonth, ...events.map(event => event.month)]
     .filter((month, index, all) => all.indexOf(month) === index)
     .map(month => `<text class="payoff-chart-x-label" x="${xPos(month).toFixed(1)}" y="${H - 12}" text-anchor="middle">${escapeHtml(formatMonthYear(month))}</text>`)
     .join('');
@@ -272,7 +273,7 @@ function payoffEventTooltip(route, month, event) {
   const monthlyDebts = route
     .filter(debt => debt.status === 'Ativa' && !debt.isConsignado)
     .map(debt => {
-      const installments = openInstallmentsForDebt(state.installmentsByDebt.get(debt.id) || [])
+      const installments = openDebtInstallments(state.installmentsByDebt.get(debt.id) || [])
         .filter(installment => String(installment.dueDate || '').startsWith(month));
       const value = installments.reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0);
       return installments.length ? { debt, value, ending: endingDebtIds.has(debt.id) } : null;

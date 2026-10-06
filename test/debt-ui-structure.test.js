@@ -127,6 +127,8 @@ test('trail includes a payoff forecast driven by open installments', async () =>
   assert.match(trail, /function renderPayoffTimeline/);
   assert.match(trail, /buildDebtPayoffForecast/);
   assert.match(trail, /payoffForecastChart/);
+  assert.match(trail, /openDebtInstallments\(state\.installmentsByDebt\.get\(debt\.id\) \|\| \[\]\)/);
+  assert.match(trail, /\[forecast\.startMonth, \.\.\.events\.map\(event => event\.month\)\]/);
 });
 
 test('waiting debt metrics follow the selected creditor filter', async () => {
