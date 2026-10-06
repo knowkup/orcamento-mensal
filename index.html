@@ -409,37 +409,21 @@
               <div class="debt-metrics" id="debtDecisionMetrics"></div>
               <div class="debt-decision-grid">
                 <section class="debt-dashboard-card">
-                  <div><p class="eyebrow">Distribuição</p><h3>Rota e espera</h3></div>
-                  <div id="debtStatusDonut"></div>
+                  <div><p class="eyebrow">Andamento</p><h3>Parcelas registradas</h3></div>
+                  <div id="debtProgressDonut"></div>
                 </section>
                 <section class="debt-dashboard-card">
-                  <div><p class="eyebrow">Concentração</p><h3>Saldo por credor</h3></div>
-                  <div id="debtCreditorDonut"></div>
+                  <div><p class="eyebrow">Exposição atual</p><h3>Valor para quitar hoje</h3></div>
+                  <div id="debtPayoffDonut"></div>
                 </section>
               </div>
+              <section class="debt-dashboard-card debt-creditor-card">
+                <div><p class="eyebrow">Credores</p><h3>Valor para quitar hoje por credor</h3></div>
+                <div id="debtCreditorBreakdown"></div>
+              </section>
             </section>
 
             <section class="payoff-timeline-panel" id="payoffTimeline" aria-label="Previsão de quitação"></section>
-
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Panorama selecionado</p><h2>Simulação por situação</h2></div>
-                <button class="ghost-btn" type="button" id="selectAllDebtOverviewButton">Mostrar todas</button>
-              </div>
-              <div class="debt-metrics" id="debtOverviewMetrics"></div>
-              <div class="debt-overview-statuses" id="debtOverviewStatuses"></div>
-            </section>
-
-            <section class="panel">
-              <div class="panel-heading">
-                <div><p class="eyebrow">Escolha o que entra no panorama</p><h2>Selecione e simule</h2></div>
-                <button class="ghost-btn" type="button" id="createOverviewConsolidationButton">Unificar marcadas</button>
-              </div>
-              <div class="filter-row" id="debtOverviewCreditorFilters"></div>
-              <p class="muted-hint" id="debtOverviewSelectionText"></p>
-              <div class="debt-overview-consolidations" id="debtOverviewConsolidations"></div>
-              <div class="debt-overview-selection-list" id="debtOverviewSelectionList"></div>
-            </section>
           </div>
         </section>
 

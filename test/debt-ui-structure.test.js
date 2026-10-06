@@ -79,7 +79,7 @@ test('debt modules expose navigation only through the intentional bridge', async
   });
 });
 
-test('migrated static controls have event bindings', async () => {
+test('static debt controls and decision dashboard targets are present', async () => {
   const html = await readFile('index.html', 'utf8');
   const events = await readFile('js/dividas/ui-events.js', 'utf8');
   const overview = await readFile('js/dividas/overview.js', 'utf8');
@@ -87,8 +87,6 @@ test('migrated static controls have event bindings', async () => {
     'waitingDebtSort',
     'waitingDebtSortDirection',
     'trailDebtSortDirection',
-    'selectAllDebtOverviewButton',
-    'createOverviewConsolidationButton',
     'closeDebtFormButton',
     'saveDebtButton',
     'debtIsConsignado'
@@ -99,14 +97,11 @@ test('migrated static controls have event bindings', async () => {
     assert.match(events, new RegExp(`getElementById\\(['"]${id}['"]\\)`), `${id} is not bound`);
   });
 
-  assert.match(events, /data-overview-debt-id/);
-  assert.match(overview, /data-overview-creditor-id/);
-  assert.match(overview, /data-overview-simulation-field/);
-  assert.match(events, /updateOverviewSimulationInput/);
-  assert.match(overview, /data-overview-unify-debt-id/);
-  assert.match(events, /createOverviewConsolidation/);
-  assert.match(overview, /selectedCreditorIds/);
-  assert.match(overview, /visibleDebts/);
+  ['debtDecisionMetrics', 'debtProgressDonut', 'debtPayoffDonut', 'debtCreditorBreakdown'].forEach(id => {
+    assert.match(html, new RegExp(`id=["']${id}["']`), `${id} is missing from index.html`);
+  });
+  assert.match(overview, /data-donut-item/);
+  assert.match(overview, /data-creditor-decision-bar/);
 });
 
 test('removed debt views and legacy status are not exposed by the UI', async () => {

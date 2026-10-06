@@ -3,9 +3,9 @@ import { state as mainState } from '../state.js';
 import { $, brl, emptyCard, escapeHtml, creditorLogoHtml, getCreditorName, showToast } from './utils.js';
 import { debtBalance, payoffTodayValue, remainingInstallmentsCount } from './calc.js';
 import { creditorFilterEntries } from '../domain/debt-filters.js';
+import { isDebtInstallmentOpen } from '../domain/debts.js';
 
 const PANORAMA_STATUSES = ['Ativa', 'Em espera'];
-const DASHBOARD_COLORS = ['#4384f4', '#1db97d', '#f0ad4e', '#d86464', '#7f6cf2', '#4aa8ba'];
 
 function overviewDebts() {
   return state.debts.filter((debt) => PANORAMA_STATUSES.includes(debt.status));
@@ -23,53 +23,136 @@ function donutHtml(total, items, centerLabel) {
   const slices = visibleItems.map((item, index) => {
     const start = current;
     current += item.value / total * 100;
-    return (item.color || DASHBOARD_COLORS[index % DASHBOARD_COLORS.length]) + ' ' + start.toFixed(2) + '% ' + current.toFixed(2) + '%';
+    return item.color + ' ' + start.toFixed(2) + '% ' + current.toFixed(2) + '%';
   });
-  return '<div class="donut-panel"><div class="debt-donut" style="background:conic-gradient(' + slices.join(',') + ')"><div><strong>' + escapeHtml(brl(total)) + '</strong><span>' + escapeHtml(centerLabel) + '</span></div></div><div class="donut-legend">' + visibleItems.map((item, index) => {
-    const color = item.color || DASHBOARD_COLORS[index % DASHBOARD_COLORS.length];
+  return '<div class="donut-panel" data-decision-donut><div class="debt-donut" style="background:conic-gradient(' + slices.join(',') + ')"><div><strong data-donut-value>' + escapeHtml(brl(total)) + '</strong><span data-donut-label>' + escapeHtml(centerLabel) + '</span></div></div><div class="donut-legend">' + visibleItems.map((item) => {
     const share = total ? item.value / total * 100 : 0;
-    return '<div class="donut-item"><i class="donut-dot" style="background:' + color + '"></i><span>' + escapeHtml(item.label) + '</span><strong>' + escapeHtml(share.toLocaleString('pt-BR', { maximumFractionDigits: 1 })) + '%</strong><small>' + escapeHtml(brl(item.value)) + '</small></div>';
+    return '<div class="donut-item" tabindex="0" data-donut-item data-value="' + escapeHtml(brl(item.value)) + '" data-label="' + escapeHtml(item.label) + '"><i class="donut-dot" style="background:' + item.color + '"></i><span>' + escapeHtml(item.label) + '</span><strong>' + escapeHtml(share.toLocaleString('pt-BR', { maximumFractionDigits: 1 })) + '%</strong><small>' + escapeHtml(brl(item.value)) + '</small></div>';
   }).join('') + '</div></div>';
+}
+
+function bindDonutInteractions(container) {
+  const donut = container.querySelector('[data-decision-donut]');
+  if (!donut) return;
+  const value = donut.querySelector('[data-donut-value]');
+  const label = donut.querySelector('[data-donut-label]');
+  const originalValue = value?.textContent || '';
+  const originalLabel = label?.textContent || '';
+  const restore = () => {
+    donut.querySelectorAll('[data-donut-item]').forEach((item) => item.classList.remove('is-active', 'is-muted'));
+    if (value) value.textContent = originalValue;
+    if (label) label.textContent = originalLabel;
+  };
+  donut.querySelectorAll('[data-donut-item]').forEach((item) => {
+    const highlight = () => {
+      donut.querySelectorAll('[data-donut-item]').forEach((entry) => entry.classList.toggle('is-muted', entry !== item));
+      item.classList.add('is-active');
+      if (value) value.textContent = item.dataset.value;
+      if (label) label.textContent = item.dataset.label;
+    };
+    item.addEventListener('mouseenter', highlight);
+    item.addEventListener('mouseleave', restore);
+    item.addEventListener('focus', highlight);
+    item.addEventListener('blur', restore);
+  });
+}
+
+function dashboardDebts() {
+  return state.debts.filter((debt) => ['Ativa', 'Em espera', 'Quitada'].includes(debt.status));
+}
+
+function recordedInstallmentProgress(debts) {
+  return debts.reduce((totals, debt) => {
+    (state.installmentsByDebt?.get(debt.id) || []).forEach((installment) => {
+      const value = Number(installment.expectedValue || 0);
+      if (isDebtInstallmentOpen(installment)) {
+        if (debt.status === 'Ativa') totals.inRoute += value;
+        if (debt.status === 'Em espera') totals.waiting += value;
+      } else {
+        totals.paid += value;
+      }
+    });
+    return totals;
+  }, { paid: 0, inRoute: 0, waiting: 0 });
+}
+
+function payoffExposure(debts) {
+  return debts
+    .filter((debt) => debt.status === 'Ativa' || debt.status === 'Em espera')
+    .map((debt) => ({ debt, value: payoffTodayValue(debt) || debtBalance(debt), informed: payoffTodayValue(debt) > 0 }))
+    .filter((item) => item.value > 0);
+}
+
+function creditorBarsHtml(items) {
+  if (!items.length) return emptyCard('Sem saldo para quitar', 'Cadastre o valor de quitação ou as parcelas das dívidas abertas.');
+  const largest = Math.max(...items.map((item) => item.value), 1);
+  return '<div class="creditor-decision-list">' + items.map((item) =>
+    '<div class="creditor-decision-bar" tabindex="0" data-creditor-decision-bar>' +
+      '<div class="creditor-decision-name">' + escapeHtml(item.label) + '</div>' +
+      '<div class="creditor-decision-track"><i style="width:' + (item.value / largest * 100).toFixed(2) + '%"></i></div>' +
+      '<strong>' + escapeHtml(brl(item.value)) + '</strong>' +
+    '</div>'
+  ).join('') + '</div>';
+}
+
+function bindCreditorInteractions(container) {
+  const bars = [...container.querySelectorAll('[data-creditor-decision-bar]')];
+  bars.forEach((bar) => {
+    const highlight = () => bars.forEach((item) => item.classList.toggle('is-muted', item !== bar));
+    const restore = () => bars.forEach((item) => item.classList.remove('is-muted'));
+    bar.addEventListener('mouseenter', highlight);
+    bar.addEventListener('mouseleave', restore);
+    bar.addEventListener('focus', highlight);
+    bar.addEventListener('blur', restore);
+  });
 }
 
 function renderDebtDecisionDashboard() {
   const metrics = $('debtDecisionMetrics');
-  const statusDonut = $('debtStatusDonut');
-  const creditorDonut = $('debtCreditorDonut');
-  if (!metrics || !statusDonut || !creditorDonut) return;
+  const progressDonut = $('debtProgressDonut');
+  const payoffDonut = $('debtPayoffDonut');
+  const creditorBreakdown = $('debtCreditorBreakdown');
+  if (!metrics || !progressDonut || !payoffDonut || !creditorBreakdown) return;
 
-  const debts = overviewDebts();
-  const route = debts.filter((debt) => debt.status === 'Ativa');
-  const waiting = debts.filter((debt) => debt.status === 'Em espera');
-  const routeBalance = route.reduce((sum, debt) => sum + debtBalance(debt), 0);
-  const waitingBalance = waiting.reduce((sum, debt) => sum + debtBalance(debt), 0);
-  const totalBalance = routeBalance + waitingBalance;
-  const monthlyCommitment = route.reduce((sum, debt) => sum + Number(debt.installmentValue || 0), 0);
-  const routeShare = totalBalance ? routeBalance / totalBalance * 100 : 0;
+  const debts = dashboardDebts();
+  const progress = recordedInstallmentProgress(debts);
+  const recordedTotal = progress.paid + progress.inRoute + progress.waiting;
+  const exposure = payoffExposure(debts);
+  const routePayoff = exposure.filter((item) => item.debt.status === 'Ativa').reduce((sum, item) => sum + item.value, 0);
+  const waitingPayoff = exposure.filter((item) => item.debt.status === 'Em espera').reduce((sum, item) => sum + item.value, 0);
+  const payoffTotal = routePayoff + waitingPayoff;
+  const informed = exposure.filter((item) => item.informed).length;
+  const estimated = exposure.length - informed;
+  const paidShare = recordedTotal ? progress.paid / recordedTotal * 100 : 0;
 
   metrics.innerHTML =
-    decisionMetric('Saldo total', brl(totalBalance), debts.length + (debts.length === 1 ? ' dívida acompanhada' : ' dívidas acompanhadas')) +
-    decisionMetric('Em rota', brl(routeBalance), routeShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '% do saldo está na frente de pagamento', 'green') +
-    decisionMetric('Em espera', brl(waitingBalance), waiting.length + (waiting.length === 1 ? ' dívida aguardando espaço' : ' dívidas aguardando espaço'), 'amber') +
-    decisionMetric('Compromisso mensal', brl(monthlyCommitment), 'Parcelas da rota ativa', 'blue');
+    decisionMetric('Dívida registrada', brl(recordedTotal), 'Parcelas pagas e abertas registradas') +
+    decisionMetric('Quitado', brl(progress.paid), paidShare.toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + '% do total registrado', 'green') +
+    decisionMetric('Quitação hoje', brl(payoffTotal), informed + ' informado' + (informed === 1 ? '' : 's') + ' · ' + estimated + ' estimativa' + (estimated === 1 ? '' : 's'), 'red') +
+    decisionMetric('Em espera hoje', brl(waitingPayoff), 'Valor para encerrar fora da rota', 'amber');
 
-  statusDonut.innerHTML = donutHtml(totalBalance, [
-    { label: 'Em rota', value: routeBalance, color: '#1db97d' },
-    { label: 'Em espera', value: waitingBalance, color: '#f0ad4e' }
-  ], 'saldo aberto');
+  progressDonut.innerHTML = donutHtml(recordedTotal, [
+    { label: 'Quitado', value: progress.paid, color: '#1db97d' },
+    { label: 'Em pagamento', value: progress.inRoute, color: '#4384f4' },
+    { label: 'Em espera', value: progress.waiting, color: '#f0ad4e' }
+  ], 'parcelas registradas');
+  bindDonutInteractions(progressDonut);
+
+  payoffDonut.innerHTML = donutHtml(payoffTotal, [
+    { label: 'Em rota', value: routePayoff, color: '#4384f4' },
+    { label: 'Em espera', value: waitingPayoff, color: '#f0ad4e' }
+  ], 'para quitar hoje');
+  bindDonutInteractions(payoffDonut);
 
   const creditors = new Map();
-  debts.forEach((debt) => {
+  exposure.forEach(({ debt, value }) => {
     const key = debt.creditorId || 'sem-credor';
     const current = creditors.get(key) || { label: getCreditorName(debt.creditorId), value: 0 };
-    current.value += debtBalance(debt);
+    current.value += value;
     creditors.set(key, current);
   });
-  const creditorItems = [...creditors.values()].sort((a, b) => b.value - a.value);
-  const topCreditors = creditorItems.slice(0, 5);
-  const otherCreditors = creditorItems.slice(5).reduce((sum, item) => sum + item.value, 0);
-  if (otherCreditors) topCreditors.push({ label: 'Outros credores', value: otherCreditors, color: '#94a3b8' });
-  creditorDonut.innerHTML = donutHtml(totalBalance, topCreditors, 'por credor');
+  creditorBreakdown.innerHTML = creditorBarsHtml([...creditors.values()].sort((a, b) => b.value - a.value));
+  bindCreditorInteractions(creditorBreakdown);
 }
 
 function selectedDebtIds() {
@@ -296,33 +379,10 @@ function renderOverviewSummary(selected, groups = []) {
 
 export function renderDebtOverview() {
   renderDebtDecisionDashboard();
-  const allDebts = overviewDebts();
-  const selectedIds = selectedDebtIds();
-  const excludedIds = excludedDebtIds();
-  const groups = validConsolidations(allDebts);
-  const visibleGroups = groups.filter((group) => group.debtIds.every((id) => {
-    const debt = allDebts.find((item) => item.id === id);
-    return debt && isSelected(debt, selectedIds);
-  }));
-  const consolidatedIds = new Set(visibleGroups.flatMap((group) => group.debtIds));
-  const selected = allDebts.filter((debt) => isSelected(debt, selectedIds) && !excludedIds.has(debt.id) && !consolidatedIds.has(debt.id));
-  renderOverviewSummary(selected, visibleGroups);
-  renderCreditorFilters(allDebts);
-  renderConsolidations(allDebts, visibleGroups);
-  renderSelectionList(allDebts, selectedIds, excludedIds, groups);
 }
 
 export function renderDebtOverviewSummary() {
-  const allDebts = overviewDebts();
-  const selectedIds = selectedDebtIds();
-  const excludedIds = excludedDebtIds();
-  const groups = validConsolidations(allDebts);
-  const visibleGroups = groups.filter((group) => group.debtIds.every((id) => {
-    const debt = allDebts.find((item) => item.id === id);
-    return debt && isSelected(debt, selectedIds);
-  }));
-  const consolidatedIds = new Set(visibleGroups.flatMap((group) => group.debtIds));
-  renderOverviewSummary(allDebts.filter((debt) => isSelected(debt, selectedIds) && !excludedIds.has(debt.id) && !consolidatedIds.has(debt.id)), visibleGroups);
+  renderDebtDecisionDashboard();
 }
 
 export async function toggleOverviewCreditor(creditorId) {
