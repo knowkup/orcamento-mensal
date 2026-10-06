@@ -144,28 +144,28 @@ function trailCreditorFilterButton(id, labelHtml, count, active) {
 
 function renderPayoffTimeline(route, allRoute, container) {
   const forecast = buildDebtPayoffForecast({
-    debts: route,
+    debts: allRoute,
     installmentsByDebt: state.installmentsByDebt,
     fromMonth: new Date().toISOString().slice(0, 7)
   });
 
-  if (!forecast.initialCommitment) {
+  if (!forecast.events.length) {
     container.innerHTML = '';
     return;
   }
 
-  const first = forecast.events[0];
+  const first = forecast.events.find(event => event.released > 0);
   const last = forecast.events.at(-1);
   const firstVacancy = first ? formatMonthYear(first.releaseMonth) : 'Sem previsão';
   const ending = last ? formatMonthYear(last.month) : 'Sem previsão';
-  const chart = first ? payoffForecastChart(forecast) : '';
+  const chart = payoffForecastChart(forecast);
   const noDateNote = forecast.withoutForecast.length
     ? `<p class="payoff-forecast-note">${forecast.withoutForecast.length === 1 ? 'Uma dívida ativa está' : `${forecast.withoutForecast.length} dívidas ativas estão`} sem data de término no gráfico.</p>`
     : '';
 
   container.innerHTML =
     '<div class="payoff-forecast-heading">' +
-      '<div><p class="eyebrow">Rota Financeira</p><h2>Previsão de quitação</h2><p>O azul é o compromisso que continua no orçamento; o verde é a capacidade mensal liberada pelas quitações.</p></div>' +
+      '<div><p class="eyebrow">Rota Financeira</p><h2>Previsão de quitação</h2></div>' +
       '<div class="payoff-forecast-summary">' +
         '<div><span>Próxima vaga no orçamento</span><strong>' + escapeHtml(firstVacancy) + '</strong>' + (first ? `<small>${escapeHtml(brl(first.released))}/mês livres</small>` : '') + '</div>' +
         '<div><span>Última quitação prevista</span><strong>' + escapeHtml(ending) + '</strong></div>' +
@@ -277,20 +277,23 @@ function bindPayoffForecastEvents(container, route, forecast) {
 
 function payoffEventTooltip(route, month, event, includePaid = false) {
   const endingDebtIds = new Set(event.debts.map(item => item.debt.id));
-  const sortRows = (a, b) => Number(a.debt.isConsignado) - Number(b.debt.isConsignado)
-    || Number(b.ending) - Number(a.ending)
-    || b.value - a.value;
-  const buildRows = predicate => route
-    .filter(debt => debt.status === 'Ativa')
-    .map(debt => {
-      const installments = (state.installmentsByDebt.get(debt.id) || [])
-        .filter(installment => String(installment.dueDate || '').startsWith(month))
-        .filter(predicate);
-      const value = installments.reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0);
-      return installments.length ? { debt, value, ending: endingDebtIds.has(debt.id) } : null;
-    })
-    .filter(Boolean)
-    .sort(sortRows);
+  const sortRows = (a, b) => Number(b.ending) - Number(a.ending) || b.value - a.value;
+  const buildRows = predicate => {
+    const monthlyRows = route
+      .filter(debt => debt.status === 'Ativa')
+      .map(debt => {
+        const installments = (state.installmentsByDebt.get(debt.id) || [])
+          .filter(installment => String(installment.dueDate || '').startsWith(month))
+          .filter(predicate);
+        const value = installments.reduce((sum, installment) => sum + Number(installment.expectedValue || 0), 0);
+        return installments.length ? { debt, value, ending: endingDebtIds.has(debt.id) } : null;
+      })
+      .filter(Boolean);
+    return [
+      ...monthlyRows.filter(item => !item.debt.isConsignado).sort(sortRows),
+      ...monthlyRows.filter(item => !!item.debt.isConsignado).sort(sortRows)
+    ];
+  };
   const pendingDebts = buildRows(isDebtInstallmentOpen);
   const paidDebts = includePaid
     ? buildRows(installment => installment.status === 'Paga' || installment.status === 'Quitada')

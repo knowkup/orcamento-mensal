@@ -36,7 +36,7 @@ export function buildDebtPayoffForecast({ debts = [], installmentsByDebt = new M
   let initialCommitment = 0;
 
   debts
-    .filter(debt => debt?.status === 'Ativa' && !debt?.isConsignado)
+    .filter(debt => debt?.status === 'Ativa')
     .forEach(debt => {
       const openInstallments = openDebtInstallments(installmentsByDebt.get(debt.id) || []);
       const datedInstallments = openInstallments
@@ -52,9 +52,11 @@ export function buildDebtPayoffForecast({ debts = [], installmentsByDebt = new M
         return;
       }
 
-      initialCommitment += monthlyValue;
       const event = eventsByMonth.get(dueMonth) || { month: dueMonth, releaseMonth, released: 0, debts: [] };
-      event.released += monthlyValue;
+      if (!debt.isConsignado) {
+        initialCommitment += monthlyValue;
+        event.released += monthlyValue;
+      }
       event.debts.push({ debt, monthlyValue, lastDueDate: lastInstallment.dueDate });
       eventsByMonth.set(dueMonth, event);
     });

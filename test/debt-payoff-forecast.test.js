@@ -39,7 +39,7 @@ test('debt payoff forecast groups debts ending in the same month', () => {
   assert.equal(forecast.events[0].debts.length, 2);
 });
 
-test('debt payoff forecast keeps unscheduled and consignado debts out of the chart', () => {
+test('debt payoff forecast shows consignado endings without adding them to budget capacity', () => {
   const forecast = buildDebtPayoffForecast({
     debts: [
       { id: 'no-date', status: 'Ativa', installmentValue: 300 },
@@ -54,6 +54,9 @@ test('debt payoff forecast keeps unscheduled and consignado debts out of the cha
 
   assert.equal(forecast.initialCommitment, 0);
   assert.deepEqual(forecast.withoutForecast.map(debt => debt.id), ['no-date']);
+  assert.deepEqual(forecast.events.map(event => event.month), ['2027-06']);
+  assert.equal(forecast.events[0].released, 0);
+  assert.deepEqual(forecast.events[0].debts.map(item => item.debt.id), ['clt']);
 });
 
 test('month helpers move into the next calendar month', () => {
