@@ -404,6 +404,7 @@ function payoffEventTooltip(route, car, month, event, includePaid = false, commi
   const paidTotal = paidDebts.reduce((sum, item) => sum + item.value, 0);
   const debtTotal = pendingTotal + paidTotal;
   const carTotal = carCommitmentForMonth(car, month);
+  const carEnding = car.endMonth === month;
   const total = debtTotal + carTotal;
   const rows = (items, paid = false) => items.map(item => {
     const notes = [
@@ -419,7 +420,7 @@ function payoffEventTooltip(route, car, month, event, includePaid = false, commi
   const nextTotals = payoffMonthTotals(route, car, nextMonth);
   const available = Math.max(0, commitmentLimit - nextTotals.total);
   return '<div class="payoff-tooltip-head"><strong>Parcelas de ' + escapeHtml(formatMonthYear(month)) + '</strong><span>' + escapeHtml(brl(debtTotal)) + '</span></div>' +
-    (carTotal ? '<div class="payoff-tooltip-commitment"><span>Financiamento do carro</span><strong>' + escapeHtml(brl(carTotal)) + '</strong></div>' : '') +
+    (carTotal ? '<div class="payoff-tooltip-commitment' + (carEnding ? ' is-ending' : '') + '"><span>Financiamento do carro' + (carEnding ? '<small>Encerra neste mês</small>' : '') + '</span><strong>' + escapeHtml(brl(carTotal)) + '</strong></div>' : '') +
     '<div class="payoff-tooltip-commitment is-total"><span>Total de compromissos</span><strong>' + escapeHtml(brl(total)) + '</strong></div>' +
     (includePaid ? '<div class="payoff-tooltip-total"><span>Pendente</span><strong>' + escapeHtml(brl(pendingTotal)) + '</strong></div>' : '') +
     '<div class="payoff-tooltip-list">' + rows(pendingDebts) + '</div>' +
