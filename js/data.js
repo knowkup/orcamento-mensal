@@ -13,7 +13,6 @@ export function createDefaultData() {
     schemaVersion: 3,
     initialBalance: 0,
     accountBalance: 0,
-    kahLimit: 0,
     debtCommitmentLimit: null,
     paymentMethods: ["PIX", "Débito em conta", "Cartão de crédito", "Boleto"],
     creditors: [],

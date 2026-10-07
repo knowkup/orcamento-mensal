@@ -1,13 +1,13 @@
 import { firebaseConfig, isFirebaseConfigured } from "../firebase-config.js";
 import { state, el } from "./state.js";
-import { loadLocalState, exportState, importState } from "./storage.js";
+import { loadLocalState } from "./storage.js";
 import { setupFirebase, saveState } from "./firebase.js";
 import { bindMoneyInputs, refreshIcons, updateSync } from "./utils.js";
 import { renderProjection } from "./planejamento/planejamento.js";
 import { renderMonthlyControl, confirmReceivedOccurrence, confirmPaidOccurrence, openPlannedDialog, closeMonth, saveAccountBalance, updatePlannedFields, addPlannedPurchase, closePlannedDialog, saveFixedCostAmount, saveFixedCostAddition, navigateControlMonth } from "./controle/controle.js";
 import { renderInstallments, addInstallment, openInstallmentDialog, closeInstallmentDialog } from "./parcelamentos/parcelamentos.js";
 import { renderFixedCosts, openFixedCostDialog, closeFixedCostDialog, updateFixedCostFields, addFixedCost } from "./custos-fixos/custos-fixos.js";
-import { renderCar, updateCar, openCarContractDialog, updateSettings, payCarInstallment } from "./carro/carro.js";
+import { renderCar, updateCar, openCarContractDialog, payCarInstallment } from "./carro/carro.js";
 import { renderFgts, openFgtsDialog, closeFgtsDialog, addFgtsContract, renderFgtsInstallmentValueFields } from "./fgts/fgts.js";
 import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException, toggleIncomeCltFields } from "./preferencias.js";
 import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
@@ -31,8 +31,6 @@ async function boot() {
 function bindEvents() {
   registerNavigation(showView);
   el.navTabs.forEach((button) => on(button, "click", () => showView(button.dataset.view)));
-  on(el.exportButton, "click", exportState);
-  on(el.importInput, "change", importState);
   const menuBtn = document.getElementById("topbarMenuButton");
   const dropdown = document.getElementById("topbarDropdown");
   if (menuBtn && dropdown) {
@@ -46,7 +44,6 @@ function bindEvents() {
   on(el.newFixedCostButton, "click", () => openFixedCostDialog());
   on(el.closeFixedCostButton, "click", closeFixedCostDialog);
   on(el.fixedCostForm.elements.paymentMethod, "change", updateFixedCostFields);
-  on(el.settingsForm, "submit", updateSettings);
   on(el.carForm, "submit", updateCar);
   on(el.editCarButton, "click", openCarContractDialog);
   on(el.closeCarContractButton, "click", () => closeDialog(el.carContractDialog));
@@ -144,17 +141,7 @@ function bindEvents() {
         closeMoreDrawer(maisDrawer, maisOverlay);
       });
     });
-    on(document.getElementById("maisExportBtn"), "click", () => {
-      el.exportButton.click();
-      closeMoreDrawer(maisDrawer, maisOverlay);
-    });
-    on(document.getElementById("maisImportBtn"), "click", () => {
-      el.importInput.click();
-      closeMoreDrawer(maisDrawer, maisOverlay);
-    });
   }
-  on(document.getElementById("prefExportButton"), "click", exportState);
-  on(document.getElementById("prefImportInput"), "change", importState);
 }
 
 function on(target, eventName, handler) {

@@ -3,35 +3,86 @@ import { escapeHtml, icon, formatCurrencyInput, parseCurrencyInput, showToast } 
 import { getCreditorName, creditorLogoHtml, getCreditCard } from "../creditors.js";
 
 export function renderFixedCosts() {
-  const fixedCosts = [...state.data.fixedCosts].sort((a, b) => {
+  const allFixedCosts = [...state.data.fixedCosts].sort((a, b) => {
     const creditorSort = getCreditorName(a.creditorId).localeCompare(getCreditorName(b.creditorId), "pt-BR");
     return creditorSort || Number(a.dueDay || 0) - Number(b.dueDay || 0);
   });
-  el.fixedCostsTable.innerHTML = `
-    <thead><tr><th>Custo</th><th>Credor</th><th>Método</th><th>Grupo</th><th>Vence Dia</th><th>Valor</th><th>Ações</th></tr></thead>
-    <tbody>
-      ${fixedCosts.map((item) => `
-        <tr>
-          <td>${escapeHtml(item.name)}</td>
-          <td>${creditorLogoHtml(item.creditorId)}${escapeHtml(getCreditorName(item.creditorId))}</td>
-          <td>${escapeHtml(item.paymentMethod || "-")}</td>
-          <td>${escapeHtml(item.group || "-")}</td>
-          <td>${item.dueDay}</td>
-          <td>${currency.format(item.amount)}</td>
-          <td class="row-actions">
+  renderFixedCostSummary(allFixedCosts);
+  renderFixedCostFilters(allFixedCosts);
+  const fixedCosts = state.fixedCostCreditorFilter === "all"
+    ? allFixedCosts
+    : allFixedCosts.filter((item) => item.creditorId === state.fixedCostCreditorFilter);
+
+  el.fixedCostsTable.innerHTML = fixedCosts.length
+    ? fixedCosts.map((item) => `
+      <article class="debt-card fixed-cost-card">
+        <div class="fixed-cost-summary">
+          <div class="entity-cell fixed-cost-title">
+            ${creditorLogoHtml(item.creditorId)}
+            <div><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(getCreditorName(item.creditorId))}</small></div>
+          </div>
+          <div class="fixed-cost-detail"><span>Pagamento</span><strong>${escapeHtml(item.paymentMethod || "-")}</strong></div>
+          <div class="fixed-cost-detail"><span>Grupo</span><strong>${escapeHtml(item.group || "Sem grupo")}</strong></div>
+          <div class="fixed-cost-detail"><span>Vencimento</span><strong>Dia ${Number(item.dueDay || 0) || "-"}</strong></div>
+          <div class="fixed-cost-value"><span>Mensal</span><strong>${currency.format(Number(item.amount || 0))}</strong></div>
+          <div class="row-actions">
             <button class="icon-button mini-icon" type="button" title="Editar" data-edit-fixed="${item.id}">${icon("pencil")}</button>
             <button class="icon-button mini-icon danger-mini" type="button" title="Excluir" data-delete-fixed="${item.id}">${icon("trash-2")}</button>
-          </td>
-        </tr>
-      `).join("") || `<tr><td colspan="7"><div class="empty-state table-empty"><strong>Nenhum custo fixo cadastrado</strong><span>Cadastre despesas recorrentes para elas entrarem automaticamente no controle mensal.</span></div></td></tr>`}
-    </tbody>
-  `;
+          </div>
+        </div>
+      </article>
+    `).join("")
+    : `<div class="empty-state"><strong>Nenhum custo fixo encontrado</strong><span>${state.fixedCostCreditorFilter === "all" ? "Cadastre despesas recorrentes para elas entrarem automaticamente no controle mensal." : "Escolha outro credor ou veja todos os custos fixos."}</span></div>`;
 
   el.fixedCostsTable.querySelectorAll("[data-edit-fixed]").forEach((button) => {
     button.addEventListener("click", () => openFixedCostDialog(button.dataset.editFixed));
   });
   el.fixedCostsTable.querySelectorAll("[data-delete-fixed]").forEach((button) => {
     button.addEventListener("click", () => deleteFixedCost(button.dataset.deleteFixed));
+  });
+}
+
+function renderFixedCostSummary(items) {
+  if (!el.fixedCostsSummary) return;
+  const monthlyTotal = items.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const cardTotal = items
+    .filter((item) => item.paymentMethod === "Cartão de crédito")
+    .reduce((sum, item) => sum + Number(item.amount || 0), 0);
+  const directTotal = monthlyTotal - cardTotal;
+  el.fixedCostsSummary.innerHTML = [
+    { label: "Total mensal", helper: "Todos os custos", value: monthlyTotal, tone: "short" },
+    { label: "Em cartão", helper: "Fatura e crediário", value: cardTotal, tone: "medium" },
+    { label: "Pagamento direto", helper: "PIX, boleto e débito", value: directTotal, tone: "long" }
+  ].map((summary) => `
+    <article class="installment-range-card ${summary.tone}">
+      <h3>${summary.label}</h3><span>${summary.helper}</span><strong>${currency.format(summary.value)}</strong><small>${items.length} custo${items.length === 1 ? "" : "s"}</small>
+    </article>
+  `).join("");
+}
+
+function renderFixedCostFilters(items) {
+  if (!el.fixedCostFilters) return;
+  const counts = new Map();
+  items.forEach((item) => {
+    if (item.creditorId) counts.set(item.creditorId, (counts.get(item.creditorId) || 0) + 1);
+  });
+  const filters = [
+    { id: "all", label: "Todos", count: items.length },
+    ...[...counts.entries()]
+      .sort((a, b) => getCreditorName(a[0]).localeCompare(getCreditorName(b[0]), "pt-BR"))
+      .map(([id, count]) => ({ id, label: getCreditorName(id), count }))
+  ];
+  el.fixedCostFilters.innerHTML = filters.map((filter) => `
+    <button class="filter-chip ${state.fixedCostCreditorFilter === filter.id ? "active" : ""}" type="button" data-fixed-cost-creditor="${filter.id}">
+      ${filter.id === "all" ? '<span class="filter-symbol">◌</span>' : creditorLogoHtml(filter.id)}
+      <strong>${escapeHtml(filter.label)}</strong><span class="filter-count">${filter.count}</span>
+    </button>
+  `).join("");
+  el.fixedCostFilters.querySelectorAll("[data-fixed-cost-creditor]").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.fixedCostCreditorFilter = button.dataset.fixedCostCreditor;
+      renderFixedCosts();
+    });
   });
 }
 

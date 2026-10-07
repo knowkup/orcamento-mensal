@@ -460,7 +460,6 @@ export function buildProjectionRows(months, keepPaidValues = false) {
   });
 
   appendDynamicProjectionRows(rows, months, keepPaidValues);
-  appendKahDifferenceRow(rows, months);
   return rows.sort((a, b) => compareRowsByDueDate(a, b, months[0]));
 }
 
@@ -705,21 +704,6 @@ export function installmentChildrenForGroup(group, monthIndex, month, strict = t
     },
     ...installments
   ];
-}
-
-export function appendKahDifferenceRow(rows, months) {
-  const limit = Number(state.data.kahLimit || 0);
-  if (!limit) return;
-  const values = {};
-  months.forEach((month) => {
-    const used = rows
-      .filter((row) => row.kind === "expense" && row.owner === "Kah")
-      .reduce((total, row) => total + Number(row.values[month] || 0), 0);
-    values[month] = Math.max(0, limit - used);
-  });
-  if (Object.values(values).some(Boolean)) {
-    rows.unshift({ id: "kah-difference", kind: "expense", owner: "Kah", label: "Diferença Kah", origin: "Limite Kah", sourceLabel: "", values });
-  }
 }
 
 export function installmentTotal(origin, monthIndex) {

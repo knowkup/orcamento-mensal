@@ -116,13 +116,6 @@ export function ensureCarPayments() {
   if (shouldSync) syncCarPayments();
 }
 
-export async function updateSettings(event) {
-  event.preventDefault();
-  const form = new FormData(event.currentTarget);
-  state.data.kahLimit = parseCurrencyInput(form.get("kahLimit"));
-  if (state.saveStateFn) await state.saveStateFn("Preferências salvas.");
-}
-
 export function openCarPaymentDialog(id) {
   const payment = state.data.car.payments.find((item) => item.id === id);
   if (!payment) return;

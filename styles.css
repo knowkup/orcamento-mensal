@@ -693,43 +693,15 @@ button.hero-card:hover { background: #f5f7fa; }
 }
 
 .preference-block {
-  display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
+  display: block;
 }
 
-.block-marker {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1px solid rgba(63, 185, 133, 0.22);
-  background: rgba(53, 184, 121, 0.12);
-  color: var(--green);
-  font-size: 13px;
-  font-weight: 850;
+.preferences-section-heading {
+  padding: 8px 0 0;
 }
 
-/* ── Backup block ── */
-.backup-block {
-  border-color: rgba(77, 141, 247, 0.22);
-  background: linear-gradient(180deg, rgba(77, 141, 247, 0.04), rgba(255,255,255,0.72)), var(--surface);
-}
-
-.backup-block-marker {
-  border-color: rgba(77, 141, 247, 0.28);
-  background: rgba(77, 141, 247, 0.10);
-  color: var(--blue);
-}
-
-.backup-description {
-  margin: 0 0 16px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.5;
-}
+.preferences-section-heading .eyebrow { margin: 0 0 3px; }
+.preferences-section-heading h2 { margin: 0; color: var(--ink); font-size: 18px; }
 
 .backup-actions {
   display: grid;
@@ -2324,6 +2296,24 @@ select {
   gap: 12px;
 }
 
+.fixed-cost-summary {
+  display: grid;
+  grid-template-columns: minmax(230px, 1.5fr) repeat(3, minmax(100px, 0.65fr)) minmax(120px, 0.8fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 14px 16px;
+}
+
+.fixed-cost-title strong,
+.fixed-cost-detail strong,
+.fixed-cost-value strong { display: block; color: var(--ink); }
+.fixed-cost-title small,
+.fixed-cost-detail span,
+.fixed-cost-value span { display: block; color: var(--muted); font-size: 11px; }
+.fixed-cost-detail strong { margin-top: 3px; font-size: 12px; }
+.fixed-cost-value { text-align: right; }
+.fixed-cost-value strong { margin-top: 3px; color: var(--red); font-size: 15px; }
+
 .debt-card {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -3806,6 +3796,29 @@ select {
   .route-item:not(.paid-route-item) .route-stat:nth-child(8),
   .route-item:not(.paid-route-item) .route-stat.payoff-stat { display: none; }
 
+  .route-item.waiting-route-item .route-stat:nth-child(5),
+  .route-item.waiting-route-item .route-stat:nth-child(6) { display: none; }
+
+  .route-item.waiting-route-item .route-stat:nth-child(7),
+  .route-item.waiting-route-item .route-stat.payoff-stat {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    align-items: baseline;
+    border: none;
+    padding: 0;
+    width: auto;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .route-item.waiting-route-item .route-stat:nth-child(7) { grid-column: 2; grid-row: 3; }
+  .route-item.waiting-route-item .route-stat.payoff-stat { grid-column: 2; grid-row: 4; }
+  .route-item.waiting-route-item .route-stat:nth-child(7) span,
+  .route-item.waiting-route-item .route-stat:nth-child(7) strong,
+  .route-item.waiting-route-item .route-stat.payoff-stat span,
+  .route-item.waiting-route-item .route-stat.payoff-stat strong { font-size: 12px; margin-bottom: 0; }
+
   .route-item:not(.paid-route-item) .route-actions {
     grid-column: 3;
     grid-row: 1 / 5;
@@ -3996,6 +4009,12 @@ select {
 
   /* KPIs de parcelamentos: 3 → 2 colunas */
   .installments-kpis { grid-template-columns: repeat(2, 1fr); }
+  .fixed-cost-summary { grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .fixed-cost-title { grid-column: 1; }
+  .fixed-cost-value { grid-column: 2; grid-row: 1; }
+  .fixed-cost-detail { display: flex; gap: 5px; align-items: baseline; }
+  .fixed-cost-detail strong { margin-top: 0; }
+  .fixed-cost-summary .row-actions { grid-column: 1 / -1; justify-content: flex-end; }
 }
 
 @media (max-width: 560px) {
