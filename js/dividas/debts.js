@@ -218,7 +218,7 @@ export function debtRouteGridRow(debt, index, mode) {
     '<div class="route-title">' + creditorLogoHtml(debt.creditorId) + '<div><button class="debt-name clickable debt-name-button" type="button" data-toggle-debt="' + escapeHtml(debt.id) + '">' + escapeHtml(getCreditorName(debt.creditorId) + ' · ' + debt.name) + '</button><div class="debt-meta">' + compactTagsForDebt(debt) + '</div></div></div>' +
     routeProgressHtml(progressValue) +
     '<div class="route-stat"><span>Parcela</span><strong>' + brl(debt.installmentValue) + '</strong></div>' +
-    '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>' +
+    (mode === 'waiting' ? '' : '<div class="route-stat"><span>Próxima Parcela</span><strong>' + escapeHtml(nextLabel) + '</strong></div>') +
     '<div class="route-stat"><span>Status</span><strong>' + routeInstallmentStatusLabel(debt) + '</strong></div>' +
     '<div class="route-stat"><span>Saldo</span><strong>' + brl(balance) + '</strong></div>' +
     '<div class="route-stat payoff-stat"><span>Quitação Hoje</span>' + payoffTodayHtml(debt) + '</div>' +
