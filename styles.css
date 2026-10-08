@@ -1036,6 +1036,29 @@ button.hero-card:hover { background: #f5f7fa; }
   overflow-x: auto;
 }
 
+.planning-chart-loading {
+  min-height: 270px;
+  display: grid;
+  place-content: center;
+  grid-auto-flow: column;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.planning-chart-loading-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: planning-loading-pulse 1s ease-in-out infinite;
+}
+
+@keyframes planning-loading-pulse {
+  50% { opacity: .28; transform: scale(.7); }
+}
+
 .chart-legend {
   display: flex;
   flex-wrap: wrap;

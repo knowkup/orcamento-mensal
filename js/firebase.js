@@ -15,6 +15,8 @@ function isDividasViewActive() {
 export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
   if (!isFirebaseConfigured) {
     updateSync("Modo local", "Firebase nao configurado.", "offline");
+    state.debtDataReady = true;
+    if (state.renderFn) state.renderFn();
     return;
   }
 
@@ -40,11 +42,15 @@ export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
         await state.loadDividasFn();
       } catch (error) {
         console.error(error);
+        state.debtDataReady = true;
+        if (state.renderFn) state.renderFn();
       }
     }
   } catch (error) {
     console.error(error);
     updateSync("Firebase indisponivel", "Dados locais preservados.", "error");
+    state.debtDataReady = true;
+    if (state.renderFn) state.renderFn();
   }
 }
 

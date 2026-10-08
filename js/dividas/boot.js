@@ -10,6 +10,7 @@ import { renderDebts } from './debts.js';
 import { renderRenegotiation } from './renegotiation.js';
 import { renderDebtOverview } from './overview.js';
 import { bindDebtDataEvents } from './ui-events.js';
+import { persistDebtCache } from './local-cache.js';
 import './payment.js';
 import './debt-form.js';
 import './data.js';
@@ -32,6 +33,8 @@ export async function loadDividas() {
   state.creditors = mainState.data?.creditors || [];
   rebuildIndexes();
   await synchronizePaidOffDebts();
+  persistDebtCache();
+  mainState.debtDataReady = true;
   renderDividas();
   if (mainState.renderFn) mainState.renderFn();
 }
@@ -39,6 +42,7 @@ export async function loadDividas() {
 export function renderDividas() {
   state.creditors = mainState.data?.creditors || [];
   rebuildIndexes();
+  persistDebtCache();
   renderDebts();
   renderRenegotiation();
   renderDebtOverview();

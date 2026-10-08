@@ -18,6 +18,7 @@ export const state = {
   saving: false,
   lastLocalRevision: 0,
   pendingCloudRevision: 0,
+  debtDataReady: false,
   installmentFilter: "open",
   installmentCreditorFilter: "all",
   fixedCostCreditorFilter: "all",

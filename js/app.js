@@ -12,19 +12,21 @@ import { renderFgts, openFgtsDialog, closeFgtsDialog, addFgtsContract, renderFgt
 import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException, toggleIncomeCltFields } from "./preferencias.js";
 import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
 import { loadDividas } from "./dividas/boot.js";
+import { restoreDebtCache } from "./dividas/local-cache.js";
 import { registerNavigation } from "./navigation.js";
 
 boot();
 
 async function boot() {
   state.data = loadLocalState();
+  state.debtDataReady = restoreDebtCache(state.data?.creditors || []);
   state.renderFn = renderCurrentView;
   state.hydrateFn = hydrateForms;
   state.saveStateFn = saveState;
   state.loadDividasFn = loadDividas;
   bindEvents();
   hydrateForms();
-  renderAll();
+  renderCurrentView();
   await setupFirebase(firebaseConfig, isFirebaseConfigured);
 }
 
@@ -180,29 +182,18 @@ function showView(name) {
   refreshIcons();
 }
 
-function renderAll() {
-  renderProjection();
-  renderMonthlyControl();
-  renderInstallments();
-  renderFixedCosts();
-  renderCar();
-  renderFgts();
-  renderOrigins();
-  renderCreditCards();
-  renderRecurringIncomes();
-  renderSettings();
-  renderTaxTables();
-  renderFerias();
-  bindMoneyInputs();
-  refreshIcons();
-}
-
 function renderCurrentView() {
   const activeView = document.querySelector(".view.active");
   renderView(activeView?.id?.replace(/View$/, "") || "planejamento");
 }
 
 function renderView(name) {
+  if (name === "planejamento" && !state.debtDataReady) {
+    renderPlanningLoading();
+    bindMoneyInputs();
+    refreshIcons();
+    return;
+  }
   const renderers = {
     planejamento: renderProjection,
     controle: renderMonthlyControl,
@@ -222,4 +213,14 @@ function renderView(name) {
   renderers[name]?.();
   bindMoneyInputs();
   refreshIcons();
+}
+
+function renderPlanningLoading() {
+  el.planningChart.innerHTML = `
+    <div class="planning-chart-loading" role="status" aria-live="polite">
+      <span class="planning-chart-loading-dot"></span>
+      <span>Carregando os compromissos do mês atual…</span>
+    </div>`;
+  document.querySelector("#projEvents").innerHTML = "";
+  document.querySelector("#projMonthlySummary").innerHTML = "";
 }
