@@ -36,7 +36,8 @@ export const state = {
   plannedEditingId: null,
   plannedEditingKind: null,
   controlMonth: null,
-  renderDividasFn: null
+  renderDividasFn: null,
+  preloadDividasFn: null
 };
 
 export const el = {

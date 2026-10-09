@@ -10,19 +10,23 @@ import { renderDebts } from './debts.js';
 import { renderRenegotiation } from './renegotiation.js';
 import { renderDebtOverview } from './overview.js';
 import { bindDebtDataEvents } from './ui-events.js';
-import { persistDebtCache } from './local-cache.js';
+import { persistStartupCache } from './local-cache.js';
 import './payment.js';
 import './debt-form.js';
 import './data.js';
 
-export async function loadDividas() {
+export function preloadDividas() {
   bindDebtDataEvents();
-  const [legacyCreditorSnapshot, debtSnapshot, installmentSnapshot, paymentSnapshot] = await Promise.all([
+  return Promise.all([
     getDocs(debtCreditorsColl()),
     getDocs(debtsColl()),
     getDocs(installmentsColl()),
     getDocs(paymentsColl())
   ]);
+}
+
+export async function loadDividas(preloadedSnapshots) {
+  const [legacyCreditorSnapshot, debtSnapshot, installmentSnapshot, paymentSnapshot] = preloadedSnapshots || await preloadDividas();
   const legacyCreditors = legacyCreditorSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   state.debts = debtSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   state.installments = installmentSnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -33,7 +37,6 @@ export async function loadDividas() {
   state.creditors = mainState.data?.creditors || [];
   rebuildIndexes();
   await synchronizePaidOffDebts();
-  persistDebtCache();
   mainState.debtDataReady = true;
   renderDividas();
   if (mainState.renderFn) mainState.renderFn();
@@ -42,7 +45,7 @@ export async function loadDividas() {
 export function renderDividas() {
   state.creditors = mainState.data?.creditors || [];
   rebuildIndexes();
-  persistDebtCache();
+  persistStartupCache();
   renderDebts();
   renderRenegotiation();
   renderDebtOverview();

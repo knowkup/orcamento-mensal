@@ -36,10 +36,12 @@ export async function setupFirebase(firebaseConfig, isFirebaseConfigured) {
     state.firestore = firestoreSdk;
     state.firebaseReady = true;
 
-    await listenCloudState();
+    const cloudStatePromise = listenCloudState();
+    const debtSnapshotsPromise = state.preloadDividasFn?.();
+    await cloudStatePromise;
     if (state.loadDividasFn) {
       try {
-        await state.loadDividasFn();
+        await state.loadDividasFn(debtSnapshotsPromise ? await debtSnapshotsPromise : undefined);
       } catch (error) {
         console.error(error);
         state.debtDataReady = true;

@@ -11,19 +11,22 @@ import { renderCar, updateCar, openCarContractDialog, payCarInstallment } from "
 import { renderFgts, openFgtsDialog, closeFgtsDialog, addFgtsContract, renderFgtsInstallmentValueFields } from "./fgts/fgts.js";
 import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncomes, renderTaxTables, hydrateForms, addCreditor, openCreditorDialog, closeCreditorDialog, handleCreditorLogoUpload, openCardDialog, closeCardDialog, saveCreditCard, updateCardLogoPreview, openIncomeDialog, closeIncomeDialog, saveRecurringIncome, handleIncomeLogoUpload, closeIncomeExceptionDialog, saveIncomeException, toggleIncomeCltFields } from "./preferencias.js";
 import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
-import { loadDividas } from "./dividas/boot.js";
-import { restoreDebtCache } from "./dividas/local-cache.js";
+import { loadDividas, preloadDividas } from "./dividas/boot.js";
+import { restoreStartupCache } from "./dividas/local-cache.js";
 import { registerNavigation } from "./navigation.js";
 
 boot();
 
 async function boot() {
   state.data = loadLocalState();
-  state.debtDataReady = restoreDebtCache(state.data?.creditors || []);
+  const startupCache = restoreStartupCache(state.data);
+  state.data = startupCache.data;
+  state.debtDataReady = startupCache.restored;
   state.renderFn = renderCurrentView;
   state.hydrateFn = hydrateForms;
   state.saveStateFn = saveState;
   state.loadDividasFn = loadDividas;
+  state.preloadDividasFn = preloadDividas;
   bindEvents();
   hydrateForms();
   renderCurrentView();
