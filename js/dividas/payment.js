@@ -124,7 +124,7 @@ export function closePaymentForm() {
   document.getElementById('divPaymentDialog')?.close();
 }
 
-// --- Reagendamento de parcela vencida ---
+// --- Reagendamento de parcela pendente ---
 
 export function openRescheduleInstallmentModal(installmentId) {
   closeDebtFormIfOpen();
@@ -135,9 +135,6 @@ export function openRescheduleInstallmentModal(installmentId) {
   if (!inst || inst.status !== 'Pendente') return showToast('Parcela pendente não encontrada.');
   const originalDueDate = inst.originalDueDate || inst.dueDate;
   const closedMonths = appState.data?.closedMonths || [];
-  if (!closedMonths.includes(String(originalDueDate || '').slice(0, 7))) {
-    return showToast('Apenas parcelas de meses já fechados podem ser reagendadas.');
-  }
   const debt = state.debts.find(item => item.id === inst.debtId);
   if (debt) state.expandedDebtId = debt.id;
   state.reschedulingInstallmentId = installmentId;

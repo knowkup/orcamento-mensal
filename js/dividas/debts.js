@@ -1,6 +1,5 @@
 import { state } from './state.js';
 import { $, brl, escapeHtml, emptyCard, tag, formatDateBR, getCreditorName, creditorLogoHtml, compactTagsForDebt, paymentForInstallment, dueHint, byDueDate, routeProgressHtml } from './utils.js';
-import { state as appState } from '../state.js';
 import { debtBalance, debtTotal, debtPaid, paidOffDifference, paidOffDifferenceLabel, paidOffDifferenceClass, paidOffClosedDateKey, isOpenInstallment, openInstallmentsForDebt, debtProgress, nextInstallment, installmentProgress, payoffTodayHtml, payoffTodayValue, routeInstallmentStatusLabel } from './calc.js';
 import { moveItemByDirection, moveItemToTargetPosition } from '../domain/reorder.js';
 import { allowDebtDrop, beginDebtDrag, endDebtDrag, persistDebtOrder, takeDebtDropSource } from './debt-order.js';
@@ -128,8 +127,7 @@ export function installmentRowsForDebt(debt) {
       const payment = paymentForInstallment(item.id);
       const originalDueDate = item.originalDueDate || item.dueDate;
       const wasRescheduled = Boolean(item.originalDueDate);
-      const canReschedule = currentTab === 'pending'
-        && (appState.data?.closedMonths || []).includes(String(originalDueDate || '').slice(0, 7));
+      const canReschedule = currentTab === 'pending' && item.status === 'Pendente';
       const actionHtml = currentTab === 'paid'
         ? (payment ? '<button class="ghost-btn mini-action" type="button" data-delete-type="payment" data-delete-id="' + escapeHtml(payment.id) + '">Excluir pagamento</button>' : '')
         : '<div class="installment-actions">' +
