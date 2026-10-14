@@ -19,6 +19,7 @@ boot();
 
 async function boot() {
   state.data = loadLocalState();
+  state.lastLocalRevision = Number(state.data.updatedAt || 0);
   const startupCache = restoreStartupCache(state.data);
   state.data = startupCache.data;
   state.debtDataReady = startupCache.restored;

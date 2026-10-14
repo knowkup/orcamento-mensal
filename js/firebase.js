@@ -75,19 +75,28 @@ export function listenCloudState() {
         }
         const raw = snapshot.data();
         const cloudRevision = Number(raw.updatedAt || 0);
-        if (!shouldApplyCloudSnapshot(cloudRevision, state.pendingCloudRevision)) {
-          updateSync("Salvando", "Aguardando a versao local mais recente.", "syncing");
+        if (!shouldApplyCloudSnapshot(
+          cloudRevision,
+          state.pendingCloudRevision,
+          state.lastLocalRevision
+        )) {
+          if (state.pendingCloudRevision) {
+            updateSync("Salvando", "Aguardando a versao local mais recente.", "syncing");
+          }
           return;
+        }
+        if (state.pendingCloudRevision && cloudRevision >= state.pendingCloudRevision) {
+          state.pendingCloudRevision = 0;
         }
         if (Number(raw.schemaVersion || 0) < 3) {
           state.data = createDefaultData();
           await setDoc(ref, withMeta(state.data));
-          persistLocalState(false);
+          persistLocalState();
           updateSync("Sincronizado", `Dados antigos zerados as ${formatTime()}.`, "online");
         } else {
           state.data = normalizeData(raw);
           state.lastLocalRevision = Math.max(state.lastLocalRevision, cloudRevision);
-          persistLocalState(false);
+          persistLocalState();
           updateSync("Sincronizado", `Dados na nuvem as ${formatTime()}.`, "online");
         }
         if (state.hydrateFn) state.hydrateFn();
@@ -119,7 +128,6 @@ export async function saveState(message) {
         try {
           const { doc, setDoc } = state.firestore;
           await setDoc(doc(state.db, "app", "state"), withMeta(snapshot, revision));
-          if (state.pendingCloudRevision === revision) state.pendingCloudRevision = 0;
           updateSync("Sincronizado", `Dados na nuvem as ${formatTime()}.`, "online");
         } finally {
           state.saving = false;
