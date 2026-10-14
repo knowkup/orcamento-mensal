@@ -18,3 +18,9 @@ test("does not restore an older cloud snapshot after a local save is acknowledge
   assert.equal(shouldApplyCloudSnapshot(101, 0, 101), true);
   assert.equal(shouldApplyCloudSnapshot(102, 0, 101), true);
 });
+
+test("keeps the locally persisted revision as the minimum accepted cloud revision", () => {
+  const persistedRevision = 509;
+  assert.equal(shouldApplyCloudSnapshot(508, 0, persistedRevision), false);
+  assert.equal(shouldApplyCloudSnapshot(509, 0, persistedRevision), true);
+});

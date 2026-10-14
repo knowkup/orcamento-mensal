@@ -116,6 +116,7 @@ export function listenCloudState() {
 export async function saveState(message) {
   const revision = nextRevision(state.lastLocalRevision);
   state.lastLocalRevision = revision;
+  state.data.updatedAt = revision;
   const snapshot = structuredClone(state.data);
   persistLocalState();
   let cloudFailed = false;
