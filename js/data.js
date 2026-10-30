@@ -23,6 +23,7 @@ export function createDefaultData() {
         workHolidays: false,
         daysOff: [],
         extraWorkDays: [],
+        autoDaysOff: [],
         goals: [],
         withdrawal: 0,
         comfort: 0
