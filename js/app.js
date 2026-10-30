@@ -14,7 +14,7 @@ import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
 import { loadDividas, preloadDividas } from "./dividas/boot.js";
 import { restoreStartupCache } from "./dividas/local-cache.js";
 import { registerNavigation, setupQuickAccess } from "./navigation.js";
-import { mountUberViews, bindUberEvents, renderUber } from "./uber/uber.js?v=20261030-uber-rules";
+import { mountUberViews, bindUberEvents, renderUber } from "./uber/uber.js?v=20261030-uber-income";
 
 mountUberViews();
 boot();
