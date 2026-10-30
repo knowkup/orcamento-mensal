@@ -151,7 +151,6 @@ function pace(key = monthKey()) {
 function goalTotals() { const costs = config().goals.reduce((n, item) => n + Number(item.amount || 0), 0), stable = costs + Number(config().withdrawal || 0); return { survival: costs, stable, comfort: stable + Number(config().comfort || 0) }; }
 
 export function rollbackBudgetIntegration() {
-  if (uber().budgetIntegrationRolledBack) return false;
   let changed = false;
   const generated = (state.data.incomeLines || []).filter((item) => item.source === "uber-operation" || item.id === "uber-operacao-ganhos");
   if (generated.length) {
@@ -162,12 +161,13 @@ export function rollbackBudgetIntegration() {
     state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((key) => !generatedIds.has(key.split(":")[0]));
     changed = true;
   }
-  const currentMonth = monthKey();
+  // Repara somente o mês afetado pela integração publicada indevidamente.
+  const rollbackMonth = "2026-10";
   const uberSources = [...(state.data.incomeLines || []), ...(state.data.recurringIncomes || [])]
     .filter((item) => `${item.label || ""} ${item.origin || ""}`.toLocaleLowerCase("pt-BR").includes("uber"));
   const completed = new Set(state.data.receivedOccurrences || []);
   uberSources.forEach((item) => {
-    const key = `${item.id}:${currentMonth}`;
+    const key = `${item.id}:${rollbackMonth}`;
     const hasReceipt = (state.data.receivedPayments?.[key] || []).length > 0 || Number(state.data.receivedAmounts?.[key] || 0) > 0;
     if (hasReceipt && !completed.has(key)) { completed.add(key); changed = true; }
   });
