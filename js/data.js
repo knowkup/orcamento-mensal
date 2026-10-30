@@ -14,6 +14,22 @@ export function createDefaultData() {
     initialBalance: 0,
     accountBalance: 0,
     debtCommitmentLimit: null,
+    quickAccess: [],
+    uber: {
+      schemaVersion: 1,
+      config: {
+        vehicleType: "combustion",
+        workDays: [],
+        workHolidays: false,
+        daysOff: [],
+        extraWorkDays: [],
+        goals: [],
+        withdrawal: 0,
+        comfort: 0
+      },
+      entries: [],
+      closings: {}
+    },
     paymentMethods: ["PIX", "Débito em conta", "Cartão de crédito", "Boleto"],
     creditors: [],
     creditCards: [],
@@ -168,6 +184,16 @@ export function normalizeData(data) {
   const normalized = {
     ...defaults,
     ...data,
+    quickAccess: Array.isArray(data.quickAccess)
+      ? [...new Set(data.quickAccess.filter((item) => typeof item === "string" && item))]
+      : defaults.quickAccess,
+    uber: {
+      ...defaults.uber,
+      ...(data.uber || {}),
+      config: { ...defaults.uber.config, ...(data.uber?.config || {}) },
+      entries: Array.isArray(data.uber?.entries) ? data.uber.entries : [],
+      closings: data.uber?.closings && typeof data.uber.closings === "object" ? data.uber.closings : {}
+    },
     creditors,
     creditCards,
     paymentMethods: data.paymentMethods?.length ? data.paymentMethods : defaults.paymentMethods,

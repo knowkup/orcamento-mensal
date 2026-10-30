@@ -22,6 +22,10 @@
         </div>
 
         <nav class="nav-tabs" aria-label="Seções">
+          <div class="quick-access-group" id="quickAccessGroup" hidden>
+            <p class="nav-group-label">Acesso rápido</p>
+            <div id="quickAccessItems"></div>
+          </div>
           <p class="nav-group-label">Orçamento</p>
           <button class="nav-tab active" type="button" data-view="planejamento">
             <i data-lucide="chart-column"></i>
@@ -73,6 +77,15 @@
             <i data-lucide="refresh-ccw"></i>
             <span>Renegociação</span>
           </button>
+
+          <p class="nav-group-label">Uber</p>
+          <button class="nav-tab" type="button" data-view="uberinicio"><i data-lucide="circle-dollar-sign"></i><span>Início</span></button>
+          <button class="nav-tab" type="button" data-view="uberdashboard"><i data-lucide="chart-no-axes-combined"></i><span>Dashboard</span></button>
+          <button class="nav-tab" type="button" data-view="ubercombustivel"><i data-lucide="fuel"></i><span>Combustível</span></button>
+          <button class="nav-tab" type="button" data-view="uberlancamentos"><i data-lucide="list"></i><span>Lançamentos</span></button>
+          <button class="nav-tab" type="button" data-view="uberhistorico"><i data-lucide="calendar-days"></i><span>Histórico</span></button>
+          <button class="nav-tab" type="button" data-view="ubersimulacao"><i data-lucide="sparkles"></i><span>Simulação</span></button>
+          <button class="nav-tab" type="button" data-view="uberconfig"><i data-lucide="settings-2"></i><span>Configurações</span></button>
 
           <p class="nav-group-label">Sistema</p>
           <button class="nav-tab" type="button" data-view="ajustes">
@@ -1252,6 +1265,14 @@
         <button class="mais-item" type="button" data-view="divespera"><i data-lucide="pause-circle"></i><span>Em Espera</span></button>
         <button class="mais-item" type="button" data-view="divquitadas"><i data-lucide="check-circle"></i><span>Quitadas</span></button>
         <button class="mais-item" type="button" data-view="divrenegociacao"><i data-lucide="refresh-ccw"></i><span>Renegociação</span></button>
+        <p class="mais-group-label">Uber</p>
+        <button class="mais-item" type="button" data-view="uberinicio"><i data-lucide="circle-dollar-sign"></i><span>Início</span></button>
+        <button class="mais-item" type="button" data-view="uberdashboard"><i data-lucide="chart-no-axes-combined"></i><span>Dashboard</span></button>
+        <button class="mais-item" type="button" data-view="ubercombustivel"><i data-lucide="fuel"></i><span>Combustível</span></button>
+        <button class="mais-item" type="button" data-view="uberlancamentos"><i data-lucide="list"></i><span>Lançamentos</span></button>
+        <button class="mais-item" type="button" data-view="uberhistorico"><i data-lucide="calendar-days"></i><span>Histórico</span></button>
+        <button class="mais-item" type="button" data-view="ubersimulacao"><i data-lucide="sparkles"></i><span>Simulação</span></button>
+        <button class="mais-item" type="button" data-view="uberconfig"><i data-lucide="settings-2"></i><span>Configurações</span></button>
         <p class="mais-group-label">Sistema</p>
         <button class="mais-item" type="button" data-view="ajustes"><i data-lucide="settings"></i><span>Configurações</span></button>
       </div>

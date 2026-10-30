@@ -13,8 +13,10 @@ import { renderSettings, renderOrigins, renderCreditCards, renderRecurringIncome
 import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
 import { loadDividas, preloadDividas } from "./dividas/boot.js";
 import { restoreStartupCache } from "./dividas/local-cache.js";
-import { registerNavigation } from "./navigation.js";
+import { registerNavigation, setupQuickAccess } from "./navigation.js";
+import { mountUberViews, bindUberEvents, renderUber } from "./uber/uber.js";
 
+mountUberViews();
 boot();
 
 async function boot() {
@@ -36,7 +38,9 @@ async function boot() {
 
 function bindEvents() {
   registerNavigation(showView);
+  setupQuickAccess(showView);
   el.navTabs.forEach((button) => on(button, "click", () => showView(button.dataset.view)));
+  bindUberEvents(showView);
   const menuBtn = document.getElementById("topbarMenuButton");
   const dropdown = document.getElementById("topbarDropdown");
   if (menuBtn && dropdown) {
@@ -165,6 +169,9 @@ function closeMoreDrawer(drawer, overlay) {
 
 function showView(name) {
   el.navTabs.forEach((tab) => tab.classList.toggle("active", tab.dataset.view === name));
+  document.querySelectorAll("#quickAccessItems .nav-tab").forEach((tab) => {
+    tab.classList.toggle("active", tab.dataset.quickView === name);
+  });
   el.views.forEach((view) => {
     const active = view.id === `${name}View`;
     view.classList.toggle("active", active);
@@ -184,9 +191,11 @@ function showView(name) {
   if (maisBtn) maisBtn.classList.toggle("active", !bottomPrimary.includes(name));
   renderView(name);
   refreshIcons();
+  window.scrollTo(0, 0);
 }
 
 function renderCurrentView() {
+  state.renderQuickAccessFn?.();
   const activeView = document.querySelector(".view.active");
   renderView(activeView?.id?.replace(/View$/, "") || "planejamento");
 }
@@ -206,6 +215,13 @@ function renderView(name) {
     carro: renderCar,
     fgts: renderFgts,
     ferias: renderFerias,
+    uberinicio: () => renderUber("uberinicio"),
+    uberdashboard: () => renderUber("uberdashboard"),
+    ubercombustivel: () => renderUber("ubercombustivel"),
+    uberlancamentos: () => renderUber("uberlancamentos"),
+    uberhistorico: () => renderUber("uberhistorico"),
+    ubersimulacao: () => renderUber("ubersimulacao"),
+    uberconfig: () => renderUber("uberconfig"),
     ajustes() {
       renderOrigins();
       renderCreditCards();
