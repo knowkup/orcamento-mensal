@@ -153,12 +153,33 @@ function goalTotals() { const costs = config().goals.reduce((n, item) => n + Num
 function syncUberIncome(month) {
   if (!month) return;
   state.data.incomeLines ||= [];
-  const id = "uber-operacao-ganhos";
-  let line = state.data.incomeLines.find((item) => item.id === id || item.source === "uber-operation");
   const amount = stats(month).gains;
-  if (!line && !amount) return;
-  const existed = Boolean(line);
-  const previous = Number(line?.values?.[month] || 0);
+  const id = "uber-operacao-ganhos";
+  const matchesUber = (item) => `${item.label || ""} ${item.origin || ""}`.toLocaleLowerCase("pt-BR").includes("uber");
+  const existing = [...state.data.incomeLines.filter((item) => item.id !== id && item.source !== "uber-operation"), ...(state.data.recurringIncomes || [])].find(matchesUber);
+  const generated = state.data.incomeLines.find((item) => item.id === id || item.source === "uber-operation");
+  let changed = false;
+
+  if (existing) {
+    if (generated) {
+      state.data.incomeLines = state.data.incomeLines.filter((item) => item !== generated);
+      changed = true;
+    }
+    const key = `${existing.id}:${month}`;
+    const receipts = state.data.receivedPayments ||= {};
+    const previous = Array.isArray(receipts[key])
+      ? receipts[key].reduce((total, receipt) => total + Number(receipt.amount || 0), 0)
+      : Number(state.data.receivedAmounts?.[key] || 0);
+    if (previous !== amount) {
+      receipts[key] = amount ? [{ amount, date: isoToday(), source: "uber-operation" }] : [];
+      changed = true;
+    }
+    return changed;
+  }
+
+  let line = generated;
+  if (!line && !amount) return false;
+  const existed = Boolean(line), previous = Number(line?.values?.[month] || 0);
   if (!line) {
     line = { id, label: "Ganhos Uber", origin: "Uber", creditorId: "", owner: "Felipe", date: `${month}-01`, values: {}, source: "uber-operation" };
     state.data.incomeLines.push(line);
@@ -170,7 +191,13 @@ function syncUberIncome(month) {
   line.label = "Ganhos Uber";
   line.origin = "Uber";
   line.source = "uber-operation";
-  return !existed || previous !== amount;
+  const key = `${line.id}:${month}`;
+  state.data.receivedPayments ||= {};
+  const previousReceived = Array.isArray(state.data.receivedPayments[key])
+    ? state.data.receivedPayments[key].reduce((total, receipt) => total + Number(receipt.amount || 0), 0)
+    : Number(state.data.receivedAmounts?.[key] || 0);
+  if (previousReceived !== amount) state.data.receivedPayments[key] = amount ? [{ amount, date: isoToday(), source: "uber-operation" }] : [];
+  return !existed || previous !== amount || previousReceived !== amount;
 }
 
 function syncAllUberIncome() {
