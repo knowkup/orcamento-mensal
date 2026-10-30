@@ -14,7 +14,7 @@ import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
 import { loadDividas, preloadDividas } from "./dividas/boot.js";
 import { restoreStartupCache } from "./dividas/local-cache.js";
 import { registerNavigation, setupQuickAccess } from "./navigation.js";
-import { mountUberViews, bindUberEvents, renderUber } from "./uber/uber.js?v=20261030-uber-isolado";
+import { mountUberViews, bindUberEvents, renderUber, rollbackBudgetIntegration } from "./uber/uber.js?v=20261030-uber-isolado-2";
 
 mountUberViews();
 boot();
@@ -34,6 +34,7 @@ async function boot() {
   hydrateForms();
   renderCurrentView();
   await setupFirebase(firebaseConfig, isFirebaseConfigured);
+  if (rollbackBudgetIntegration()) await state.saveStateFn?.("Integração Uber removida do orçamento mensal.");
 }
 
 function bindEvents() {

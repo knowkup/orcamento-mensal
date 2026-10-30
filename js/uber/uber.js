@@ -150,7 +150,7 @@ function pace(key = monthKey()) {
 }
 function goalTotals() { const costs = config().goals.reduce((n, item) => n + Number(item.amount || 0), 0), stable = costs + Number(config().withdrawal || 0); return { survival: costs, stable, comfort: stable + Number(config().comfort || 0) }; }
 
-function rollbackBudgetIntegration() {
+export function rollbackBudgetIntegration() {
   if (uber().budgetIntegrationRolledBack) return false;
   let changed = false;
   const generated = (state.data.incomeLines || []).filter((item) => item.source === "uber-operation" || item.id === "uber-operacao-ganhos");
