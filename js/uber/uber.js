@@ -5,7 +5,7 @@ const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Jul
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let recentExpanded = false;
-let persistingIncomeSync = false;
+let persistingRollback = false;
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const monthKey = (date = isoToday()) => String(date).slice(0, 7);
@@ -150,67 +150,38 @@ function pace(key = monthKey()) {
 }
 function goalTotals() { const costs = config().goals.reduce((n, item) => n + Number(item.amount || 0), 0), stable = costs + Number(config().withdrawal || 0); return { survival: costs, stable, comfort: stable + Number(config().comfort || 0) }; }
 
-function syncUberIncome(month) {
-  if (!month) return;
-  state.data.incomeLines ||= [];
-  const amount = stats(month).gains;
-  const id = "uber-operacao-ganhos";
-  const matchesUber = (item) => `${item.label || ""} ${item.origin || ""}`.toLocaleLowerCase("pt-BR").includes("uber");
-  const existing = [...state.data.incomeLines.filter((item) => item.id !== id && item.source !== "uber-operation"), ...(state.data.recurringIncomes || [])].find(matchesUber);
-  const generated = state.data.incomeLines.find((item) => item.id === id || item.source === "uber-operation");
+function rollbackBudgetIntegration() {
+  if (uber().budgetIntegrationRolledBack) return false;
   let changed = false;
-
-  if (existing) {
-    if (generated) {
-      state.data.incomeLines = state.data.incomeLines.filter((item) => item !== generated);
-      changed = true;
-    }
-    const key = `${existing.id}:${month}`;
-    const receipts = state.data.receivedPayments ||= {};
-    const previous = Array.isArray(receipts[key])
-      ? receipts[key].reduce((total, receipt) => total + Number(receipt.amount || 0), 0)
-      : Number(state.data.receivedAmounts?.[key] || 0);
-    if (previous !== amount) {
-      receipts[key] = amount ? [{ amount, date: isoToday(), source: "uber-operation" }] : [];
-      changed = true;
-    }
-    return changed;
+  const generated = (state.data.incomeLines || []).filter((item) => item.source === "uber-operation" || item.id === "uber-operacao-ganhos");
+  if (generated.length) {
+    const generatedIds = new Set(generated.map((item) => item.id));
+    state.data.incomeLines = state.data.incomeLines.filter((item) => !generatedIds.has(item.id));
+    Object.keys(state.data.receivedPayments || {}).filter((key) => generatedIds.has(key.split(":")[0])).forEach((key) => delete state.data.receivedPayments[key]);
+    Object.keys(state.data.receivedAmounts || {}).filter((key) => generatedIds.has(key.split(":")[0])).forEach((key) => delete state.data.receivedAmounts[key]);
+    state.data.receivedOccurrences = (state.data.receivedOccurrences || []).filter((key) => !generatedIds.has(key.split(":")[0]));
+    changed = true;
   }
-
-  let line = generated;
-  if (!line && !amount) return false;
-  const existed = Boolean(line), previous = Number(line?.values?.[month] || 0);
-  if (!line) {
-    line = { id, label: "Ganhos Uber", origin: "Uber", creditorId: "", owner: "Felipe", date: `${month}-01`, values: {}, source: "uber-operation" };
-    state.data.incomeLines.push(line);
-  }
-  line.values ||= {};
-  if (amount) line.values[month] = amount;
-  else delete line.values[month];
-  line.date ||= `${month}-01`;
-  line.label = "Ganhos Uber";
-  line.origin = "Uber";
-  line.source = "uber-operation";
-  const key = `${line.id}:${month}`;
-  state.data.receivedPayments ||= {};
-  const previousReceived = Array.isArray(state.data.receivedPayments[key])
-    ? state.data.receivedPayments[key].reduce((total, receipt) => total + Number(receipt.amount || 0), 0)
-    : Number(state.data.receivedAmounts?.[key] || 0);
-  if (previousReceived !== amount) state.data.receivedPayments[key] = amount ? [{ amount, date: isoToday(), source: "uber-operation" }] : [];
-  return !existed || previous !== amount || previousReceived !== amount;
-}
-
-function syncAllUberIncome() {
-  const months = new Set(uber().entries.filter((item) => item.type === "gain" && item.date).map((item) => monthKey(item.date)));
-  return [...months].map((month) => syncUberIncome(month)).some(Boolean);
+  const currentMonth = monthKey();
+  const uberSources = [...(state.data.incomeLines || []), ...(state.data.recurringIncomes || [])]
+    .filter((item) => `${item.label || ""} ${item.origin || ""}`.toLocaleLowerCase("pt-BR").includes("uber"));
+  const completed = new Set(state.data.receivedOccurrences || []);
+  uberSources.forEach((item) => {
+    const key = `${item.id}:${currentMonth}`;
+    const hasReceipt = (state.data.receivedPayments?.[key] || []).length > 0 || Number(state.data.receivedAmounts?.[key] || 0) > 0;
+    if (hasReceipt && !completed.has(key)) { completed.add(key); changed = true; }
+  });
+  state.data.receivedOccurrences = [...completed];
+  uber().budgetIntegrationRolledBack = true;
+  return changed;
 }
 
 export function renderUber(view) {
   if (!document.querySelector("#uberinicioView")) return;
   syncAutomaticDays();
-  if (syncAllUberIncome() && !persistingIncomeSync) {
-    persistingIncomeSync = true;
-    Promise.resolve(state.saveStateFn?.("Ganhos Uber integrados ao orçamento mensal.")).finally(() => { persistingIncomeSync = false; });
+  if (rollbackBudgetIntegration() && !persistingRollback) {
+    persistingRollback = true;
+    Promise.resolve(state.saveStateFn?.("Integração Uber removida do orçamento mensal.")).finally(() => { persistingRollback = false; });
   }
   const data = stats(), forecast = pace(), goals = goalTotals();
   document.querySelectorAll(".uber-energy-label").forEach((item) => { item.textContent = energyLabel(); });
@@ -259,14 +230,14 @@ function emptyRow(cols, message) { return `<tr><td colspan="${cols}" class="empt
 function typeLabel(type) { return ({ gain: "Ganho", fuel: energyLabel(), expense: "Despesa", km: "Atualização de KM" })[type] || type; }
 function formatDate(date) { return date ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${date}T12:00:00`)) : "—"; }
 async function save(message) { await state.saveStateFn?.(message); renderUber(document.querySelector(".view.active")?.id.replace(/View$/, "")); }
-async function saveEntry(event) { event.preventDefault(); const form = event.currentTarget, type = form.elements.type.value, amount = parseCurrencyInput(form.elements.amount.value); const entry = { id: crypto.randomUUID(), date: form.elements.date.value, type, description: String(form.elements.description.value || "").trim() || (type === "gain" ? "Ganhos Uber" : type === "fuel" ? energyLabel() : ""), amount: type === "km" ? 0 : Math.abs(amount), quantity: Number(form.elements.quantity.value || 0), km: Number(form.elements.km.value || 0) }; if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity) || ((type === "gain" || type === "fuel" || type === "km") && !entry.km)) return showToast("Preencha valor e KM atual para este lançamento.", "error"); uber().entries.push(entry); if (type === "gain") syncUberIncome(monthKey(entry.date)); form.reset(); form.elements.date.value = isoToday(); selectType("gain"); await save("Lançamento Uber salvo."); }
+async function saveEntry(event) { event.preventDefault(); const form = event.currentTarget, type = form.elements.type.value, amount = parseCurrencyInput(form.elements.amount.value); const entry = { id: crypto.randomUUID(), date: form.elements.date.value, type, description: String(form.elements.description.value || "").trim() || (type === "gain" ? "Ganhos Uber" : type === "fuel" ? energyLabel() : ""), amount: type === "km" ? 0 : Math.abs(amount), quantity: Number(form.elements.quantity.value || 0), km: Number(form.elements.km.value || 0) }; if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity) || ((type === "gain" || type === "fuel" || type === "km") && !entry.km)) return showToast("Preencha valor e KM atual para este lançamento.", "error"); uber().entries.push(entry); form.reset(); form.elements.date.value = isoToday(); selectType("gain"); await save("Lançamento Uber salvo."); }
 async function saveConfig(event) { event.preventDefault(); config().vehicleType = event.currentTarget.elements.vehicleType.value; await save("Veículo atualizado."); }
 async function toggleWeekday(day) { const days = new Set(config().workDays); days.has(day) ? days.delete(day) : days.add(day); config().workDays = [...days].sort((a, b) => a - b); syncAutomaticDays(); await save("Rotina de trabalho atualizada."); }
 async function toggleDate(key) { const [year, month, day] = key.split("-").map(Number), date = new Date(year, month - 1, day), wasWorking = workDay(date), base = baseWorkDay(date); config().daysOff = config().daysOff.filter((item) => item !== key); config().extraWorkDays = config().extraWorkDays.filter((item) => item !== key); config().autoDaysOff = config().autoDaysOff.filter((item) => item !== key); if (!wasWorking && !base) config().extraWorkDays.push(key); else if (wasWorking && base) config().daysOff.push(key); await save("Exceção de rotina atualizada."); }
 async function addGoal(event) { event.preventDefault(); const form = event.currentTarget, name = String(form.elements.name.value || "").trim(), amount = parseCurrencyInput(form.elements.amount.value); if (!name || !amount) return showToast("Informe custo e valor.", "error"); config().goals.push({ id: crypto.randomUUID(), name, amount }); form.reset(); await save("Custo Uber adicionado."); }
 async function saveTargets(event) { event.preventDefault(); const form = event.currentTarget; config().withdrawal = parseCurrencyInput(form.elements.withdrawal.value); config().comfort = parseCurrencyInput(form.elements.comfort.value); await save("Metas Uber atualizadas."); }
-async function deleteEntry(id) { const entry = uber().entries.find((item) => item.id === id); uber().entries = uber().entries.filter((item) => item.id !== id); if (entry?.type === "gain") syncUberIncome(monthKey(entry.date)); await save("Lançamento Uber excluído."); }
+async function deleteEntry(id) { uber().entries = uber().entries.filter((item) => item.id !== id); await save("Lançamento Uber excluído."); }
 async function deleteGoal(id) { config().goals = config().goals.filter((item) => item.id !== id); await save("Custo Uber excluído."); }
 async function closeMonth() { const key = monthKey(); uber().closings[key] = { ...stats(key), closedAt: new Date().toISOString() }; await save("Mês Uber fechado."); }
 function simulate(event) { event?.preventDefault(); const form = document.querySelector("#uberSimulationForm"), days = Number(form.elements.days.value || 0), daily = parseCurrencyInput(form.elements.daily.value), costs = parseCurrencyInput(form.elements.costs.value); document.querySelector("#uberSimulationKpis").innerHTML = kpis([["Faturamento projetado", money(days * daily), `${days} dias × ${money(daily)}`], ["Custos previstos", money(costs), "cenário informado"], ["Sobra projetada", money(days * daily - costs), "após custos"]]); }
-async function importBackup(event) { const file = event.target.files?.[0]; if (!file) return; try { const raw = JSON.parse(await file.text()), source = Array.isArray(raw) ? { dados: raw } : raw; const imported = (source.dados || []).map((item) => ({ id: String(item.id || crypto.randomUUID()), date: item.data, type: ({ ganho: "gain", gasolina: "fuel", despesas: "expense", km: "km", credito: "gain", debito: "expense" })[item.tipo] || "expense", description: item.descricao || "", amount: Math.abs(Number(item.valor || 0)), quantity: Number(item.litros || 0), km: Number(item.km || 0) })).filter((item) => item.date); const byId = new Map(uber().entries.map((item) => [item.id, item])); imported.forEach((item) => byId.set(item.id, item)); uber().entries = [...byId.values()]; [...new Set(imported.filter((item) => item.type === "gain").map((item) => monthKey(item.date)))].forEach(syncUberIncome); const sourceConfig = source.config || {}; uber().config = { ...config(), vehicleType: sourceConfig.tipoVeiculo === "eletrico" ? "electric" : config().vehicleType, workDays: (sourceConfig.diasSemana || config().workDays).map((day) => Number(day) % 7), workHolidays: !!sourceConfig.trabalhoEmFeriados, daysOff: sourceConfig.diasFolgaExtra || config().daysOff, extraWorkDays: sourceConfig.diasTrabalhoExtra || config().extraWorkDays, autoDaysOff: sourceConfig.diasFolgaAutomatica || config().autoDaysOff, withdrawal: Number(sourceConfig.retiradaDesejada || config().withdrawal || 0), comfort: Number(sourceConfig.confortoDesejado || config().comfort || 0), goals: (sourceConfig.metas || config().goals).map((goal) => ({ id: String(goal.id || crypto.randomUUID()), name: goal.nome || goal.name, amount: Number(goal.valor || goal.amount || 0) })) }; await save(`${imported.length} lançamento(s) do Controle Uber importado(s).`); } catch { showToast("Não foi possível ler esse backup do Controle Uber.", "error"); } finally { event.target.value = ""; } }
+async function importBackup(event) { const file = event.target.files?.[0]; if (!file) return; try { const raw = JSON.parse(await file.text()), source = Array.isArray(raw) ? { dados: raw } : raw; const imported = (source.dados || []).map((item) => ({ id: String(item.id || crypto.randomUUID()), date: item.data, type: ({ ganho: "gain", gasolina: "fuel", despesas: "expense", km: "km", credito: "gain", debito: "expense" })[item.tipo] || "expense", description: item.descricao || "", amount: Math.abs(Number(item.valor || 0)), quantity: Number(item.litros || 0), km: Number(item.km || 0) })).filter((item) => item.date); const byId = new Map(uber().entries.map((item) => [item.id, item])); imported.forEach((item) => byId.set(item.id, item)); uber().entries = [...byId.values()]; const sourceConfig = source.config || {}; uber().config = { ...config(), vehicleType: sourceConfig.tipoVeiculo === "eletrico" ? "electric" : config().vehicleType, workDays: (sourceConfig.diasSemana || config().workDays).map((day) => Number(day) % 7), workHolidays: !!sourceConfig.trabalhoEmFeriados, daysOff: sourceConfig.diasFolgaExtra || config().daysOff, extraWorkDays: sourceConfig.diasTrabalhoExtra || config().extraWorkDays, autoDaysOff: sourceConfig.diasFolgaAutomatica || config().autoDaysOff, withdrawal: Number(sourceConfig.retiradaDesejada || config().withdrawal || 0), comfort: Number(sourceConfig.confortoDesejado || config().comfort || 0), goals: (sourceConfig.metas || config().goals).map((goal) => ({ id: String(goal.id || crypto.randomUUID()), name: goal.nome || goal.name, amount: Number(goal.valor || goal.amount || 0) })) }; await save(`${imported.length} lançamento(s) do Controle Uber importado(s).`); } catch { showToast("Não foi possível ler esse backup do Controle Uber.", "error"); } finally { event.target.value = ""; } }
