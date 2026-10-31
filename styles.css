@@ -4569,8 +4569,43 @@ select {
   }
 
   #uberinicioView #uberEntryForm input[type="date"] {
+    position: relative;
+    height: 52px;
+    min-height: 52px;
     padding-inline: 10px;
     font-size: 16px;
+    line-height: 1;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background-color: #fff;
+    overflow: hidden;
+  }
+
+  #uberinicioView #uberEntryForm input[type="date"]::-webkit-date-and-time-value,
+  #uberinicioView #uberEntryForm input[type="date"]::-webkit-datetime-edit,
+  #uberinicioView #uberEntryForm input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    display: flex;
+    align-items: center;
+    height: 50px;
+    min-height: 50px;
+    margin: 0;
+    padding: 0;
+  }
+
+  #uberinicioView #uberEntryForm input[type="date"]::-webkit-date-and-time-value {
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+  }
+
+  #uberinicioView #uberEntryForm input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 12px;
+    margin: 0;
+    padding: 0;
+    opacity: .72;
   }
 
   #uberconfigView .uber-goal-form,
