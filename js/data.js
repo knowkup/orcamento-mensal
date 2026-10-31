@@ -29,7 +29,8 @@ export function createDefaultData() {
         comfort: 0
       },
       entries: [],
-      closings: {}
+      closings: {},
+      activeMonth: null
     },
     paymentMethods: ["PIX", "Débito em conta", "Cartão de crédito", "Boleto"],
     creditors: [],
@@ -193,7 +194,8 @@ export function normalizeData(data) {
       ...(data.uber || {}),
       config: { ...defaults.uber.config, ...(data.uber?.config || {}) },
       entries: Array.isArray(data.uber?.entries) ? data.uber.entries : [],
-      closings: data.uber?.closings && typeof data.uber.closings === "object" ? data.uber.closings : {}
+      closings: data.uber?.closings && typeof data.uber.closings === "object" ? data.uber.closings : {},
+      activeMonth: /^\d{4}-\d{2}$/.test(data.uber?.activeMonth || "") ? data.uber.activeMonth : null
     },
     creditors,
     creditCards,

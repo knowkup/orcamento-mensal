@@ -9,14 +9,26 @@ let persistingRollback = false;
 
 const isoToday = () => new Date().toISOString().slice(0, 10);
 const monthKey = (date = isoToday()) => String(date).slice(0, 7);
+const nextMonthKey = (key) => {
+  const [year, month] = key.split("-").map(Number);
+  const date = new Date(year, month, 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+};
 const monthName = (key) => { const [year, month] = key.split("-"); return `${MONTHS[Number(month) - 1]} de ${year}`; };
 const dateKey = (year, month, day) => `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 const money = (value) => currency.format(Number(value) || 0);
 const uber = () => state.data.uber;
-const entries = (key = monthKey()) => uber().entries.filter((item) => item.date?.startsWith(key));
+// O mês da operação pode avançar antes da virada do calendário. Assim, ao
+// encerrar outubro, novembro começa limpo e outubro continua no histórico.
+const activeMonthKey = () => {
+  const today = monthKey(), configured = uber().activeMonth;
+  if (configured && configured >= today) return configured;
+  return uber().closings?.[today] ? nextMonthKey(today) : today;
+};
+const entryDateForActiveMonth = () => activeMonthKey() === monthKey() ? isoToday() : `${activeMonthKey()}-01`;
+const entries = (key = activeMonthKey()) => uber().entries.filter((item) => item.date?.startsWith(key));
 const energyLabel = () => uber().config.vehicleType === "electric" ? "Recarga" : "Abastecimento";
 const energyUnit = () => uber().config.vehicleType === "electric" ? "kWh" : "L";
-const isCurrentMonth = (key) => key === monthKey();
 
 function config() {
   const value = uber().config;
@@ -58,7 +70,9 @@ function isSpecialDay(date) {
 
 function syncAutomaticDays() {
   const today = new Date();
-  const gains = new Set(entries(monthKey()).filter((item) => item.type === "gain" && Number(item.amount) > 0).map((item) => item.date));
+  // Não marque dias como folga automática no mês que ainda não começou.
+  if (activeMonthKey() !== monthKey()) return false;
+  const gains = new Set(entries(activeMonthKey()).filter((item) => item.type === "gain" && Number(item.amount) > 0).map((item) => item.date));
   const automatic = [];
   for (let day = 1; day < today.getDate(); day++) {
     const date = new Date(today.getFullYear(), today.getMonth(), day), key = dateKey(today.getFullYear(), today.getMonth() + 1, day);
@@ -115,7 +129,7 @@ export function bindUberEvents(showView) {
     else if (action.startsWith("date:")) await toggleDate(action.slice(5));
   });
   selectType("gain");
-  document.querySelector("#uberEntryForm").elements.date.value = isoToday();
+  document.querySelector("#uberEntryForm").elements.date.value = entryDateForActiveMonth();
 }
 
 function selectType(type) {
@@ -128,7 +142,7 @@ function selectType(type) {
   form.querySelector(".uber-km-field").hidden = type === "expense";
 }
 
-function stats(key = monthKey()) {
+function stats(key = activeMonthKey()) {
   const list = entries(key), gains = list.filter((item) => item.type === "gain").reduce((n, item) => n + Number(item.amount || 0), 0);
   const fuel = list.filter((item) => item.type === "fuel"), fuelCost = fuel.reduce((n, item) => n + Number(item.amount || 0), 0);
   const expenses = list.filter((item) => item.type === "expense").reduce((n, item) => n + Number(item.amount || 0), 0);
@@ -137,14 +151,14 @@ function stats(key = monthKey()) {
   return { list, gains, fuelCost, expenses, costs: fuelCost + expenses, quantities, km, days, net: gains - fuelCost - expenses };
 }
 
-function plannedDays(key = monthKey()) { const [year, month] = key.split("-").map(Number), last = new Date(year, month, 0).getDate(); let total = 0; for (let day = 1; day <= last; day++) if (workDay(new Date(year, month - 1, day))) total++; return total; }
-function pace(key = monthKey()) {
+function plannedDays(key = activeMonthKey()) { const [year, month] = key.split("-").map(Number), last = new Date(year, month, 0).getDate(); let total = 0; for (let day = 1; day <= last; day++) if (workDay(new Date(year, month - 1, day))) total++; return total; }
+function pace(key = activeMonthKey()) {
   const byDay = new Map(); entries(key).filter((item) => item.type === "gain").forEach((item) => byDay.set(item.date, (byDay.get(item.date) || 0) + Number(item.amount || 0)));
   let normalTotal = 0, normalDays = 0, specialTotal = 0, specialDays = 0;
   byDay.forEach((value, date) => { if (isSpecialDay(new Date(`${date}T12:00:00`))) { specialTotal += value; specialDays++; } else { normalTotal += value; normalDays++; } });
   const average = byDay.size ? [...byDay.values()].reduce((n, value) => n + value, 0) / byDay.size : 0, normal = normalDays ? normalTotal / normalDays : average, special = specialDays ? specialTotal / specialDays : (normal || average);
   const [year, month] = key.split("-").map(Number), last = new Date(year, month, 0).getDate(); let normalRemaining = 0, specialRemaining = 0;
-  const start = isCurrentMonth(key) ? new Date().getDate() : last + 1;
+  const start = key === monthKey() ? new Date().getDate() : key > monthKey() ? 1 : last + 1;
   for (let day = start; day <= last; day++) { const date = new Date(year, month - 1, day), dateIso = dateKey(year, month, day); if (workDay(date) && !byDay.has(dateIso)) isSpecialDay(date) ? specialRemaining++ : normalRemaining++; }
   return { normal, special, normalDays, specialDays, normalRemaining, specialRemaining, projected: stats(key).gains + (normalRemaining * normal) + (specialRemaining * special), average, remaining: normalRemaining + specialRemaining };
 }
@@ -213,7 +227,7 @@ function renderOperation(data) {
   document.querySelector("#uberFuelRows").innerHTML = fuel.length ? fuel.slice().sort((a, b) => b.date.localeCompare(a.date)).map((item) => `<tr><td data-label="Data">${formatDate(item.date)}</td><td data-label="Quantidade">${Number(item.quantity || 0).toLocaleString("pt-BR")} ${energyUnit()}</td><td data-label="Valor" class="negative">-${money(item.amount)}</td><td data-label="Preço/unidade">${item.quantity ? money(item.amount / item.quantity) : "—"}</td><td data-label="KM">${item.km || "—"}</td></tr>`).join("") : emptyRow(5, `Nenhum lançamento de ${energyLabel().toLowerCase()} neste mês.`);
 }
 function renderHistory() {
-  const currentKey = monthKey(), currentClosed = uber().closings?.[currentKey];
+  const currentKey = activeMonthKey(), currentClosed = uber().closings?.[currentKey];
   const button = document.querySelector("#uberCloseMonthButton");
   const status = document.querySelector("#uberCloseStatus");
   if (button) { button.disabled = Boolean(currentClosed); button.querySelector("span").textContent = currentClosed ? "Mês fechado" : "Fechar mês atual"; }
@@ -238,7 +252,7 @@ function emptyRow(cols, message) { return `<tr><td colspan="${cols}" class="empt
 function typeLabel(type) { return ({ gain: "Ganho", fuel: energyLabel(), expense: "Despesa", km: "Atualização de KM" })[type] || type; }
 function formatDate(date) { return date ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${date}T12:00:00`)) : "—"; }
 async function save(message) { await state.saveStateFn?.(message); renderUber(document.querySelector(".view.active")?.id.replace(/View$/, "")); }
-async function saveEntry(event) { event.preventDefault(); const form = event.currentTarget, type = form.elements.type.value, amount = parseCurrencyInput(form.elements.amount.value); const entry = { id: crypto.randomUUID(), date: form.elements.date.value, type, description: String(form.elements.description.value || "").trim() || (type === "gain" ? "Ganhos Uber" : type === "fuel" ? energyLabel() : ""), amount: type === "km" ? 0 : Math.abs(amount), quantity: Number(form.elements.quantity.value || 0), km: Number(form.elements.km.value || 0) }; if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity) || ((type === "gain" || type === "fuel" || type === "km") && !entry.km)) return showToast("Preencha valor e KM atual para este lançamento.", "error"); uber().entries.push(entry); form.reset(); form.elements.date.value = isoToday(); selectType("gain"); await save("Lançamento Uber salvo."); }
+async function saveEntry(event) { event.preventDefault(); const form = event.currentTarget, type = form.elements.type.value, amount = parseCurrencyInput(form.elements.amount.value); const entry = { id: crypto.randomUUID(), date: form.elements.date.value, type, description: String(form.elements.description.value || "").trim() || (type === "gain" ? "Ganhos Uber" : type === "fuel" ? energyLabel() : ""), amount: type === "km" ? 0 : Math.abs(amount), quantity: Number(form.elements.quantity.value || 0), km: Number(form.elements.km.value || 0) }; if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity) || ((type === "gain" || type === "fuel" || type === "km") && !entry.km)) return showToast("Preencha valor e KM atual para este lançamento.", "error"); uber().entries.push(entry); form.reset(); form.elements.date.value = entryDateForActiveMonth(); selectType("gain"); await save("Lançamento Uber salvo."); }
 async function saveConfig(event) { event.preventDefault(); config().vehicleType = event.currentTarget.elements.vehicleType.value; await save("Veículo atualizado."); }
 async function toggleWeekday(day) { const days = new Set(config().workDays); days.has(day) ? days.delete(day) : days.add(day); config().workDays = [...days].sort((a, b) => a - b); syncAutomaticDays(); await save("Rotina de trabalho atualizada."); }
 async function toggleDate(key) { const [year, month, day] = key.split("-").map(Number), date = new Date(year, month - 1, day), wasWorking = workDay(date), base = baseWorkDay(date); config().daysOff = config().daysOff.filter((item) => item !== key); config().extraWorkDays = config().extraWorkDays.filter((item) => item !== key); config().autoDaysOff = config().autoDaysOff.filter((item) => item !== key); if (!wasWorking && !base) config().extraWorkDays.push(key); else if (wasWorking && base) config().daysOff.push(key); await save("Exceção de rotina atualizada."); }
@@ -247,10 +261,13 @@ async function saveTargets(event) { event.preventDefault(); const form = event.c
 async function deleteEntry(id) { uber().entries = uber().entries.filter((item) => item.id !== id); await save("Lançamento Uber excluído."); }
 async function deleteGoal(id) { config().goals = config().goals.filter((item) => item.id !== id); await save("Custo Uber excluído."); }
 async function closeMonth() {
-  const key = monthKey();
+  const key = activeMonthKey();
   if (uber().closings?.[key]) return showToast("Este mês Uber já está fechado.", "error");
   uber().closings ||= {};
   uber().closings[key] = { ...stats(key), closedAt: new Date().toISOString() };
+  uber().activeMonth = nextMonthKey(key);
+  const form = document.querySelector("#uberEntryForm");
+  if (form) { form.reset(); form.elements.date.value = entryDateForActiveMonth(); selectType("gain"); }
   await state.saveStateFn?.("Mês Uber fechado.");
   renderUber("uberhistorico");
 }
