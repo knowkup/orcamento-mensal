@@ -232,6 +232,38 @@ button:disabled {
 .uber-projection-details article:last-child span { grid-column: 1 / -1; }
 .uber-progress { height: 7px; margin: 12px 0 9px; overflow: hidden; border-radius: 99px; background: rgba(13,32,56,.1); }
 .uber-progress i { display: block; height: 100%; border-radius: inherit; background: var(--green); }
+.uber-rhythm { display: grid; gap: 16px; }
+.uber-rhythm-scale { display: grid; gap: 10px; }
+.uber-rhythm-track { height: 15px; overflow: hidden; border-radius: 999px; background: linear-gradient(90deg, rgba(216,164,65,.18), rgba(63,185,133,.18)); }
+.uber-rhythm-track i { display: block; height: 100%; min-width: 2px; border-radius: inherit; background: linear-gradient(90deg, #18744b, var(--green)); }
+.uber-rhythm-labels { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.uber-rhythm-labels span, .uber-rhythm-summary span { display: block; color: var(--muted); font-size: 12px; }
+.uber-rhythm-labels strong, .uber-rhythm-summary strong { display: block; margin-top: 3px; color: var(--ink); font-size: 13px; }
+.uber-rhythm-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid rgba(63,185,133,.25); border-radius: 12px; background: var(--green-soft); }
+.uber-rhythm-summary strong { color: #18744b; }
+.uber-goal-card { display: grid; align-content: start; gap: 7px; }
+.uber-goal-card strong { margin: 0; }
+.uber-goal-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.uber-goal-card-head span { color: var(--ink); font-weight: 800; }
+.uber-goal-card-head b { color: #18744b; font-size: 12px; }
+.uber-goal-card dl { display: grid; gap: 5px; margin: 0; }
+.uber-goal-card dl div { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; }
+.uber-goal-card dt { color: var(--muted); }
+.uber-goal-card dd { margin: 0; color: var(--ink); font-weight: 700; text-align: right; }
+.uber-goal-action { margin: 5px 0 0; padding-top: 9px; border-top: 1px solid var(--line); color: #18744b; font-size: 11px; font-weight: 700; line-height: 1.4; }
+.uber-composition { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.uber-cost-composition, .uber-composition-total { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); }
+.uber-cost-composition strong, .uber-cost-composition small, .uber-cost-composition span, .uber-composition-total span, .uber-composition-total strong { display: block; }
+.uber-cost-composition small, .uber-composition-total span { margin-top: 3px; color: var(--muted); font-size: 11px; }
+.uber-cost-composition > div:last-child { width: min(54%, 250px); }
+.uber-cost-composition span { font-size: 12px; font-weight: 750; text-align: right; }
+.uber-cost-composition .uber-progress { margin: 7px 0 0; }
+.uber-composition-total { border-color: rgba(63,185,133,.3); background: var(--green-soft); }
+.uber-composition-total strong { color: #18744b; font-size: 18px; }
+.uber-weeks { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.uber-week { padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); }
+.uber-week span, .uber-week small { display: block; color: var(--muted); font-size: 11px; }
+.uber-week strong { display: block; margin: 6px 0 3px; font-size: 18px; }
 .uber-routine { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, .42fr); gap: 22px; align-items: start; }
 .uber-routine-card { padding: 18px; border: 1px solid rgba(63,185,133,.24); border-radius: 15px; background: linear-gradient(135deg, #f9fdf9, #f3faf5); }
 .uber-routine-card h3 { margin: 0 0 6px; font-size: 16px; }
@@ -260,6 +292,34 @@ button:disabled {
 .uber-close-status { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
 .uber-history-card.is-closed { border-color: rgba(63, 185, 133, .36); background: linear-gradient(135deg, #f4fcf7, var(--surface-soft)); }
 .uber-history-card.is-closed > span { color: #18744b; font-weight: 750; }
+.uber-history-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 4px 0 18px; }
+.uber-history-summary article { padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); }
+.uber-history-summary span, .uber-history-summary strong { display: block; }
+.uber-history-summary span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+.uber-history-summary strong { margin-top: 5px; font-size: 17px; }
+.uber-history-detailed { grid-template-columns: 1fr; }
+.uber-history-detail { padding: 18px; }
+.uber-history-detail header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.uber-history-detail header span { color: var(--ink); font-weight: 800; }
+.uber-history-detail header small { margin-top: 3px; }
+.uber-history-tier { margin: 11px 0 0; color: var(--muted); font-size: 13px; }
+.uber-history-tier b { color: #18744b; }
+.uber-history-result { margin: 15px 0; padding: 14px; border-radius: 12px; background: rgba(255,255,255,.72); }
+.uber-history-result span, .uber-history-result strong, .uber-history-result small { display: block; }
+.uber-history-result span, .uber-history-result small { color: var(--muted); font-size: 11px; }
+.uber-history-result strong { margin: 4px 0; font-size: 25px; }
+.uber-history-progress { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.uber-history-progress span { display: grid; gap: 3px; padding: 9px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); font-size: 11px; }
+.uber-history-progress b { color: var(--ink); }
+.uber-history-progress em { color: #18744b; font-style: normal; font-weight: 800; }
+.uber-history-metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-top: 14px; }
+.uber-history-metrics > span { display: grid; gap: 3px; padding: 10px; border-radius: 10px; background: rgba(13,32,56,.035); font-size: 14px; font-weight: 800; }
+.uber-history-metrics b, .uber-history-metrics small { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.uber-history-metrics small { text-transform: none; letter-spacing: 0; }
+.uber-history-costs { display: grid; gap: 7px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.uber-history-costs > b { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+.uber-history-costs span { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 12px; }
+.uber-history-costs b { color: var(--ink); }
 /* O módulo Uber é usado diariamente no celular: os controles precisam manter
    área de toque, valor legível e nenhum estouro lateral. */
 #uberinicioView input, #ubersimulacaoView input, #uberconfigView input, #uberconfigView select { min-width: 0; min-height: 48px; font-size: 16px; }
@@ -268,6 +328,9 @@ button:disabled {
 @media (max-width: 820px) {
   .workspace { padding: 16px 14px 92px; }
   .uber-projection, .uber-routine, .uber-target-form { grid-template-columns: 1fr; }
+  .uber-composition { grid-template-columns: 1fr; }
+  .uber-rhythm-labels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uber-history-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .uber-projection { gap: 16px; }
   #uberoperacaoView .finance-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .uber-entry-card { align-items: flex-start; gap: 9px; }
@@ -303,6 +366,13 @@ button:disabled {
   .uber-projection { padding: 18px; }
   .uber-projection-main > strong { font-size: 34px; }
   .uber-projection-details article { padding: 12px; }
+  .uber-rhythm-summary { display: grid; }
+  .uber-cost-composition { align-items: flex-start; flex-direction: column; }
+  .uber-cost-composition > div:last-child { width: 100%; }
+  .uber-history-summary, .uber-history-progress { grid-template-columns: 1fr; }
+  .uber-history-detail { padding: 14px; }
+  .uber-history-detail header { display: grid; }
+  .uber-history-detail header .small-button { width: 100%; }
   .uber-goal-card, .uber-history-card { padding: 15px; }
   .uber-routine-card { padding: 13px; }
   .uber-weekdays { gap: 3px; }
