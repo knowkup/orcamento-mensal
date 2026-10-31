@@ -4535,6 +4535,69 @@ select {
   }
 }
 
+/* Uber — campos críticos no iPhone. Regras finais para não receberem a grade
+   compacta de formulários globais do Orçamento. */
+@media (max-width: 760px) {
+  #uberinicioView #uberEntryForm,
+  #uberinicioView #uberEntryForm .uber-form-grid,
+  #uberconfigView .uber-goal-form,
+  #uberconfigView .uber-target-form,
+  #uberconfigView .uber-vehicle-form {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  #uberinicioView #uberEntryForm .uber-form-grid > label,
+  #uberconfigView .uber-goal-form > label,
+  #uberconfigView .uber-target-form > label,
+  #uberconfigView .uber-vehicle-form > label {
+    overflow: hidden;
+  }
+
+  #uberinicioView #uberEntryForm input,
+  #uberinicioView #uberEntryForm select,
+  #uberconfigView .uber-goal-form input,
+  #uberconfigView .uber-target-form input,
+  #uberconfigView .uber-vehicle-form select {
+    display: block;
+    box-sizing: border-box;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0;
+    min-height: 52px;
+  }
+
+  #uberinicioView #uberEntryForm input[type="date"] {
+    padding-inline: 10px;
+    font-size: 16px;
+  }
+
+  #uberconfigView .uber-goal-form,
+  #uberconfigView .uber-target-form,
+  #uberconfigView .uber-vehicle-form {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 14px;
+  }
+
+  #uberconfigView .uber-goal-form > *,
+  #uberconfigView .uber-target-form > *,
+  #uberconfigView .uber-vehicle-form > * {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  #uberconfigView .uber-goal-form button,
+  #uberconfigView .uber-target-form button,
+  #uberconfigView .uber-vehicle-form button {
+    min-height: 52px;
+    padding-inline: 14px;
+    white-space: normal;
+  }
+}
+
 /* Uber — lançamento diário no iPhone
    Esta regra fica no fim do arquivo para não ser anulada pelas grades genéricas
    dos formulários do orçamento. Cada informação recebe sua própria linha. */
