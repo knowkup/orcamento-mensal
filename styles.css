@@ -4464,3 +4464,40 @@ select {
     font-size: 12px;
   }
 }
+
+/* Uber — lançamento diário no iPhone
+   Esta regra fica no fim do arquivo para não ser anulada pelas grades genéricas
+   dos formulários do orçamento. Cada informação recebe sua própria linha. */
+@media (max-width: 760px) {
+  #uberinicioView #uberEntryForm .uber-form-grid {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-auto-flow: row;
+    gap: 14px;
+    width: 100%;
+  }
+
+  #uberinicioView #uberEntryForm .uber-form-grid > label,
+  #uberinicioView #uberEntryForm .uber-form-grid .uber-value-field,
+  #uberinicioView #uberEntryForm .uber-form-grid .uber-km-field,
+  #uberinicioView #uberEntryForm .uber-form-grid .uber-quantity-field,
+  #uberinicioView #uberEntryForm .uber-form-grid .uber-description-field {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    min-width: 0;
+  }
+
+  #uberinicioView #uberEntryForm .uber-form-grid input {
+    box-sizing: border-box;
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0;
+    color: var(--ink);
+    opacity: 1;
+    text-align: left;
+  }
+
+  #uberinicioView #uberEntryForm .uber-form-grid input[type="date"] {
+    font-size: 16px;
+  }
+}
