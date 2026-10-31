@@ -257,9 +257,67 @@ button:disabled {
 .uber-calendar-empty { visibility: hidden; }
 .uber-vehicle-form { align-content: start; grid-template-columns: 1fr; }
 .uber-target-form { grid-template-columns: repeat(2, minmax(0, 1fr)) auto; align-items: end; }
+.uber-close-status { margin: 6px 0 0; color: var(--muted); font-size: 12px; }
+.uber-history-card.is-closed { border-color: rgba(63, 185, 133, .36); background: linear-gradient(135deg, #f4fcf7, var(--surface-soft)); }
+.uber-history-card.is-closed > span { color: #18744b; font-weight: 750; }
+/* O módulo Uber é usado diariamente no celular: os controles precisam manter
+   área de toque, valor legível e nenhum estouro lateral. */
+#uberinicioView input, #ubersimulacaoView input, #uberconfigView input, #uberconfigView select { min-width: 0; min-height: 48px; font-size: 16px; }
+#uberEntryForm .primary-button { width: fit-content; min-width: 240px; }
 @media (max-width: 820px) { .uber-hero { align-items: flex-start; flex-direction: column; } .uber-hero-total { text-align: left; } .uber-form-grid, .uber-simulation-form, .uber-goal-form, .uber-goals, .uber-insights, #uberinicioView .finance-kpis, #uberdashboardView .finance-kpis, #uberoperacaoView .finance-kpis, #ubersimulacaoView .finance-kpis { grid-template-columns: 1fr; } .nav-favorite { opacity: 1; } }
-@media (max-width: 820px) { .uber-projection, .uber-routine, .uber-target-form { grid-template-columns: 1fr; } .uber-projection { gap: 16px; } #uberoperacaoView .finance-kpis { grid-template-columns: 1fr; } .uber-entry-card { align-items: flex-start; gap: 9px; } .uber-entry-card > strong { white-space: nowrap; font-size: 13px; } }
-@media (max-width: 480px) { .uber-hero { padding: 18px; } .uber-hero h2 { font-size: 20px; } .uber-type-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .uber-type { justify-content: center; padding: 0 8px; font-size: 12px; } .uber-calendar button, .uber-calendar-empty { min-height: 40px; } .uber-calendar button small { font-size: 7px; } .uber-weekdays { gap: 3px; } .uber-weekdays button { font-size: 11px; } }
+@media (max-width: 820px) {
+  .workspace { padding: 16px 14px 92px; }
+  .uber-projection, .uber-routine, .uber-target-form { grid-template-columns: 1fr; }
+  .uber-projection { gap: 16px; }
+  #uberoperacaoView .finance-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .uber-entry-card { align-items: flex-start; gap: 9px; }
+  .uber-entry-card > strong { white-space: nowrap; font-size: 13px; }
+  .uber-history-heading { align-items: stretch; flex-direction: column; }
+  .uber-history-heading .primary-button { width: 100%; }
+  .uber-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .uber-form-grid .uber-km-field, .uber-form-grid .uber-description-field { grid-column: 1 / -1; }
+  .uber-form-grid label { min-width: 0; }
+  #uberEntryForm .primary-button { width: 100%; min-width: 0; min-height: 50px; }
+}
+@media (max-width: 560px) {
+  .panel.uber-hero { padding: 18px; margin-inline: -2px; }
+  .uber-hero h2 { font-size: 21px; }
+  .uber-hero p:not(.eyebrow) { font-size: 13px; }
+  .uber-hero-total strong { font-size: 25px; }
+  .uber-type-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .uber-type { justify-content: center; min-height: 44px; padding: 0 8px; font-size: 12px; }
+  .uber-form-grid { grid-template-columns: 1fr; gap: 12px; }
+  .uber-form-grid .uber-km-field, .uber-form-grid .uber-description-field { grid-column: auto; }
+  .uber-form-grid label { display: grid; gap: 6px; font-size: 13px; font-weight: 700; }
+  #uberEntryForm input { width: 100%; min-height: 52px; padding: 0 13px; background: #fff; color: var(--ink); font-size: 18px; font-weight: 700; }
+  #uberEntryForm input[type="date"] { font-size: 15px; font-weight: 650; }
+  #uberEntryForm .primary-button { font-size: 15px; }
+  #uberinicioView .finance-kpis, #uberoperacaoView .finance-kpis { grid-template-columns: 1fr 1fr; gap: 9px; }
+  #uberinicioView .finance-kpis .kpi-card, #uberoperacaoView .finance-kpis .kpi-card { min-height: 98px; padding: 13px; }
+  #uberinicioView .finance-kpis .kpi-card strong, #uberoperacaoView .finance-kpis .kpi-card strong { overflow-wrap: anywhere; font-size: 18px; }
+  .uber-entry-card { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; padding: 13px 0; }
+  .uber-entry-card > .icon-only { grid-column: 3; grid-row: 2; justify-self: end; }
+  .uber-entry-card > strong { grid-column: 3; grid-row: 1; align-self: center; }
+  .uber-entry-copy { grid-column: 2; grid-row: 1 / span 2; }
+  .uber-entry-copy span { overflow-wrap: anywhere; line-height: 1.4; }
+  .uber-projection { padding: 18px; }
+  .uber-projection-main > strong { font-size: 34px; }
+  .uber-projection-details article { padding: 12px; }
+  .uber-goal-card, .uber-history-card { padding: 15px; }
+  .uber-routine-card { padding: 13px; }
+  .uber-weekdays { gap: 3px; }
+  .uber-weekdays button { min-height: 38px; font-size: 11px; }
+  .uber-calendar button, .uber-calendar-empty { min-height: 42px; }
+  .uber-calendar button small { font-size: 7px; }
+  .uber-table { min-width: 0; }
+  .uber-table thead { display: none; }
+  .uber-table, .uber-table tbody, .uber-table tr, .uber-table td { display: block; width: 100%; }
+  .uber-table tr { margin-bottom: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  .uber-table td { display: flex; justify-content: space-between; gap: 16px; padding: 6px 0; border: 0; text-align: right; font-size: 13px; }
+  .uber-table td::before { content: attr(data-label); color: var(--muted); font-size: 11px; font-weight: 750; text-align: left; }
+  .uber-table td[colspan] { display: block; text-align: center; }
+  .uber-table td[colspan]::before { display: none; }
+}
 
 .sidebar-actions {
   display: flex;
