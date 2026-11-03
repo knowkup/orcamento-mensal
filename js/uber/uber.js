@@ -138,16 +138,16 @@ export function mountUberViews() {
   if (!target) return;
   target.insertAdjacentHTML("beforebegin", `
     <section class="view" id="uberinicioView" data-title="Uber" data-eyebrow="Operação">
-      <section class="uber-hero panel" aria-label="Resumo da operação"><article class="uber-hero-projection"><p>Faturamento projetado do mês</p><strong id="uberHeroProjected">${money(0)}</strong><small id="uberHeroProjectionCopy">Comece registrando seus ganhos para gerar projeção.</small></article><article><span>Faturamento realizado</span><strong id="uberHeroRealized">${money(0)}</strong></article><article><span>Resultado previsto após custos</span><strong id="uberHeroOutcome">${money(0)}</strong><small id="uberHeroCostCopy">Considerando custos de ${money(0)}</small></article><article><span>Média atual</span><strong class="uber-hero-average"><small>Seg–Sex</small><b id="uberHeroWeekdayAverage">—</b><small>Dia especial</small><b id="uberHeroSpecialAverage">—</b></strong></article></section>
+      <section class="uber-hero panel" aria-label="Resumo da operação"><article class="uber-hero-projection"><p>Faturamento projetado do mês</p><strong id="uberHeroProjected">${money(0)}</strong><small id="uberHeroProjectionCopy">0 dia(s) de trabalho sem ganho</small></article><article><span>Faturamento realizado</span><strong id="uberHeroRealized">${money(0)}</strong></article><article><span>Resultado previsto após custos</span><strong id="uberHeroOutcome">${money(0)}</strong><small id="uberHeroCostCopy">Considerando custos de ${money(0)}</small></article><article><span>Média atual</span><strong class="uber-hero-average"><small>Seg–Sex</small><b id="uberHeroWeekdayAverage">—</b><small>Dia especial</small><b id="uberHeroSpecialAverage">—</b></strong></article></section>
       <section class="panel"><form id="uberEntryForm" class="uber-entry-form"><div class="panel-heading uber-entry-heading"><div><p class="eyebrow">Lançamento diário</p><h2>Registrar Operação</h2></div></div><div class="uber-type-picker"><button type="button" class="uber-type active" data-uber-type="gain"><i data-lucide="arrow-up-circle"></i> Ganho</button><button type="button" class="uber-type" data-uber-type="fuel"><i data-lucide="fuel"></i> <span class="uber-energy-label">Abastecimento</span></button><button type="button" class="uber-type" data-uber-type="expense"><i data-lucide="receipt"></i> Despesa</button><button type="button" class="uber-type" data-uber-type="km"><i data-lucide="gauge"></i> KM</button></div><input type="hidden" name="type" value="gain"><div class="form-grid uber-form-grid"><label>Data<input type="date" name="date" required></label><label class="uber-value-field">Valor<input data-money-input data-money-prefix="R$" type="text" name="amount" inputmode="numeric" placeholder="R$ 0,00"></label><label class="uber-quantity-field" hidden><span class="uber-quantity-label">Litros abastecidos</span><input type="number" name="quantity" inputmode="decimal" step="0.01" min="0"></label><label class="uber-description-field" hidden>Descrição<select name="description"><option>Manutenção</option><option>Lavagem</option><option>Seguro</option><option>Parcela</option><option>Outros</option></select></label><label class="uber-km-field">KM atual <small>opcional</small><input type="number" name="km" inputmode="numeric" min="0"></label></div><button class="primary-button" type="submit"><i data-lucide="plus"></i> Adicionar lançamento</button></form></section>
-      <div class="finance-kpis" id="uberOperationalKpis"></div>
       <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Últimos lançamentos</p><h2>Movimentação recente</h2></div><button class="ghost-button" type="button" data-uber-action="toggle-recent">Ver todos</button></div><div class="uber-list" id="uberRecentEntries"></div></section>
+      <section class="panel uber-month-goals"><div class="panel-heading"><div><p class="eyebrow">Metas do mês</p><h2>Sobrevivência, estabilidade e conforto</h2></div></div><div class="uber-goals uber-goals-refined" id="uberGoalCards"></div></section>
+      <section class="panel uber-composition-panel"><div class="uber-section-title"><span class="uber-section-icon"><i data-lucide="badge-dollar-sign"></i></span><h2>Composição das Metas</h2></div><div class="uber-composition-box"><p>Custos que compõem a sobrevivência</p><div class="uber-composition" id="uberComposition"></div></div></section>
+      <section class="panel uber-weeks-panel"><div class="uber-section-title"><span class="uber-section-icon"><i data-lucide="chart-no-axes-column-increasing"></i></span><h2>Semanas do mês</h2></div><div class="uber-weeks" id="uberWeeks"></div></section>
     </section>
-    <section class="view" id="uberdashboardView" data-title="Dashboard Uber" data-eyebrow="Operação" data-subtitle="Ritmo, metas e previsão de fechamento do mês."><section class="panel uber-projection" id="uberProjection"></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Ritmo do mês</p><h2>Onde a projeção chega</h2></div></div><div class="uber-rhythm" id="uberRhythm"></div></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Metas do mês</p><h2>Sobrevivência, estabilidade e conforto</h2></div></div><div class="uber-goals" id="uberGoalCards"></div></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Composição das metas</p><h2>O que a operação precisa pagar</h2></div></div><div class="uber-composition" id="uberComposition"></div></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Semanas do mês</p><h2>Leitura semanal dos ganhos</h2></div></div><div class="uber-weeks" id="uberWeeks"></div></section></section>
-    <section class="view" id="uberoperacaoView" data-title="Operação do Carro" data-eyebrow="Uber" data-subtitle="Rentabilidade por quilômetro e seus abastecimentos."><div class="finance-kpis" id="uberFuelKpis"></div><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Mês atual</p><h2>Abastecimentos e recargas</h2></div></div><div class="uber-table-wrap"><table class="uber-table"><thead><tr><th>Data</th><th>Quantidade</th><th>Valor</th><th>Preço/unidade</th><th>KM</th></tr></thead><tbody id="uberFuelRows"></tbody></table></div></section></section>
     <section class="view" id="uberhistoricoView" data-title="Histórico Uber" data-eyebrow="Uber"><section class="panel"><div class="panel-heading uber-history-heading"><div><p class="eyebrow">Histórico mensal</p><h2>Evolução da operação</h2><p class="uber-close-status" id="uberCloseStatus"></p></div><button class="primary-button" id="uberCloseMonthButton" type="button" data-uber-action="close-month"><i data-lucide="calendar-check"></i><span>Fechar mês atual</span></button></div><div class="uber-history-summary" id="uberHistorySummary"></div><div class="uber-history uber-history-detailed" id="uberHistoryCards"></div></section></section>
     <section class="view" id="ubersimulacaoView" data-title="Simulação Uber" data-eyebrow="Uber"><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Cenário futuro</p><h2>Simular um mês</h2></div></div><form id="uberSimulationForm" class="form-grid uber-simulation-form"><label>Dias de trabalho<input name="days" type="number" min="0" value="0"></label><label>Média diária<input data-money-input name="daily" type="text" inputmode="numeric" placeholder="0,00"></label><label>Custos previstos<input data-money-input name="costs" type="text" inputmode="numeric" placeholder="0,00"></label><button class="primary-button" type="submit">Calcular cenário</button></form><div class="finance-kpis" id="uberSimulationKpis"></div></section></section>
-    <section class="view" id="uberconfigView" data-title="Regras da Operação" data-eyebrow="Uber" data-subtitle="Defina sua rotina, veículo e as metas que orientam a operação."><div class="vertical-stack"><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Rotina</p><h2>Configurações do mês</h2></div></div><div class="uber-routine"><div class="uber-routine-card"><h3>Rotina de trabalho</h3><p>Escolha seus dias. O calendário considera feriados nacionais e permite exceções.</p><strong id="uberPlannedDays">0 dias planejados</strong><div class="uber-weekdays" id="uberWeekdays"></div><label class="checkbox-field"><input id="uberWorkHolidays" type="checkbox"> Também trabalho nos feriados nacionais</label><div class="uber-calendar-head"><button class="icon-button" type="button" aria-label="Mês anterior" data-uber-action="calendar:-1"><i data-lucide="chevron-left"></i></button><strong id="uberCalendarTitle"></strong><button class="icon-button" type="button" aria-label="Próximo mês" data-uber-action="calendar:1"><i data-lucide="chevron-right"></i></button></div><div class="uber-calendar-weekdays">${WEEKDAYS.map((day) => `<span>${day}</span>`).join("")}</div><div class="uber-calendar" id="uberCalendar"></div><small>Toque em um dia para alternar entre trabalho e folga. Feriados permanecem como folga até você criar uma exceção.</small></div><form id="uberConfigForm" class="form-grid uber-vehicle-form"><label>Tipo de veículo<select name="vehicleType"><option value="combustion">Combustão</option><option value="electric">Elétrico</option></select></label><button class="primary-button" type="submit">Salvar veículo</button></form></div></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Metas</p><h2>Custos, retirada e conforto</h2></div></div><form id="uberGoalForm" class="form-grid uber-goal-form"><label>Nome do custo<input name="name" maxlength="50" placeholder="Ex.: Seguro"></label><label>Valor mensal<input data-money-input name="amount" inputmode="numeric" placeholder="0,00"></label><button class="secondary-button" type="submit">Adicionar custo</button></form><div class="uber-goal-settings" id="uberGoalSettings"></div><form id="uberTargetsForm" class="form-grid uber-target-form"><label>Retirada desejada<input data-money-input name="withdrawal" inputmode="numeric" placeholder="0,00"></label><label>Adicional de conforto<input data-money-input name="comfort" inputmode="numeric" placeholder="0,00"></label><button class="primary-button" type="submit">Salvar metas</button></form></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Migração</p><h2>Dados do Controle Uber</h2><p>Importe um backup JSON do app original. Nada é apagado durante a importação.</p></div></div><input id="uberImportFile" type="file" accept="application/json,.json" hidden><button class="ghost-button" type="button" data-uber-action="import"><i data-lucide="upload"></i> Importar backup do Controle Uber</button></section></div></section>`);
+    <section class="view" id="uberconfigView" data-title="Regras da Operação" data-eyebrow="Uber" data-subtitle="Defina sua rotina, custos e metas da operação."><div class="vertical-stack"><section class="panel uber-settings-panel"><div class="uber-section-title"><span class="uber-section-icon"><i data-lucide="calendar-days"></i></span><h2>Configurações do Mês</h2></div><div class="uber-routine-card"><div class="uber-routine-copy"><div><h3>Rotina de trabalho</h3><p>Escolha os dias em que costuma trabalhar. O calendário considera feriados nacionais e permite exceções.</p></div><strong id="uberPlannedDays">0 dias planejados</strong></div><div class="uber-weekdays" id="uberWeekdays"></div><label class="checkbox-field"><input id="uberWorkHolidays" type="checkbox"> Também trabalho nos feriados nacionais</label><div class="uber-calendar-head"><button class="icon-button" type="button" aria-label="Mês anterior" data-uber-action="calendar:-1"><i data-lucide="chevron-left"></i></button><strong id="uberCalendarTitle"></strong><button class="icon-button" type="button" aria-label="Próximo mês" data-uber-action="calendar:1"><i data-lucide="chevron-right"></i></button></div><div class="uber-calendar-weekdays">${WEEKDAYS.map((day) => `<span>${day}</span>`).join("")}</div><div class="uber-calendar" id="uberCalendar"></div><small>Toque em um dia para alternar entre trabalho e folga. Feriados ficam como folga, salvo quando você marcar uma exceção. As alterações são salvas automaticamente.</small></div><form id="uberConfigForm" class="uber-vehicle-form"><label>Tipo de veículo<select name="vehicleType"><option value="combustion">Combustão</option><option value="electric">Elétrico</option></select></label></form></section><section class="panel uber-costs-panel"><div class="uber-section-title"><span class="uber-section-icon"><i data-lucide="badge-dollar-sign"></i></span><h2>Custos do mês</h2></div><p class="uber-section-copy">Cadastre aqui os custos necessários para a operação. Eles formam a sua base de Sobrevivência.</p><form id="uberGoalForm" class="uber-goal-form"><input type="hidden" name="goalId"><label>Nome do custo<input name="name" maxlength="50" placeholder="Ex: Gasolina"></label><label>Valor<input data-money-input data-money-prefix="R$" name="amount" inputmode="numeric" placeholder="R$ 0,00"></label><button class="primary-button" type="submit"><span id="uberGoalSubmitLabel">Cadastrar custo</span></button></form><div class="uber-goal-settings" id="uberGoalSettings"></div></section><section class="panel uber-targets-panel"><div class="uber-section-title"><span class="uber-section-icon"><i data-lucide="crosshair"></i></span><h2>Metas e retirada</h2></div><p class="uber-section-copy">Defina em sequência o que o trabalho precisa pagar, o que você quer receber e o extra que representa conforto.</p><form id="uberTargetsForm" class="uber-target-form"><article class="uber-target-step survival"><header><span>1</span><div><h3>Sobrevivência</h3><p>Todos os custos essenciais do mês.</p></div></header><div class="uber-target-total"><small>Custos cadastrados</small><strong id="uberSurvivalTarget">${money(0)}</strong></div></article><article class="uber-target-step stability"><header><span>2</span><div><h3>Estabilidade</h3><p>Custos cobertos mais a retirada que você quer garantir.</p></div></header><label>Quanto quero receber no mês<input data-money-input data-money-prefix="R$" name="withdrawal" inputmode="numeric" placeholder="R$ 0,00"></label><div class="uber-target-total"><small>Total para chegar à estabilidade</small><strong id="uberStabilityTarget">${money(0)}</strong></div></article><article class="uber-target-step comfort"><header><span>3</span><div><h3>Conforto</h3><p>Um valor adicional, além da estabilidade, para o padrão de vida desejado.</p></div></header><label>Quanto quero ter além da estabilidade<input data-money-input data-money-prefix="R$" name="comfort" inputmode="numeric" placeholder="R$ 0,00"></label><div class="uber-target-total"><small>Total para chegar ao conforto</small><strong id="uberComfortTarget">${money(0)}</strong></div></article><button class="primary-button uber-save-targets" type="submit">Salvar planejamento do mês</button></form></section><section class="panel"><div class="panel-heading"><div><p class="eyebrow">Migração</p><h2>Dados do Controle Uber</h2><p>Importe um backup JSON do app original. Nada é apagado durante a importação.</p></div></div><input id="uberImportFile" type="file" accept="application/json,.json" hidden><button class="ghost-button" type="button" data-uber-action="import"><i data-lucide="upload"></i> Importar backup do Controle Uber</button></section></div></section>`);
   el.views = document.querySelectorAll(".view");
   bindMoneyInputs(target.parentElement);
 }
@@ -158,7 +158,7 @@ export function bindUberEvents(showView) {
   root.dataset.bound = "true";
   document.querySelector("#uberEntryForm").addEventListener("submit", saveEntry);
   document.querySelector("#uberEntryForm").elements.date.addEventListener("change", (event) => { event.target.dataset.userChanged = "true"; });
-  document.querySelector("#uberConfigForm").addEventListener("submit", saveConfig);
+  document.querySelector("#uberConfigForm").addEventListener("change", saveConfig);
   document.querySelector("#uberGoalForm").addEventListener("submit", addGoal);
   document.querySelector("#uberTargetsForm").addEventListener("submit", saveTargets);
   document.querySelector("#uberSimulationForm").addEventListener("submit", simulate);
@@ -175,6 +175,7 @@ export function bindUberEvents(showView) {
     else if (action.startsWith("delete:")) await deleteEntry(action.slice(7));
     else if (action.startsWith("reopen:")) await reopenMonth(action.slice(7));
     else if (action.startsWith("goal-delete:")) await deleteGoal(action.slice(12));
+    else if (action.startsWith("goal-edit:")) editGoal(action.slice(10));
     else if (action.startsWith("weekday:")) await toggleWeekday(Number(action.slice(8)));
     else if (action.startsWith("calendar:")) { calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + Number(action.slice(9)), 1); renderConfig(); }
     else if (action.startsWith("date:")) await toggleDate(action.slice(5));
@@ -258,8 +259,6 @@ export function renderUber(view) {
   document.querySelectorAll(".uber-energy-label").forEach((item) => { item.textContent = energyLabel(); });
   document.querySelectorAll(".uber-quantity-label").forEach((item) => { item.textContent = config().vehicleType === "electric" ? "kWh recarregados" : "Litros abastecidos"; });
   if (view === "uberinicio") renderStart(data, forecast, goals);
-  if (view === "uberdashboard") renderDashboard(data, forecast, goals);
-  if (view === "uberoperacao") renderOperation(data);
   if (view === "uberhistorico") renderHistory();
   if (view === "ubersimulacao") renderSimulation();
   if (view === "uberconfig") renderConfig();
@@ -270,7 +269,7 @@ function renderStart(data, forecast, goals) {
   setEntryDateDefault();
   const expectedCosts = Math.max(goals.survival, data.costs), outcome = forecast.projected - expectedCosts;
   document.querySelector("#uberHeroProjected").textContent = money(forecast.projected);
-  document.querySelector("#uberHeroProjectionCopy").textContent = data.days ? `Usa suas médias de ${forecast.normalDays} dia(s) seg–sex e ${forecast.specialDays} dia(s) especial(is).` : "Comece registrando seus ganhos para gerar projeção.";
+  document.querySelector("#uberHeroProjectionCopy").textContent = `${forecast.remaining} dia(s) de trabalho sem ganho`;
   document.querySelector("#uberHeroRealized").textContent = money(data.gains);
   const outcomeElement = document.querySelector("#uberHeroOutcome");
   outcomeElement.textContent = money(outcome);
@@ -279,55 +278,47 @@ function renderStart(data, forecast, goals) {
   document.querySelector("#uberHeroCostCopy").textContent = `Considerando custos de ${money(expectedCosts)}`;
   document.querySelector("#uberHeroWeekdayAverage").textContent = forecast.normalDays ? money(forecast.normal) : "—";
   document.querySelector("#uberHeroSpecialAverage").textContent = forecast.specialDays ? money(forecast.special) : "—";
-  document.querySelector("#uberOperationalKpis").innerHTML = kpis([["Resultado do mês", money(data.net), "ganhos menos custos"], ["Ganhos", money(data.gains), "realizado no mês"], ["Custos", money(data.costs), "não duplicados no orçamento"], ["KM rodados", data.km.toLocaleString("pt-BR"), "base do mês"]]);
   const list = data.list.slice().sort((a, b) => b.date.localeCompare(a.date)); document.querySelector("#uberRecentEntries").innerHTML = entryCards(recentExpanded ? list : list.slice(0, 5));
   const button = document.querySelector('[data-uber-action="toggle-recent"]'); if (button) button.textContent = recentExpanded ? "Mostrar menos" : "Ver todos";
+  document.querySelector("#uberGoalCards").innerHTML = goalStages(data, forecast, goals);
+  document.querySelector("#uberComposition").innerHTML = composition(data);
+  document.querySelector("#uberWeeks").innerHTML = weeklyReadout(data.list, goals.comfort);
 }
-function renderDashboard(data, forecast, goals) {
-  const expectedCosts = Math.max(goals.survival, data.costs), outcome = forecast.projected - expectedCosts;
+function goalStages(data, forecast, goals) {
   const stages = [
-    { label: "Sobrevivência", value: goals.survival, copy: "Cobrir os custos da operação." },
-    { label: "Estabilidade", value: goals.stable, copy: "Custos mais a retirada desejada." },
-    { label: "Conforto", value: goals.comfort, copy: "Estabilidade mais o adicional de conforto." }
+    { label: "Sobrevivência", value: goals.survival, tone: "survival", icon: "circle-check" },
+    { label: "Estabilidade", value: goals.stable, tone: "stability", icon: "target" },
+    { label: "Conforto", value: goals.comfort, tone: "comfort", icon: "flag" }
   ];
-  document.querySelector("#uberProjection").innerHTML = `<div class="uber-projection-main"><p class="eyebrow">Faturamento projetado do mês</p><strong>${money(forecast.projected)}</strong><p>${data.days ? `Usa suas médias de ${forecast.normalDays} dia(s) seg–sex e ${forecast.specialDays} dia(s) especial(is).` : "Comece registrando seus ganhos para gerar projeção."}</p></div><div class="uber-projection-details"><article><span>Faturamento realizado</span><strong>${money(data.gains)}</strong></article><article><span>Resultado previsto após custos</span><strong class="${outcome >= 0 ? "positive" : "negative"}">${money(outcome)}</strong><small>Considerando custos de ${money(expectedCosts)}</small></article><article><span>Média atual</span><strong><small>Seg–sex</small>${forecast.normalDays ? money(forecast.normal) : "—"}</strong><strong><small>Dia especial</small>${forecast.specialDays ? money(forecast.special) : "—"}</strong></article></div>`;
-  document.querySelector("#uberRhythm").innerHTML = `<div class="uber-rhythm-scale"><div class="uber-rhythm-track"><i style="width:${Math.min((forecast.projected / Math.max(goals.comfort, 1)) * 100, 100)}%"></i></div><div class="uber-rhythm-labels"><span>Projeção <strong>${money(forecast.projected)}</strong></span>${stages.map((stage) => `<span>${stage.label} <strong>${money(stage.value)}</strong></span>`).join("")}</div></div><div class="uber-rhythm-summary"><span>${forecast.remaining} dia(s) de trabalho sem ganho</span><strong>${data.km ? `${money(data.net / data.km)} de lucro por KM` : "Registre KM para medir o lucro por KM"}</strong></div>`;
-  document.querySelector("#uberGoalCards").innerHTML = stages.map((stage) => goalCard(stage, forecast)).join("");
-  document.querySelector("#uberComposition").innerHTML = composition(data, goals);
-  document.querySelector("#uberWeeks").innerHTML = weeklyReadout(data.list);
+  return stages.map((stage) => {
+    const executed = data.gains, missing = Math.max(stage.value - executed, 0), percent = stage.value ? Math.min((executed / stage.value) * 100, 100) : 0;
+    const normalWeight = forecast.normalDays ? Math.max(forecast.normal, 1) : 1;
+    const specialWeight = forecast.specialDays ? Math.max(forecast.special, 1) : normalWeight * 1.5;
+    const weightedDays = forecast.normalRemaining * normalWeight + forecast.specialRemaining * specialWeight;
+    const normalNeeded = weightedDays ? missing * normalWeight / weightedDays : 0;
+    const specialNeeded = weightedDays ? missing * specialWeight / weightedDays : 0;
+    const daily = forecast.remaining ? `<div class="uber-goal-daily"><span class="uber-goal-icon"><i data-lucide="${stage.icon}"></i></span><div><span>Seg–sex</span><span>Dia especial</span><small>${forecast.normalRemaining} dia(s) seg–sex · ${forecast.specialRemaining} dia(s) especial(is) restantes</small></div><div><strong>${money(normalNeeded)}<small>/dia</small></strong><strong>${money(specialNeeded)}<small>/dia</small></strong></div></div>` : `<div class="uber-goal-daily"><span class="uber-goal-icon"><i data-lucide="${stage.icon}"></i></span><small>Sem dias planejados restantes.</small></div>`;
+    return `<article class="uber-goal-card ${stage.tone}"><div class="uber-goal-card-head"><span>${stage.label}</span></div><strong class="uber-goal-percent">${percent.toFixed(0)}%</strong><div class="uber-progress"><i style="width:${percent}%"></i></div><dl><div><dt>Meta</dt><dd>${money(stage.value)}</dd></div><div><dt>Meta atualizada</dt><dd>${money(stage.value)}</dd></div><div><dt>Executado</dt><dd>${money(executed)} · ${percent.toFixed(0)}%</dd></div><div><dt>Faltam</dt><dd>${missing ? money(missing) : "Meta atingida"}</dd></div></dl>${daily}</article>`;
+  }).join("");
 }
 
-function goalCard(stage, forecast) {
-  const missing = Math.max(stage.value - forecast.projected, 0), percent = stage.value ? Math.min((forecast.projected / stage.value) * 100, 100) : 100;
-  const normalWeight = forecast.normal || forecast.average || 1, specialWeight = forecast.special || normalWeight;
-  const weightedDays = forecast.normalRemaining * normalWeight + forecast.specialRemaining * specialWeight;
-  const multiplier = weightedDays ? missing / weightedDays : 0;
-  const normalNeeded = normalWeight * multiplier, specialNeeded = specialWeight * multiplier;
-  const action = !missing ? "Meta projetada alcançada." : forecast.remaining ? `Para chegar: seg–sex ${money(normalNeeded)}/dia · dia especial ${money(specialNeeded)}/dia` : "Sem dias planejados para alcançar esta meta.";
-  return `<article class="uber-goal-card"><div class="uber-goal-card-head"><span>${stage.label}</span><b>${percent.toFixed(0)}%</b></div><strong>${money(stage.value)}</strong><small>${stage.copy}</small><div class="uber-progress"><i style="width:${percent}%"></i></div><dl><div><dt>Executado</dt><dd>${money(forecast.projected)} · ${percent.toFixed(0)}%</dd></div><div><dt>Faltam</dt><dd>${missing ? money(missing) : "Meta atingida"}</dd></div></dl><p class="uber-goal-action">${action}</p></article>`;
-}
-
-function composition(data, goals) {
+function composition(data) {
   const goalItems = config().goals;
   if (!goalItems.length) return '<p class="empty-state">Cadastre os custos essenciais em Regras da Operação para formar as metas.</p>';
   return goalItems.map((goal) => {
     const name = String(goal.name || "").toLocaleLowerCase("pt-BR");
     const actual = name.includes("gas") || name.includes("combust") || name.includes("recarga") ? data.fuelCost : data.list.filter((item) => item.type === "expense" && String(item.description || "").toLocaleLowerCase("pt-BR") === name).reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const planned = Number(goal.amount || 0), percent = planned ? Math.min((actual / planned) * 100, 100) : 0;
-    return `<article class="uber-cost-composition"><div><strong>${escapeHtml(goal.name)}</strong><small>Custo essencial</small></div><div><span>${money(actual)} / ${money(planned)}</span><div class="uber-progress"><i style="width:${percent}%"></i></div></div></article>`;
-  }).join("") + `<div class="uber-composition-total"><span>Base de sobrevivência</span><strong>${money(goals.survival)}</strong></div>`;
+    const planned = Number(goal.amount || 0), balance = Math.max(planned - actual, 0);
+    return `<article class="uber-cost-composition"><strong>${escapeHtml(goal.name)}</strong><div><span>Definido</span><b class="defined">${money(planned)}</b></div><div><span>Saldo</span><b>${money(balance)}</b></div></article>`;
+  }).join("");
 }
 
-function weeklyReadout(list) {
+function weeklyReadout(list, target) {
   const key = activeMonthKey(), [year, month] = key.split("-").map(Number), last = new Date(year, month, 0).getDate();
   const weeks = []; let start = 1;
   while (start <= last) { const startDate = new Date(year, month - 1, start), length = start === 1 ? 7 - startDate.getDay() : 7; const end = Math.min(start + length - 1, last); weeks.push([start, end]); start = end + 1; }
-  return weeks.map(([first, lastDay], index) => { const gains = list.filter((item) => item.type === "gain" && Number(item.date.slice(8, 10)) >= first && Number(item.date.slice(8, 10)) <= lastDay).reduce((sum, item) => sum + Number(item.amount || 0), 0); const days = new Set(list.filter((item) => item.type === "gain" && Number(item.date.slice(8, 10)) >= first && Number(item.date.slice(8, 10)) <= lastDay).map((item) => item.date)).size; return `<article class="uber-week"><span>S${index + 1} · ${first}–${lastDay} ${MONTHS[month - 1].toLocaleLowerCase("pt-BR")}</span><strong>${money(gains)}</strong><small>${days} dia(s) com ganho</small></article>`; }).join("");
-}
-function renderOperation(data) {
-  const fuel = data.list.filter((item) => item.type === "fuel");
-  document.querySelector("#uberFuelKpis").innerHTML = kpis([["Lucro por KM", data.km ? money(data.net / data.km) : "—", "foco da operação"], ["Receita por KM", data.km ? money(data.gains / data.km) : "—", "ganhos ÷ KM"], ["Custo por KM", data.km ? money(data.costs / data.km) : "—", "todos os custos ÷ KM"], [energyLabel() + "s", `${data.quantities.toLocaleString("pt-BR")} ${energyUnit()}`, `${fuel.length} lançamento(s) no mês`]]);
-  document.querySelector("#uberFuelRows").innerHTML = fuel.length ? fuel.slice().sort((a, b) => b.date.localeCompare(a.date)).map((item) => `<tr><td data-label="Data">${formatDate(item.date)}</td><td data-label="Quantidade">${Number(item.quantity || 0).toLocaleString("pt-BR")} ${energyUnit()}</td><td data-label="Valor" class="negative">-${money(item.amount)}</td><td data-label="Preço/unidade">${item.quantity ? money(item.amount / item.quantity) : "—"}</td><td data-label="KM">${item.km || "—"}</td></tr>`).join("") : emptyRow(5, `Nenhum lançamento de ${energyLabel().toLowerCase()} neste mês.`);
+  const targetPerWeek = target > 0 ? target / weeks.length : 0;
+  return weeks.map(([first, lastDay], index) => { const gains = list.filter((item) => item.type === "gain" && Number(item.date.slice(8, 10)) >= first && Number(item.date.slice(8, 10)) <= lastDay).reduce((sum, item) => sum + Number(item.amount || 0), 0); const percent = targetPerWeek ? Math.min((gains / targetPerWeek) * 100, 100) : 0; return `<article class="uber-week"><span>S${index + 1}: ${first}–${lastDay} ${MONTHS[month - 1].toLocaleLowerCase("pt-BR")}</span><div class="uber-progress"><i style="width:${percent}%"></i></div><strong>${gains ? money(gains) : "—"}</strong></article>`; }).join("");
 }
 function renderHistory() {
   const currentKey = activeMonthKey(), currentClosed = uber().closings?.[currentKey];
@@ -358,14 +349,16 @@ function renderConfig() {
   document.querySelector("#uberWeekdays").innerHTML = WEEKDAYS.map((day, number) => `<button type="button" class="${config().workDays.includes(number) ? "active" : ""}" data-uber-action="weekday:${number}">${day}</button>`).join("");
   const year = calendarMonth.getFullYear(), month = calendarMonth.getMonth() + 1, last = new Date(year, month, 0).getDate(), offset = new Date(year, month - 1, 1).getDay(); document.querySelector("#uberCalendarTitle").textContent = `${MONTHS[month - 1]} de ${year}`; document.querySelector("#uberPlannedDays").textContent = `${plannedDays(`${year}-${String(month).padStart(2, "0")}`)} dias planejados`;
   document.querySelector("#uberCalendar").innerHTML = `${Array.from({ length: offset }, () => '<span class="uber-calendar-empty"></span>').join("")}${Array.from({ length: last }, (_, index) => { const day = index + 1, date = new Date(year, month - 1, day), key = dateKey(year, month, day), holiday = holidays(year).has(key), auto = config().autoDaysOff.includes(key), manual = config().daysOff.includes(key) || config().extraWorkDays.includes(key), working = workDay(date), label = auto ? "Folga automática" : manual ? "Exceção" : holiday ? "Feriado" : working ? "Trabalho" : "Folga"; return `<button type="button" class="${working ? "work" : "off"}${holiday ? " holiday" : ""}${manual || auto ? " exception" : ""}" data-uber-action="date:${key}"><strong>${day}</strong><small>${label}</small></button>`; }).join("")}`;
-  document.querySelector("#uberGoalSettings").innerHTML = config().goals.map((item) => `<div class="uber-setting-row"><span>${escapeHtml(item.name)}</span><strong>${money(item.amount)}</strong><button class="small-button danger-mini" data-uber-action="goal-delete:${item.id}">Excluir</button></div>`).join("") || '<p class="empty-state">Cadastre os custos que formam sua meta de sobrevivência.</p>';
-  const targets = document.querySelector("#uberTargetsForm"); targets.elements.withdrawal.value = formatCurrencyInput(config().withdrawal || 0); targets.elements.comfort.value = formatCurrencyInput(config().comfort || 0);
+  document.querySelector("#uberGoalSettings").innerHTML = config().goals.map((item) => `<article class="uber-setting-row"><div><strong>${escapeHtml(item.name)}</strong><small>Custo essencial</small></div><b>${money(item.amount)}</b><div class="uber-setting-actions"><button class="small-button" data-uber-action="goal-edit:${item.id}">Editar</button><button class="small-button danger-mini" data-uber-action="goal-delete:${item.id}">Excluir</button></div></article>`).join("") || '<p class="empty-state">Cadastre os custos que formam sua meta de sobrevivência.</p>';
+  const targets = document.querySelector("#uberTargetsForm"), totals = goalTotals(); targets.elements.withdrawal.value = moneyInput(config().withdrawal); targets.elements.comfort.value = moneyInput(config().comfort);
+  document.querySelector("#uberSurvivalTarget").textContent = money(totals.survival);
+  document.querySelector("#uberStabilityTarget").textContent = money(totals.stable);
+  document.querySelector("#uberComfortTarget").textContent = money(totals.comfort);
 }
-function nextWorkDay() { const start = new Date(); for (let days = 0; days < 62; days++) { const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + days); if (workDay(date)) return `${WEEKDAYS[date.getDay()]} ${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}`; } return "—"; }
+function moneyInput(value) { return `R$ ${formatCurrencyInput(Number(value || 0))}`; }
 function kpis(items) { return items.map(([label, value, copy]) => `<article class="kpi-card"><span>${label}</span><strong>${value}</strong><small>${copy}</small></article>`).join(""); }
 function entryIcon(type) { return ({ gain: "arrow-up-circle", fuel: "fuel", expense: "receipt", km: "gauge" })[type] || "circle"; }
 function entryCards(list) { return list.length ? list.map((item) => { const detail = [formatDate(item.date), item.description && escapeHtml(item.description), item.type === "fuel" && `${Number(item.quantity || 0).toLocaleString("pt-BR")} ${energyUnit()}`, item.km && `KM ${item.km}`].filter(Boolean).join(" · "); const value = item.type === "km" ? `${item.km} KM` : `${item.type === "gain" ? "" : "-"}${money(item.amount)}`; return `<article class="uber-entry-card"><div class="uber-entry-icon ${item.type}"><i data-lucide="${entryIcon(item.type)}"></i></div><div class="uber-entry-copy"><strong>${typeLabel(item.type)}</strong><span>${detail}</span></div><strong class="${item.type === "gain" ? "positive" : item.type === "km" ? "" : "negative"}">${value}</strong><button class="small-button danger-mini icon-only" aria-label="Excluir lançamento" title="Excluir" data-uber-action="delete:${item.id}"><i data-lucide="trash-2"></i></button></article>`; }).join("") : '<p class="empty-state">Comece registrando sua operação.</p>'; }
-function emptyRow(cols, message) { return `<tr><td colspan="${cols}" class="empty-state">${message}</td></tr>`; }
 function typeLabel(type) { return ({ gain: "Ganho", fuel: energyLabel(), expense: "Despesa", km: "Atualização de KM" })[type] || type; }
 function formatDate(date) { return date ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${date}T12:00:00`)) : "—"; }
 async function save(message) { await state.saveStateFn?.(message); renderUber(document.querySelector(".view.active")?.id.replace(/View$/, "")); }
@@ -384,10 +377,21 @@ async function saveEntry(event) {
   selectType("gain");
   await save(linked ? "Ganho Uber salvo e recebido parcial atualizado no Controle Mensal." : "Lançamento Uber salvo.");
 }
-async function saveConfig(event) { event.preventDefault(); config().vehicleType = event.currentTarget.elements.vehicleType.value; await save("Veículo atualizado."); }
+async function saveConfig() { config().vehicleType = document.querySelector("#uberConfigForm").elements.vehicleType.value; await save("Tipo de veículo atualizado."); }
 async function toggleWeekday(day) { const days = new Set(config().workDays); days.has(day) ? days.delete(day) : days.add(day); config().workDays = [...days].sort((a, b) => a - b); syncAutomaticDays(); await save("Rotina de trabalho atualizada."); }
 async function toggleDate(key) { const [year, month, day] = key.split("-").map(Number), date = new Date(year, month - 1, day), wasWorking = workDay(date), base = baseWorkDay(date); config().daysOff = config().daysOff.filter((item) => item !== key); config().extraWorkDays = config().extraWorkDays.filter((item) => item !== key); config().autoDaysOff = config().autoDaysOff.filter((item) => item !== key); if (!wasWorking && !base) config().extraWorkDays.push(key); else if (wasWorking && base) config().daysOff.push(key); await save("Exceção de rotina atualizada."); }
-async function addGoal(event) { event.preventDefault(); const form = event.currentTarget, name = String(form.elements.name.value || "").trim(), amount = parseCurrencyInput(form.elements.amount.value); if (!name || !amount) return showToast("Informe custo e valor.", "error"); config().goals.push({ id: crypto.randomUUID(), name, amount }); form.reset(); await save("Custo Uber adicionado."); }
+async function addGoal(event) {
+  event.preventDefault();
+  const form = event.currentTarget, name = String(form.elements.name.value || "").trim(), amount = parseCurrencyInput(form.elements.amount.value), goalId = form.elements.goalId.value;
+  if (!name || !amount) return showToast("Informe custo e valor.", "error");
+  if (goalId) {
+    const goal = config().goals.find((item) => item.id === goalId);
+    if (goal) { goal.name = name; goal.amount = amount; }
+  } else config().goals.push({ id: crypto.randomUUID(), name, amount });
+  form.reset();
+  document.querySelector("#uberGoalSubmitLabel").textContent = "Cadastrar custo";
+  await save(goalId ? "Custo Uber atualizado." : "Custo Uber adicionado.");
+}
 async function saveTargets(event) { event.preventDefault(); const form = event.currentTarget; config().withdrawal = parseCurrencyInput(form.elements.withdrawal.value); config().comfort = parseCurrencyInput(form.elements.comfort.value); await save("Metas Uber atualizadas."); }
 async function deleteEntry(id) {
   const removed = uber().entries.find((item) => item.id === id);
@@ -396,6 +400,15 @@ async function deleteEntry(id) {
   await save("Lançamento Uber excluído.");
 }
 async function deleteGoal(id) { config().goals = config().goals.filter((item) => item.id !== id); await save("Custo Uber excluído."); }
+function editGoal(id) {
+  const goal = config().goals.find((item) => item.id === id), form = document.querySelector("#uberGoalForm");
+  if (!goal || !form) return;
+  form.elements.goalId.value = goal.id;
+  form.elements.name.value = goal.name;
+  form.elements.amount.value = moneyInput(goal.amount);
+  document.querySelector("#uberGoalSubmitLabel").textContent = "Salvar custo";
+  form.elements.name.focus();
+}
 async function closeMonth() {
   const key = activeMonthKey();
   if (uber().closings?.[key]) return showToast("Este mês Uber já está fechado.", "error");

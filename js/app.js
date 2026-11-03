@@ -14,7 +14,7 @@ import { renderFerias, bindFeriasEvents } from "./ferias/ferias.js";
 import { loadDividas, preloadDividas } from "./dividas/boot.js";
 import { restoreStartupCache } from "./dividas/local-cache.js";
 import { registerNavigation, setupQuickAccess } from "./navigation.js";
-import { mountUberViews, bindUberEvents, renderUber, rollbackBudgetIntegration } from "./uber/uber.js?v=20261103-uber-operation-refinement";
+import { mountUberViews, bindUberEvents, renderUber, rollbackBudgetIntegration } from "./uber/uber.js?v=20261103-uber-unified-operation";
 
 mountUberViews();
 boot();
@@ -217,8 +217,6 @@ function renderView(name) {
     fgts: renderFgts,
     ferias: renderFerias,
     uberinicio: () => renderUber("uberinicio"),
-    uberdashboard: () => renderUber("uberdashboard"),
-    uberoperacao: () => renderUber("uberoperacao"),
     uberhistorico: () => renderUber("uberhistorico"),
     ubersimulacao: () => renderUber("ubersimulacao"),
     uberconfig: () => renderUber("uberconfig"),

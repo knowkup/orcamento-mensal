@@ -184,11 +184,11 @@ button:disabled {
 .uber-km-field > small { margin-left: 4px; color: var(--muted); font-size: 11px; font-weight: 500; }
 .uber-entry-form { display: grid; gap: 16px; }
 .uber-hero + .panel { margin-bottom: 18px; }
-.uberinicioView .finance-kpis, #uberinicioView .finance-kpis, #uberdashboardView .finance-kpis, #uberoperacaoView .finance-kpis, #ubersimulacaoView .finance-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.uber-hero ~ .finance-kpis .kpi-card, #uberdashboardView .kpi-card, #uberoperacaoView .kpi-card, #ubersimulacaoView .kpi-card { display: grid; gap: 5px; min-height: 108px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
-.uber-hero ~ .finance-kpis .kpi-card span, #uberdashboardView .kpi-card span, #uberoperacaoView .kpi-card span, #ubersimulacaoView .kpi-card span { color: var(--muted); font-size: 12px; font-weight: 650; }
-.uber-hero ~ .finance-kpis .kpi-card strong, #uberdashboardView .kpi-card strong, #uberoperacaoView .kpi-card strong, #ubersimulacaoView .kpi-card strong { font-size: 21px; letter-spacing: -.03em; }
-.uber-hero ~ .finance-kpis .kpi-card small, #uberdashboardView .kpi-card small, #uberoperacaoView .kpi-card small, #ubersimulacaoView .kpi-card small { color: var(--muted); font-size: 12px; }
+#ubersimulacaoView .finance-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#ubersimulacaoView .kpi-card { display: grid; gap: 5px; min-height: 108px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+#ubersimulacaoView .kpi-card span { color: var(--muted); font-size: 12px; font-weight: 650; }
+#ubersimulacaoView .kpi-card strong { font-size: 21px; letter-spacing: -.03em; }
+#ubersimulacaoView .kpi-card small { color: var(--muted); font-size: 12px; }
 .uber-type-picker { display: flex; flex-wrap: wrap; gap: 8px; }
 .uber-type { display: inline-flex; align-items: center; gap: 8px; min-height: 39px; padding: 0 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--muted); font-weight: 650; }
 .uber-type.active { color: #16724b; background: var(--green-soft); border-color: rgba(63,185,133,.48); }
@@ -330,7 +330,7 @@ button:disabled {
    área de toque, valor legível e nenhum estouro lateral. */
 #uberinicioView input, #ubersimulacaoView input, #uberconfigView input, #uberconfigView select { min-width: 0; min-height: 48px; font-size: 16px; }
 #uberEntryForm .primary-button { width: fit-content; min-width: 240px; }
-@media (max-width: 820px) { .panel.uber-hero { grid-template-columns: 1fr 1fr; } .uber-hero article:nth-child(3) { padding-left: 0; border-left: 0; } .uber-form-grid, .uber-simulation-form, .uber-goal-form, .uber-goals, .uber-insights, #uberinicioView .finance-kpis, #uberdashboardView .finance-kpis, #uberoperacaoView .finance-kpis, #ubersimulacaoView .finance-kpis { grid-template-columns: 1fr; } .nav-favorite { opacity: 1; } }
+@media (max-width: 820px) { .panel.uber-hero { grid-template-columns: 1fr 1fr; } .uber-hero article:nth-child(3) { padding-left: 0; border-left: 0; } .uber-form-grid, .uber-simulation-form, .uber-goal-form, .uber-goals, .uber-insights, #ubersimulacaoView .finance-kpis { grid-template-columns: 1fr; } .nav-favorite { opacity: 1; } }
 @media (max-width: 820px) {
   .workspace { padding: 16px 14px 92px; }
   .uber-projection, .uber-routine, .uber-target-form { grid-template-columns: 1fr; }
@@ -338,7 +338,6 @@ button:disabled {
   .uber-rhythm-labels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .uber-history-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .uber-projection { gap: 16px; }
-  #uberoperacaoView .finance-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .uber-entry-card { align-items: flex-start; gap: 9px; }
   .uber-entry-card > strong { white-space: nowrap; font-size: 13px; }
   .uber-history-heading { align-items: stretch; flex-direction: column; }
@@ -364,9 +363,6 @@ button:disabled {
   #uberEntryForm input { width: 100%; min-height: 52px; padding: 0 13px; background: #fff; color: var(--ink); font-size: 18px; font-weight: 700; }
   #uberEntryForm input[type="date"] { font-size: 15px; font-weight: 650; }
   #uberEntryForm .primary-button { font-size: 15px; }
-  #uberinicioView .finance-kpis, #uberoperacaoView .finance-kpis { grid-template-columns: 1fr 1fr; gap: 9px; }
-  #uberinicioView .finance-kpis .kpi-card, #uberoperacaoView .finance-kpis .kpi-card { min-height: 98px; padding: 13px; }
-  #uberinicioView .finance-kpis .kpi-card strong, #uberoperacaoView .finance-kpis .kpi-card strong { overflow-wrap: anywhere; font-size: 18px; }
   .uber-entry-card { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; padding: 13px 0; }
   .uber-entry-card > .icon-only { grid-column: 3; grid-row: 2; justify-self: end; }
   .uber-entry-card > strong { grid-column: 3; grid-row: 1; align-self: center; }
@@ -4677,4 +4673,118 @@ select {
   #uberinicioView #uberEntryForm .uber-form-grid input[type="date"] {
     font-size: 16px;
   }
+}
+
+/* Uber — operação consolidada e regras da operação */
+.uber-month-goals, .uber-composition-panel, .uber-weeks-panel { margin-top: 18px; }
+.uber-section-title { display: flex; align-items: center; gap: 9px; margin-bottom: 16px; }
+.uber-section-title h2 { margin: 0; font-size: 16px; }
+.uber-section-icon { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid #e9e2d4; border-radius: 9px; color: #53647a; background: #f8f5ef; }
+.uber-section-icon svg { width: 15px; height: 15px; }
+.uber-goals-refined { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.uber-goal-card { display: grid; gap: 10px; min-height: 302px; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcfd; }
+.uber-goal-card.survival { border-color: #bfe7cd; background: linear-gradient(145deg, #fff, #f4fcf6); color: #078d48; }
+.uber-goal-card.stability { border-color: #ffd19a; background: linear-gradient(145deg, #fff, #fff8ee); color: #df7800; }
+.uber-goal-card.comfort { border-color: #bfdbf8; background: linear-gradient(145deg, #fff, #f2f8ff); color: #2878bf; }
+.uber-goal-card-head span { color: currentColor; font-size: 12px; font-weight: 850; letter-spacing: .05em; text-transform: uppercase; }
+.uber-goal-percent { color: currentColor; font-size: 36px; line-height: 1; letter-spacing: -.06em; }
+.uber-goal-card .uber-progress { height: 10px; margin: 0; background: rgba(15,32,54,.09); }
+.uber-goal-card .uber-progress i { background: currentColor; }
+.uber-goal-card dl { display: grid; gap: 5px; margin: 0; color: var(--ink); }
+.uber-goal-card dl div { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+.uber-goal-card dt { color: #5c6b7b; }
+.uber-goal-card dd { margin: 0; font-weight: 800; text-align: right; }
+.uber-goal-daily { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 9px; align-items: center; margin-top: auto; padding: 11px; border: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 22%, transparent); border-radius: 12px; background: rgba(255,255,255,.6); color: var(--ink); }
+.uber-goal-icon { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; color: inherit; background: #fff; }
+.uber-goal-icon svg { width: 17px; height: 17px; }
+.uber-goal-card.survival .uber-goal-icon { color: #159650; }
+.uber-goal-card.stability .uber-goal-icon { color: #bf6800; }
+.uber-goal-card.comfort .uber-goal-icon { color: #2878bf; }
+.uber-goal-daily > div { display: grid; gap: 3px; min-width: 0; }
+.uber-goal-daily > div span { color: #5a6978; font-size: 11px; }
+.uber-goal-daily > div small { grid-column: 1 / -1; margin-top: 2px; color: #5a6978; font-size: 10px; line-height: 1.35; }
+.uber-goal-daily > div:last-child { justify-items: end; }
+.uber-goal-daily strong { white-space: nowrap; color: var(--ink); font-size: 13px; }
+.uber-goal-daily strong small { margin-left: 2px; color: #5a6978; font-size: 10px; font-weight: 600; }
+.uber-composition-box { padding: 12px; border: 1px solid #bfe7cd; border-radius: 14px; background: linear-gradient(145deg, #fbfffc, #f5fbf6); }
+.uber-composition-box > p { margin: 0 0 10px; color: #28734b; font-size: 12px; font-weight: 850; letter-spacing: .04em; text-transform: uppercase; }
+.uber-composition { display: grid; gap: 8px; }
+.uber-cost-composition { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 24px; min-height: 56px; padding: 11px 13px; border: 0; border-radius: 12px; background: rgba(255,255,255,.82); }
+.uber-cost-composition > strong { color: var(--ink); font-size: 13px; }
+.uber-cost-composition > div { display: grid; justify-items: end; gap: 3px; min-width: 74px; }
+.uber-cost-composition span { color: #6e777c; font-size: 9px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
+.uber-cost-composition b { color: var(--ink); font-size: 13px; }
+.uber-cost-composition .defined { color: #c2372f; }
+.uber-weeks { display: grid; gap: 13px; }
+.uber-week { display: grid; grid-template-columns: 94px minmax(0, 1fr) 94px; gap: 12px; align-items: center; }
+.uber-week span { color: var(--ink); font-size: 12px; font-weight: 700; }
+.uber-week .uber-progress { height: 9px; margin: 0; background: #e5e9ee; }
+.uber-week .uber-progress i { background: linear-gradient(90deg, #1b8252, #58c98f); }
+.uber-week strong { justify-self: end; color: var(--ink); font-size: 13px; }
+
+#uberconfigView .vertical-stack { gap: 18px; }
+.uber-settings-panel, .uber-costs-panel, .uber-targets-panel { padding: 20px; }
+.uber-routine-card { padding: 14px; border-color: #d7e5d9; background: linear-gradient(145deg, #fff, #f7fcf8); }
+.uber-routine-copy { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.uber-routine-copy h3 { margin: 0 0 4px; }
+.uber-routine-copy p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.uber-routine-copy > strong { flex: 0 0 auto; margin: 3px 0 0; color: #167748; font-size: 12px; }
+.uber-routine-card > .checkbox-field { margin: 0 0 10px; font-size: 12px; }
+.uber-calendar-head { padding-top: 12px; border-top: 1px solid #dce8de; }
+.uber-vehicle-form { display: block; margin-top: 18px; }
+.uber-vehicle-form label { display: grid; gap: 6px; max-width: none; color: var(--muted); font-size: 12px; }
+.uber-vehicle-form select { width: 100%; min-height: 48px; color: var(--ink); }
+.uber-section-copy { margin: -7px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.uber-costs-panel .uber-goal-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.uber-costs-panel .uber-goal-form label { display: grid; gap: 6px; color: #64707a; font-size: 12px; font-weight: 700; }
+.uber-costs-panel .uber-goal-form .primary-button { grid-column: 1 / -1; width: min(100%, 536px); min-height: 44px; background: #1f2d46; }
+.uber-costs-panel .uber-goal-form .primary-button:hover { background: #15233b; }
+.uber-goal-settings { margin: 14px 0 0; }
+.uber-setting-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 16px; min-height: 62px; padding: 12px; border: 1px solid #eee9df; border-radius: 13px; background: #fdfcf9; }
+.uber-setting-row + .uber-setting-row { margin-top: 9px; }
+.uber-setting-row > div:first-child { display: grid; gap: 3px; }
+.uber-setting-row strong { color: var(--ink); font-size: 13px; }
+.uber-setting-row small { color: var(--muted); font-size: 11px; }
+.uber-setting-row > b { color: #c2372f; font-size: 14px; }
+.uber-setting-actions { display: flex; gap: 8px; }
+.uber-setting-actions .small-button { min-height: 31px; }
+.uber-target-form { display: grid; grid-template-columns: 1fr !important; gap: 12px; }
+.uber-target-step { padding: 14px; border: 1px solid; border-radius: 14px; }
+.uber-target-step.survival { border-color: #bce5ca; background: #f2fbf4; color: #0c964c; }
+.uber-target-step.stability { border-color: #ffd199; background: #fff7e9; color: #bf6800; }
+.uber-target-step.comfort { border-color: #c1dbfa; background: #f1f7ff; color: #2878bf; }
+.uber-target-step header { display: flex; align-items: flex-start; gap: 10px; }
+.uber-target-step header > span { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; border-radius: 50%; color: #fff; font-size: 13px; font-weight: 850; }
+.uber-target-step.survival header > span { background: #159650; }
+.uber-target-step.stability header > span { background: #bf6800; }
+.uber-target-step.comfort header > span { background: #2878bf; }
+.uber-target-step header h3 { margin: 1px 0 3px; color: currentColor; font-size: 14px; }
+.uber-target-step header p { margin: 0; color: #667078; font-size: 12px; }
+.uber-target-step label { display: grid; gap: 6px; margin-top: 13px; color: var(--ink); font-size: 12px; font-weight: 750; }
+.uber-target-step input { width: 100%; background: #fff; color: var(--ink); }
+.uber-target-total { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 13px; padding-top: 13px; border-top: 1px solid currentColor; border-color: color-mix(in srgb, currentColor 25%, transparent); }
+.uber-target-total small { color: #667078; font-size: 11px; font-weight: 700; }
+.uber-target-total strong { color: currentColor; font-size: 18px; }
+.uber-save-targets { width: 100%; min-height: 44px; background: #1f2d46; }
+.uber-save-targets:hover { background: #15233b; }
+
+@media (max-width: 760px) {
+  .uber-goals-refined { grid-template-columns: 1fr; }
+  .uber-goal-card { min-height: 0; }
+  .uber-goal-daily { grid-template-columns: 34px minmax(0, 1fr) auto; }
+  .uber-cost-composition { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 14px; }
+  .uber-cost-composition > strong { grid-column: 1 / -1; }
+  .uber-cost-composition > div { min-width: 0; }
+  .uber-week { grid-template-columns: 75px minmax(0, 1fr) 62px; gap: 8px; }
+  .uber-week span { font-size: 11px; }
+  .uber-week strong { font-size: 12px; }
+  .uber-routine-copy { display: grid; gap: 9px; }
+  .uber-routine-copy > strong { margin: 0; }
+  .uber-calendar button, .uber-calendar-empty { min-height: 42px; }
+  .uber-costs-panel .uber-goal-form { grid-template-columns: 1fr; }
+  .uber-costs-panel .uber-goal-form .primary-button { width: 100%; }
+  .uber-setting-row { grid-template-columns: minmax(0, 1fr) auto; gap: 8px 12px; }
+  .uber-setting-row > b { justify-self: end; }
+  .uber-setting-actions { grid-column: 1 / -1; }
+  .uber-setting-actions .small-button { flex: 1; }
 }
