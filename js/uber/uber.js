@@ -7,6 +7,7 @@ const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
 let recentExpanded = false;
 let persistingRollback = false;
+let persistingIncomeLink = false;
 
 const isoToday = () => {
   const today = new Date();
@@ -243,6 +244,12 @@ export function rollbackBudgetIntegration() {
 export function renderUber(view) {
   if (!document.querySelector("#uberinicioView")) return;
   syncAutomaticDays();
+  const previousIncomeId = uber().linkedIncomeId;
+  const incomeLink = linkedUberIncome();
+  if (incomeLink && incomeLink.id !== previousIncomeId && !persistingIncomeLink) {
+    persistingIncomeLink = true;
+    Promise.resolve(state.saveStateFn?.("Renda recorrente Uber vinculada aos lançamentos da operação.")).finally(() => { persistingIncomeLink = false; });
+  }
   if (rollbackBudgetIntegration() && !persistingRollback) {
     persistingRollback = true;
     Promise.resolve(state.saveStateFn?.("Integração Uber removida do orçamento mensal.")).finally(() => { persistingRollback = false; });
