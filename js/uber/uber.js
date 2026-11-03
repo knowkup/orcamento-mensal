@@ -138,8 +138,8 @@ export function mountUberViews() {
   if (!target) return;
   target.insertAdjacentHTML("beforebegin", `
     <section class="view" id="uberinicioView" data-title="Uber" data-eyebrow="Operação">
-      <div class="uber-hero panel"><div><p class="eyebrow">Lançamento diário</p><h2>Registrar operação</h2><p>Registre ganhos, abastecimentos, despesas e quilometragem.</p></div><div class="uber-hero-total"><span>Ganhos no mês</span><strong id="uberHeroEarnings">${money(0)}</strong></div></div>
-      <section class="panel"><form id="uberEntryForm" class="uber-entry-form"><div class="uber-type-picker"><button type="button" class="uber-type active" data-uber-type="gain"><i data-lucide="arrow-up-circle"></i> Ganho</button><button type="button" class="uber-type" data-uber-type="fuel"><i data-lucide="fuel"></i> <span class="uber-energy-label">Abastecimento</span></button><button type="button" class="uber-type" data-uber-type="expense"><i data-lucide="receipt"></i> Despesa</button><button type="button" class="uber-type" data-uber-type="km"><i data-lucide="gauge"></i> KM</button></div><input type="hidden" name="type" value="gain"><div class="form-grid uber-form-grid"><label>Data<input type="date" name="date" required></label><label class="uber-value-field">Valor<input data-money-input type="text" name="amount" inputmode="numeric" placeholder="0,00"></label><label class="uber-quantity-field" hidden><span class="uber-quantity-label">Litros abastecidos</span><input type="number" name="quantity" inputmode="decimal" step="0.01" min="0"></label><label class="uber-description-field" hidden>Descrição<select name="description"><option>Manutenção</option><option>Lavagem</option><option>Seguro</option><option>Parcela</option><option>Outros</option></select></label><label class="uber-km-field">KM atual<input type="number" name="km" inputmode="numeric" min="0"></label></div><button class="primary-button" type="submit"><i data-lucide="plus"></i> Adicionar lançamento</button></form></section>
+      <section class="uber-hero panel" aria-label="Resumo da operação"><article class="uber-hero-projection"><p>Faturamento projetado do mês</p><strong id="uberHeroProjected">${money(0)}</strong><small id="uberHeroProjectionCopy">Comece registrando seus ganhos para gerar projeção.</small></article><article><span>Faturamento realizado</span><strong id="uberHeroRealized">${money(0)}</strong></article><article><span>Resultado previsto após custos</span><strong id="uberHeroOutcome">${money(0)}</strong><small id="uberHeroCostCopy">Considerando custos de ${money(0)}</small></article><article><span>Média atual</span><strong class="uber-hero-average"><small>Seg–Sex</small><b id="uberHeroWeekdayAverage">—</b><small>Dia especial</small><b id="uberHeroSpecialAverage">—</b></strong></article></section>
+      <section class="panel"><form id="uberEntryForm" class="uber-entry-form"><div class="panel-heading uber-entry-heading"><div><p class="eyebrow">Lançamento diário</p><h2>Registrar Operação</h2></div></div><div class="uber-type-picker"><button type="button" class="uber-type active" data-uber-type="gain"><i data-lucide="arrow-up-circle"></i> Ganho</button><button type="button" class="uber-type" data-uber-type="fuel"><i data-lucide="fuel"></i> <span class="uber-energy-label">Abastecimento</span></button><button type="button" class="uber-type" data-uber-type="expense"><i data-lucide="receipt"></i> Despesa</button><button type="button" class="uber-type" data-uber-type="km"><i data-lucide="gauge"></i> KM</button></div><input type="hidden" name="type" value="gain"><div class="form-grid uber-form-grid"><label>Data<input type="date" name="date" required></label><label class="uber-value-field">Valor<input data-money-input data-money-prefix="R$" type="text" name="amount" inputmode="numeric" placeholder="R$ 0,00"></label><label class="uber-quantity-field" hidden><span class="uber-quantity-label">Litros abastecidos</span><input type="number" name="quantity" inputmode="decimal" step="0.01" min="0"></label><label class="uber-description-field" hidden>Descrição<select name="description"><option>Manutenção</option><option>Lavagem</option><option>Seguro</option><option>Parcela</option><option>Outros</option></select></label><label class="uber-km-field">KM atual <small>opcional</small><input type="number" name="km" inputmode="numeric" min="0"></label></div><button class="primary-button" type="submit"><i data-lucide="plus"></i> Adicionar lançamento</button></form></section>
       <div class="finance-kpis" id="uberOperationalKpis"></div>
       <section class="panel"><div class="panel-heading"><div><p class="eyebrow">Últimos lançamentos</p><h2>Movimentação recente</h2></div><button class="ghost-button" type="button" data-uber-action="toggle-recent">Ver todos</button></div><div class="uber-list" id="uberRecentEntries"></div></section>
     </section>
@@ -257,8 +257,7 @@ export function renderUber(view) {
   const data = stats(), forecast = pace(), goals = goalTotals();
   document.querySelectorAll(".uber-energy-label").forEach((item) => { item.textContent = energyLabel(); });
   document.querySelectorAll(".uber-quantity-label").forEach((item) => { item.textContent = config().vehicleType === "electric" ? "kWh recarregados" : "Litros abastecidos"; });
-  const hero = document.querySelector("#uberHeroEarnings"); if (hero) hero.textContent = money(data.gains);
-  if (view === "uberinicio") renderStart(data);
+  if (view === "uberinicio") renderStart(data, forecast, goals);
   if (view === "uberdashboard") renderDashboard(data, forecast, goals);
   if (view === "uberoperacao") renderOperation(data);
   if (view === "uberhistorico") renderHistory();
@@ -267,8 +266,19 @@ export function renderUber(view) {
   bindMoneyInputs(document); refreshIcons();
 }
 
-function renderStart(data) {
+function renderStart(data, forecast, goals) {
   setEntryDateDefault();
+  const expectedCosts = Math.max(goals.survival, data.costs), outcome = forecast.projected - expectedCosts;
+  document.querySelector("#uberHeroProjected").textContent = money(forecast.projected);
+  document.querySelector("#uberHeroProjectionCopy").textContent = data.days ? `Usa suas médias de ${forecast.normalDays} dia(s) seg–sex e ${forecast.specialDays} dia(s) especial(is).` : "Comece registrando seus ganhos para gerar projeção.";
+  document.querySelector("#uberHeroRealized").textContent = money(data.gains);
+  const outcomeElement = document.querySelector("#uberHeroOutcome");
+  outcomeElement.textContent = money(outcome);
+  outcomeElement.classList.toggle("negative", outcome < 0);
+  outcomeElement.classList.toggle("positive", outcome >= 0);
+  document.querySelector("#uberHeroCostCopy").textContent = `Considerando custos de ${money(expectedCosts)}`;
+  document.querySelector("#uberHeroWeekdayAverage").textContent = forecast.normalDays ? money(forecast.normal) : "—";
+  document.querySelector("#uberHeroSpecialAverage").textContent = forecast.specialDays ? money(forecast.special) : "—";
   document.querySelector("#uberOperationalKpis").innerHTML = kpis([["Resultado do mês", money(data.net), "ganhos menos custos"], ["Ganhos", money(data.gains), "realizado no mês"], ["Custos", money(data.costs), "não duplicados no orçamento"], ["KM rodados", data.km.toLocaleString("pt-BR"), "base do mês"]]);
   const list = data.list.slice().sort((a, b) => b.date.localeCompare(a.date)); document.querySelector("#uberRecentEntries").innerHTML = entryCards(recentExpanded ? list : list.slice(0, 5));
   const button = document.querySelector('[data-uber-action="toggle-recent"]'); if (button) button.textContent = recentExpanded ? "Mostrar menos" : "Ver todos";
@@ -363,7 +373,8 @@ async function saveEntry(event) {
   event.preventDefault();
   const form = event.currentTarget, type = form.elements.type.value, amount = parseCurrencyInput(form.elements.amount.value), entryMonth = monthKey(form.elements.date.value);
   const entry = { id: crypto.randomUUID(), date: form.elements.date.value, type, description: type === "expense" ? String(form.elements.description.value || "Outros").trim() : type === "gain" ? "Ganhos Uber" : type === "fuel" ? energyLabel() : "", amount: type === "km" ? 0 : Math.abs(amount), quantity: Number(form.elements.quantity.value || 0), km: Number(form.elements.km.value || 0) };
-  if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity) || ((type === "gain" || type === "fuel" || type === "km") && !entry.km)) return showToast("Preencha valor e KM atual para este lançamento.", "error");
+  if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity)) return showToast("Preencha a data, o valor e, no abastecimento, os litros.", "error");
+  if (type === "km" && !entry.km) return showToast("Informe o KM atual para registrar uma atualização de quilometragem.", "error");
   if (uber().closings?.[entryMonth]) return showToast(`${monthName(entryMonth)} está fechado. Reabra o mês no Histórico para lançar nele.`, "error");
   uber().entries.push(entry);
   const linked = type === "gain" && syncUberIncomeReceipts(entryMonth);

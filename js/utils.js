@@ -99,15 +99,21 @@ function formatCurrencyMask(value) {
   return `${signal}${formatCurrencyInput(Number(digits) / 100)}`;
 }
 
+function formatMoneyInputValue(input, value, masked = false) {
+  const formatted = masked ? formatCurrencyMask(value) : formatCurrencyInput(value);
+  const prefix = input.dataset.moneyPrefix;
+  return formatted && prefix ? `${prefix} ${formatted}` : formatted;
+}
+
 export function bindMoneyInputs(root = document) {
   root.querySelectorAll("[data-money-input]").forEach((input) => {
     if (input.dataset.moneyBound) return;
     input.dataset.moneyBound = "true";
     input.addEventListener("blur", () => {
-      input.value = formatCurrencyInput(input.value);
+      input.value = formatMoneyInputValue(input, input.value);
     });
     input.addEventListener("input", () => {
-      input.value = formatCurrencyMask(input.value);
+      input.value = formatMoneyInputValue(input, input.value, true);
       input.setSelectionRange(input.value.length, input.value.length);
     });
   });
