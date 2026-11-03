@@ -1,5 +1,6 @@
 import { state, el, currency } from "../state.js";
 import { bindMoneyInputs, escapeHtml, formatCurrencyInput, parseCurrencyInput, refreshIcons, showToast } from "../utils.js";
+import { applyCashMovement } from "../controle/controle.js";
 
 const MONTHS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const WEEKDAYS = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -7,7 +8,10 @@ let calendarMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1)
 let recentExpanded = false;
 let persistingRollback = false;
 
-const isoToday = () => new Date().toISOString().slice(0, 10);
+const isoToday = () => {
+  const today = new Date();
+  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+};
 const monthKey = (date = isoToday()) => String(date).slice(0, 7);
 const nextMonthKey = (key) => {
   const [year, month] = key.split("-").map(Number);
@@ -31,6 +35,48 @@ const entryDateForActiveMonth = () => isoToday();
 const entries = (key = activeMonthKey()) => uber().entries.filter((item) => item.date?.startsWith(key));
 const energyLabel = () => uber().config.vehicleType === "electric" ? "Recarga" : "Abastecimento";
 const energyUnit = () => uber().config.vehicleType === "electric" ? "kWh" : "L";
+
+function linkedUberIncome() {
+  const incomes = state.data.recurringIncomes || [];
+  const byId = incomes.find((income) => income.id === uber().linkedIncomeId);
+  if (byId) return byId;
+  const candidates = incomes.filter((income) => /uber/i.test(`${income.label || ""} ${income.origin || ""}`));
+  const income = candidates.find((item) => String(item.label || "").trim().toLocaleLowerCase("pt-BR") === "uber") || candidates[0];
+  if (income) uber().linkedIncomeId = income.id;
+  return income;
+}
+
+function syncUberIncomeReceipts(month) {
+  const income = linkedUberIncome();
+  if (!income) return false;
+  const key = `${income.id}:${month}`;
+  const manualReceipts = (state.data.receivedPayments?.[key] || []).filter((payment) => payment.source !== "uber-entry");
+  const uberReceipts = entries(month).filter((entry) => entry.type === "gain").map((entry) => ({ amount: Number(entry.amount || 0), date: entry.date, source: "uber-entry", entryId: entry.id }));
+  const receipts = [...manualReceipts, ...uberReceipts];
+  const total = receipts.reduce((sum, receipt) => sum + Number(receipt.amount || 0), 0);
+  state.data.receivedPayments ||= {};
+  state.data.receivedAmounts ||= {};
+  if (receipts.length) {
+    state.data.receivedPayments[key] = receipts;
+    state.data.receivedAmounts[key] = total;
+  } else {
+    delete state.data.receivedPayments[key];
+    delete state.data.receivedAmounts[key];
+  }
+  const expectedChange = [...(income.changes || [])].filter((change) => change.month <= month).sort((a, b) => a.month.localeCompare(b.month)).at(-1);
+  const expected = Number(expectedChange?.amount || income.amount || 0);
+  const completed = total > 0 && total >= expected - 0.005;
+  state.data.receivedOccurrences = completed
+    ? [...new Set([...(state.data.receivedOccurrences || []), key])]
+    : (state.data.receivedOccurrences || []).filter((item) => item !== key);
+  applyCashMovement(key, total);
+  return true;
+}
+
+function setEntryDateDefault(force = false) {
+  const input = document.querySelector("#uberEntryForm [name='date']");
+  if (input && (force || input.dataset.userChanged !== "true")) input.value = isoToday();
+}
 
 function config() {
   const value = uber().config;
@@ -110,6 +156,7 @@ export function bindUberEvents(showView) {
   if (!root || root.dataset.bound) return;
   root.dataset.bound = "true";
   document.querySelector("#uberEntryForm").addEventListener("submit", saveEntry);
+  document.querySelector("#uberEntryForm").elements.date.addEventListener("change", (event) => { event.target.dataset.userChanged = "true"; });
   document.querySelector("#uberConfigForm").addEventListener("submit", saveConfig);
   document.querySelector("#uberGoalForm").addEventListener("submit", addGoal);
   document.querySelector("#uberTargetsForm").addEventListener("submit", saveTargets);
@@ -132,7 +179,7 @@ export function bindUberEvents(showView) {
     else if (action.startsWith("date:")) await toggleDate(action.slice(5));
   });
   selectType("gain");
-  document.querySelector("#uberEntryForm").elements.date.value = entryDateForActiveMonth();
+  setEntryDateDefault(true);
 }
 
 function selectType(type) {
@@ -214,6 +261,7 @@ export function renderUber(view) {
 }
 
 function renderStart(data) {
+  setEntryDateDefault();
   document.querySelector("#uberOperationalKpis").innerHTML = kpis([["Resultado do mês", money(data.net), "ganhos menos custos"], ["Ganhos", money(data.gains), "realizado no mês"], ["Custos", money(data.costs), "não duplicados no orçamento"], ["KM rodados", data.km.toLocaleString("pt-BR"), "base do mês"]]);
   const list = data.list.slice().sort((a, b) => b.date.localeCompare(a.date)); document.querySelector("#uberRecentEntries").innerHTML = entryCards(recentExpanded ? list : list.slice(0, 5));
   const button = document.querySelector('[data-uber-action="toggle-recent"]'); if (button) button.textContent = recentExpanded ? "Mostrar menos" : "Ver todos";
@@ -304,13 +352,31 @@ function emptyRow(cols, message) { return `<tr><td colspan="${cols}" class="empt
 function typeLabel(type) { return ({ gain: "Ganho", fuel: energyLabel(), expense: "Despesa", km: "Atualização de KM" })[type] || type; }
 function formatDate(date) { return date ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(`${date}T12:00:00`)) : "—"; }
 async function save(message) { await state.saveStateFn?.(message); renderUber(document.querySelector(".view.active")?.id.replace(/View$/, "")); }
-async function saveEntry(event) { event.preventDefault(); const form = event.currentTarget, type = form.elements.type.value, amount = parseCurrencyInput(form.elements.amount.value), entryMonth = monthKey(form.elements.date.value); const entry = { id: crypto.randomUUID(), date: form.elements.date.value, type, description: type === "expense" ? String(form.elements.description.value || "Outros").trim() : type === "gain" ? "Ganhos Uber" : type === "fuel" ? energyLabel() : "", amount: type === "km" ? 0 : Math.abs(amount), quantity: Number(form.elements.quantity.value || 0), km: Number(form.elements.km.value || 0) }; if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity) || ((type === "gain" || type === "fuel" || type === "km") && !entry.km)) return showToast("Preencha valor e KM atual para este lançamento.", "error"); if (uber().closings?.[entryMonth]) return showToast(`${monthName(entryMonth)} está fechado. Reabra o mês no Histórico para lançar nele.`, "error"); uber().entries.push(entry); form.reset(); form.elements.date.value = entryDateForActiveMonth(); selectType("gain"); await save("Lançamento Uber salvo."); }
+async function saveEntry(event) {
+  event.preventDefault();
+  const form = event.currentTarget, type = form.elements.type.value, amount = parseCurrencyInput(form.elements.amount.value), entryMonth = monthKey(form.elements.date.value);
+  const entry = { id: crypto.randomUUID(), date: form.elements.date.value, type, description: type === "expense" ? String(form.elements.description.value || "Outros").trim() : type === "gain" ? "Ganhos Uber" : type === "fuel" ? energyLabel() : "", amount: type === "km" ? 0 : Math.abs(amount), quantity: Number(form.elements.quantity.value || 0), km: Number(form.elements.km.value || 0) };
+  if (!entry.date || (type !== "km" && !entry.amount) || (type === "fuel" && !entry.quantity) || ((type === "gain" || type === "fuel" || type === "km") && !entry.km)) return showToast("Preencha valor e KM atual para este lançamento.", "error");
+  if (uber().closings?.[entryMonth]) return showToast(`${monthName(entryMonth)} está fechado. Reabra o mês no Histórico para lançar nele.`, "error");
+  uber().entries.push(entry);
+  const linked = type === "gain" && syncUberIncomeReceipts(entryMonth);
+  form.reset();
+  delete form.elements.date.dataset.userChanged;
+  setEntryDateDefault(true);
+  selectType("gain");
+  await save(linked ? "Ganho Uber salvo e recebido parcial atualizado no Controle Mensal." : "Lançamento Uber salvo.");
+}
 async function saveConfig(event) { event.preventDefault(); config().vehicleType = event.currentTarget.elements.vehicleType.value; await save("Veículo atualizado."); }
 async function toggleWeekday(day) { const days = new Set(config().workDays); days.has(day) ? days.delete(day) : days.add(day); config().workDays = [...days].sort((a, b) => a - b); syncAutomaticDays(); await save("Rotina de trabalho atualizada."); }
 async function toggleDate(key) { const [year, month, day] = key.split("-").map(Number), date = new Date(year, month - 1, day), wasWorking = workDay(date), base = baseWorkDay(date); config().daysOff = config().daysOff.filter((item) => item !== key); config().extraWorkDays = config().extraWorkDays.filter((item) => item !== key); config().autoDaysOff = config().autoDaysOff.filter((item) => item !== key); if (!wasWorking && !base) config().extraWorkDays.push(key); else if (wasWorking && base) config().daysOff.push(key); await save("Exceção de rotina atualizada."); }
 async function addGoal(event) { event.preventDefault(); const form = event.currentTarget, name = String(form.elements.name.value || "").trim(), amount = parseCurrencyInput(form.elements.amount.value); if (!name || !amount) return showToast("Informe custo e valor.", "error"); config().goals.push({ id: crypto.randomUUID(), name, amount }); form.reset(); await save("Custo Uber adicionado."); }
 async function saveTargets(event) { event.preventDefault(); const form = event.currentTarget; config().withdrawal = parseCurrencyInput(form.elements.withdrawal.value); config().comfort = parseCurrencyInput(form.elements.comfort.value); await save("Metas Uber atualizadas."); }
-async function deleteEntry(id) { uber().entries = uber().entries.filter((item) => item.id !== id); await save("Lançamento Uber excluído."); }
+async function deleteEntry(id) {
+  const removed = uber().entries.find((item) => item.id === id);
+  uber().entries = uber().entries.filter((item) => item.id !== id);
+  if (removed?.type === "gain") syncUberIncomeReceipts(monthKey(removed.date));
+  await save("Lançamento Uber excluído.");
+}
 async function deleteGoal(id) { config().goals = config().goals.filter((item) => item.id !== id); await save("Custo Uber excluído."); }
 async function closeMonth() {
   const key = activeMonthKey();
