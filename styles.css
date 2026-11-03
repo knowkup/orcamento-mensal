@@ -4729,7 +4729,8 @@ select {
 .uber-routine-copy h3 { margin: 0 0 4px; }
 .uber-routine-copy p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 .uber-routine-copy > strong { flex: 0 0 auto; margin: 3px 0 0; color: #167748; font-size: 12px; }
-.uber-routine-card > .checkbox-field { margin: 0 0 10px; font-size: 12px; }
+.uber-routine-card > .checkbox-field { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 12px; }
+.uber-routine-card > .checkbox-field input[type="checkbox"] { width: 14px; min-width: 14px; height: 14px; min-height: 14px; margin: 0; accent-color: #18744b; }
 .uber-calendar-head { padding-top: 12px; border-top: 1px solid #dce8de; }
 .uber-vehicle-form { display: block; margin-top: 18px; }
 .uber-vehicle-form label { display: grid; gap: 6px; max-width: none; color: var(--muted); font-size: 12px; }
